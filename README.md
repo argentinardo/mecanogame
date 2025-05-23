@@ -1,54 +1,68 @@
-# React + TypeScript + Vite
+# Mecano Game
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Mecano Game is a web-based typing game where players type falling letters to score points and progress through stages.
 
-Currently, two official plugins are available:
+## Getting Started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
 
-## Expanding the ESLint configuration
+*   Node.js (v18 or later recommended)
+*   npm (comes with Node.js) or yarn
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Installation
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+1.  Navigate to the project directory:
+    ```bash
+    cd mecano-game 
+    ```
+    (If you are not already in the project's root directory)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2.  Install the dependencies:
+    ```bash
+    npm install
+    ```
+    Alternatively, if you prefer using yarn:
+    ```bash
+    yarn install
+    ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Available Scripts
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+In the project directory, you can run the following commands:
+
+### `npm run dev`
+
+Runs the app in development mode.
+Open [http://localhost:5173](http://localhost:5173) (or the port shown in your terminal) to view it in the browser.
+The page will reload if you make edits.
+
+### `npm run build`
+
+Builds the app for production to the `dist` folder.
+It correctly bundles React in production mode and optimizes the build for the best performance.
+
+### `npm run preview`
+
+Serves the production build locally for preview before deployment.
+
+### `npm run lint`
+
+Lints the codebase using ESLint to identify and fix stylistic and programmatic errors.
+
+## Gameplay
+
+Mecano Game is a fast-paced typing challenge!
+
+*   **Objective:** Type the letters that fall from the top of the screen before they reach the bottom.
+*   **Shooting:** Press the corresponding key on your keyboard to "shoot" a falling letter.
+*   **Scoring:** Each correctly typed letter earns you points.
+*   **Lives:** You start with a set number of lives. If a letter reaches the bottom, you lose a life. The game ends when you run out of lives.
+*   **Difficulty:** The game gets progressively harder, with letters falling faster and appearing more frequently as you score more points and advance through different typing stages.
+*   **Stages:** The game features different stages, introducing new sets of letters to type, helping you practice different areas of the keyboard.
+
+## Technologies Used
+
+*   **React:** A JavaScript library for building user interfaces.
+*   **TypeScript:** A typed superset of JavaScript that compiles to plain JavaScript.
+*   **Vite:** A fast build tool and development server for modern web projects.
+*   **ESLint:** A pluggable and configurable linter tool for identifying and reporting on patterns in JavaScript and TypeScript.
