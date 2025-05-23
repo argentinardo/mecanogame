@@ -35,7 +35,8 @@ body {
 
 .game-container {
     position: relative;
-    width: 100vw;
+
+    max-width: 1300px;
     height: 100vh;
     z-index: 2;
 }

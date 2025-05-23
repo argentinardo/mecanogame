@@ -6,7 +6,7 @@ interface HUDProps {
     lives: number;
     status: string;
     isPenalized: boolean;
-    stage: TypingStage;
+    stage?: TypingStage;
 }
 
 export const HUD: React.FC<HUDProps> = ({ score, lives, status, isPenalized, stage }) => {
@@ -15,8 +15,8 @@ export const HUD: React.FC<HUDProps> = ({ score, lives, status, isPenalized, sta
             <div className="score">Puntos: {score}</div>
             <div className="lives">Vidas: {lives}</div>
             <div className="stage">
-                <div className="stage-name">{stage.name}</div>
-                <div className="stage-description">{stage.description}</div>
+                <div className="stage-name">{stage?.name || 'Etapa no definida'}</div>
+                <div className="stage-description">{stage?.description || 'Sin descripción'}</div>
             </div>
             <div className={`status ${isPenalized ? 'penalty' : ''}`}>
                 {status}

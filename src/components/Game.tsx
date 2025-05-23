@@ -93,7 +93,19 @@ export const Game: React.FC = () => {
             return;
         }
 
+        // Verificar que currentStage esté dentro de los límites válidos
+        if (gameState.currentStage < 0 || gameState.currentStage >= TYPING_STAGES.length) {
+            console.warn('Índice de etapa inválido:', gameState.currentStage);
+            spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
+            return;
+        }
+
         const currentStage = TYPING_STAGES[gameState.currentStage];
+        if (!currentStage || !currentStage.letters || currentStage.letters.length === 0) {
+            console.warn('No hay letras disponibles para la etapa actual');
+            spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
+            return;
+        }
         const letter = currentStage.letters[Math.floor(Math.random() * currentStage.letters.length)];
         const { x, y } = getLetterPosition(letter);
         
@@ -202,15 +214,21 @@ export const Game: React.FC = () => {
     const advanceStage = useCallback(() => {
         setGameState(prev => {
             const nextStage = prev.currentStage + 1;
+            // Si ya estamos en la última etapa, no avanzamos más
             if (nextStage >= TYPING_STAGES.length) {
-                return prev; // Mantener la última etapa
+                return {
+                    ...prev,
+                    // Mantener la última etapa pero seguir aumentando la dificultad
+                    gameSpeed: Math.max(MIN_GAME_SPEED, prev.gameSpeed - GAME_SPEED_DECREMENT),
+                    letterSpeed: prev.letterSpeed + SPEED_INCREMENT
+                };
             }
             return {
                 ...prev,
                 currentStage: nextStage,
                 fallingLetters: [], // Limpiar letras actuales
-                gameSpeed: Math.max(INITIAL_GAME_SPEED - (nextStage * 100), 300), // Aumentar dificultad
-                letterSpeed: INITIAL_LETTER_SPEED + (nextStage * 0.5) // Aumentar velocidad
+                gameSpeed: Math.max(INITIAL_GAME_SPEED - (nextStage * 100), MIN_GAME_SPEED),
+                letterSpeed: INITIAL_LETTER_SPEED + (nextStage * 0.5)
             };
         });
     }, []);
@@ -229,8 +247,9 @@ export const Game: React.FC = () => {
                 ? prev.letterSpeed + SPEED_INCREMENT
                 : prev.letterSpeed;
             
-            // Verificar si debemos avanzar de etapa
-            const shouldAdvanceStage = newScore >= (prev.currentStage + 1) * SCORE_THRESHOLD;
+            // Verificar si debemos avanzar de etapa, pero asegurarnos de no exceder el límite
+            const nextStage = prev.currentStage + 1;
+            const shouldAdvanceStage = newScore >= (prev.currentStage + 1) * SCORE_THRESHOLD && nextStage < TYPING_STAGES.length;
             
             return {
                 ...prev,
@@ -238,12 +257,13 @@ export const Game: React.FC = () => {
                 gameSpeed: newGameSpeed,
                 letterSpeed: newLetterSpeed,
                 fallingLetters: prev.fallingLetters.filter(l => l.id !== letterObj.id),
-                currentStage: shouldAdvanceStage ? prev.currentStage + 1 : prev.currentStage
+                currentStage: shouldAdvanceStage ? nextStage : prev.currentStage
             };
         });
 
-        // Avanzar a la siguiente etapa si es necesario
-        if (gameState.score >= (gameState.currentStage + 1) * SCORE_THRESHOLD) {
+        // Avanzar a la siguiente etapa si es necesario y es posible
+        if (gameState.score >= (gameState.currentStage + 1) * SCORE_THRESHOLD && 
+            gameState.currentStage + 1 < TYPING_STAGES.length) {
             advanceStage();
         }
     }, [gameState.score, gameState.currentStage, advanceStage]);
