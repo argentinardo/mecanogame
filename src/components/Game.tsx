@@ -38,8 +38,8 @@ const LETTER_IMAGES: Record<string, string> = {
 
 const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
 const MAX_LETTERS_ON_SCREEN = 10000;
-const INITIAL_LETTER_SPEED = 0.5;
-const INITIAL_GAME_SPEED = 2000;
+const INITIAL_LETTER_SPEED = 0.4;
+const INITIAL_GAME_SPEED = 2200;
 
 // Constantes para la progresión de dificultad
 const SPEED_INCREMENT = 0.1; // Incremento más pequeño de velocidad
@@ -110,10 +110,16 @@ export const Game: React.FC = () => {
         isPaused: false
     });
 
+    const [cannonAngle, setCannonAngle] = useState<number>(0);
+    const [comboCount, setComboCount] = useState<number>(0);
+    const [lastHitTime, setLastHitTime] = useState<number>(0);
+
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const gameLoopRef = useRef<number | undefined>(undefined);
     const spawnIntervalRef = useRef<number | undefined>(undefined);
     const lastSpawnTimeRef = useRef<number>(0);
+    const lastSpawnedLetterRef = useRef<string | null>(null);
+    const comboTimeoutRef = useRef<number | undefined>(undefined);
 
     const getLetterPosition = useCallback((letter: string) => {
         const position = KEYBOARD_POSITIONS[letter];
@@ -167,7 +173,16 @@ export const Game: React.FC = () => {
             spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
             return;
         }
-        const letter = currentStage.letters[Math.floor(Math.random() * currentStage.letters.length)];
+
+        // Obtener letras disponibles excluyendo la última letra generada
+        let availableLetters = currentStage.letters;
+        if (lastSpawnedLetterRef.current && availableLetters.length > 1) {
+            availableLetters = availableLetters.filter(letter => letter !== lastSpawnedLetterRef.current);
+        }
+
+        const letter = availableLetters[Math.floor(Math.random() * availableLetters.length)];
+        lastSpawnedLetterRef.current = letter;
+        
         const { x, y } = getLetterPosition(letter);
         
         // Verificar si ya existe una letra en la misma posición
@@ -235,6 +250,15 @@ export const Game: React.FC = () => {
         const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
         
+        // Rotar el cañón hacia el objetivo
+        const cannonRotationAngle = Math.atan2(deltaX, -deltaY) * (180 / Math.PI);
+        setCannonAngle(cannonRotationAngle);
+        
+        // Restablecer el ángulo del cañón después del disparo con animación rápida
+        setTimeout(() => {
+            setCannonAngle(0);
+        }, 150);
+        
         // Establecer el estilo del rayo
         laser.style.position = 'fixed';
         laser.style.left = `${startX}px`;
@@ -279,7 +303,7 @@ export const Game: React.FC = () => {
             // Ejecutar hitLetter de forma asíncrona para evitar problemas de dependencia
             setTimeout(() => hitLetter(targetLetterObj), 0);
         }, 100);
-    }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound]);
+    }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound, setCannonAngle]);
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {
@@ -311,6 +335,7 @@ export const Game: React.FC = () => {
         const gameArea = gameAreaRef.current?.getBoundingClientRect();
         if (!gameArea) return;
 
+        // Calcular las coordenadas absolutas del centro de la letra
         const explosionX = gameArea.left + letterObj.x + (LETTER_SIZE / 2);
         const explosionY = gameArea.top + letterObj.y + (LETTER_SIZE / 2);
         
@@ -318,6 +343,32 @@ export const Game: React.FC = () => {
         playExplosionSound();
         
         createExplosion(explosionX, explosionY);
+        
+        // Sistema de combos
+        const currentTime = Date.now();
+        const timeSinceLastHit = currentTime - lastHitTime;
+        
+        if (timeSinceLastHit <= 1500 && lastHitTime > 0) {
+            // Continuar combo (aumentado a 1500ms para facilitar los combos)
+            setComboCount(prev => {
+                const newCount = prev + 1;
+                // Programar mostrar combo con delay en lugar de inmediatamente
+                setTimeout(() => scheduleComboMessage(), 0);
+                return newCount;
+            });
+        } else {
+            // Iniciar nuevo combo
+            setComboCount(1);
+            // Programar mostrar combo para el primer hit también
+            setTimeout(() => scheduleComboMessage(), 0);
+        }
+        
+        // TODO: Feedback inmediato deshabilitado para evitar conflicto con combos
+        // if (comboCount >= 1) {
+        //     showCentralMessage(`Hit ${comboCount + 1}!`, 800);
+        // }
+        
+        setLastHitTime(currentTime);
         
         setGameState(prev => {
             const newScore = prev.score + 10;
@@ -346,55 +397,128 @@ export const Game: React.FC = () => {
             gameState.currentStage + 1 < TYPING_STAGES.length) {
             advanceStage();
         }
-    }, [gameState.score, gameState.currentStage, advanceStage, playExplosionSound]);
+    }, [gameState.score, gameState.currentStage, advanceStage, playExplosionSound, lastHitTime, setComboCount, setLastHitTime]);
+
+    // Función para mostrar mensaje central temporalmente
+    const showCentralMessage = useCallback((message: string, duration: number = 2000) => {
+        setGameState(prev => ({
+            ...prev,
+            centralMessage: message,
+            showCentralMessage: true
+        }));
+
+        setTimeout(() => {
+            setGameState(prev => ({
+                ...prev,
+                showCentralMessage: false,
+                centralMessage: null
+            }));
+        }, duration);
+    }, []);
+
+    // Función para mostrar mensaje de combo
+    const showComboMessage = useCallback((count: number) => {
+        if (count < 2) return; // Mostrar combo desde 2 aciertos (más fácil)
+        
+        let adjective = '';
+        if (count >= 15) adjective = 'ULTRA';
+        else if (count >= 12) adjective = 'MEGA';
+        else if (count >= 8) adjective = 'SUPER';
+        else if (count >= 6) adjective = 'AWESOME';
+        else if (count >= 4) adjective = 'GREAT';
+        else if (count >= 2) adjective = 'GOOD';
+        
+        const message = `${adjective} COMBO ${count}!`;
+        showCentralMessage(message, 2500);
+    }, [showCentralMessage]);
+
+    // Función para resetear combo
+    const resetCombo = useCallback(() => {
+        // Limpiar timeout pendiente
+        if (comboTimeoutRef.current) {
+            clearTimeout(comboTimeoutRef.current);
+            comboTimeoutRef.current = undefined;
+        }
+        
+        if (comboCount >= 2) {
+            showComboMessage(comboCount);
+        }
+        setComboCount(0);
+        setLastHitTime(0);
+    }, [comboCount, showComboMessage, setComboCount, setLastHitTime]);
+
+    // Función para programar mostrar combo con delay
+    const scheduleComboMessage = useCallback(() => {
+        // Limpiar timeout anterior si existe
+        if (comboTimeoutRef.current) {
+            clearTimeout(comboTimeoutRef.current);
+        }
+        
+        // Programar mostrar el combo después de 500ms de inactividad (más rápido)
+        comboTimeoutRef.current = window.setTimeout(() => {
+            if (comboCount >= 2) {
+                let adjective = '';
+                if (comboCount >= 15) adjective = 'ULTRA';
+                else if (comboCount >= 12) adjective = 'MEGA';
+                else if (comboCount >= 8) adjective = 'SUPER';
+                else if (comboCount >= 6) adjective = 'AWESOME';
+                else if (comboCount >= 4) adjective = 'GREAT';
+                else if (comboCount >= 2) adjective = 'GOOD';
+                
+                const message = `${adjective} COMBO ${comboCount}!`;
+                showCentralMessage(message, 2000);
+            }
+        }, 500);
+    }, [comboCount, showCentralMessage]);
+
+    // Efecto para mostrar mensajes de combo eliminado - ahora usa delay
 
     const handleMiss = useCallback(() => {
         // Reproducir sonido de fallo
         playMissSound();
         
+        // Resetear combo al fallar
+        resetCombo();
+        
         setGameState(prev => ({
             ...prev,
             isPenalized: true,
-            penaltyTime: 3
+            penaltyTime: 3,
+            showCentralMessage: true,
+            centralMessage: 'Recalibrando... 3s'
         }));
 
         const penaltyInterval = setInterval(() => {
             setGameState(prev => {
                 const newPenaltyTime = prev.penaltyTime - 1;
                 
-                if (newPenaltyTime <= 0) {
-                    clearInterval(penaltyInterval);
+                if (newPenaltyTime > 0) {
                     return {
                         ...prev,
-                        isPenalized: false,
-                        penaltyTime: 0,
-                        showCentralMessage: false,
-                        centralMessage: null
+                        penaltyTime: newPenaltyTime,
+                        showCentralMessage: true,
+                        centralMessage: `Recalibrando... ${newPenaltyTime}s`
                     };
                 }
                 
+                // Cuando llegue a 0, limpiar todo
+                clearInterval(penaltyInterval);
                 return {
                     ...prev,
-                    penaltyTime: newPenaltyTime
+                    isPenalized: false,
+                    penaltyTime: 0,
+                    showCentralMessage: false,
+                    centralMessage: null
                 };
             });
         }, 1000);
-    }, [playMissSound]);
+    }, [playMissSound, resetCombo]);
 
     const createExplosion = (x: number, y: number) => {
-        const explosion = document.createElement('div');
-        explosion.className = 'explosion';
-        explosion.style.position = 'fixed';
-        explosion.style.left = `${x}px`;
-        explosion.style.top = `${y}px`;
-        explosion.style.transform = 'translate(-50%, -50%)';
-        document.body.appendChild(explosion);
-        
+        // Solo crear partículas, sin la bola de explosión
         for (let i = 0; i < 20; i++) {
             createParticle(x, y);
         }
-        
-        setTimeout(() => explosion.remove(), 500);
     };
 
     const createParticle = (x: number, y: number) => {
@@ -484,57 +608,49 @@ export const Game: React.FC = () => {
     }, [playGameOverSound, stopBackgroundMusic]);
 
     const restartGame = useCallback(() => {
+        // Limpiar todos los timeouts e intervalos
         if (spawnIntervalRef.current) {
             clearTimeout(spawnIntervalRef.current);
+            spawnIntervalRef.current = undefined;
         }
         if (gameLoopRef.current) {
             cancelAnimationFrame(gameLoopRef.current);
+            gameLoopRef.current = undefined;
         }
         
-        // Resetear explícitamente el estado antes de iniciar el juego
+        // Resetear completamente las referencias
         lastSpawnTimeRef.current = 0;
+        lastSpawnedLetterRef.current = null;
+        
+        // Resetear estados de combo
+        setComboCount(0);
+        setLastHitTime(0);
+        setCannonAngle(0);
         
         // Inicializar contexto de audio
         initAudioContext();
         
-        // Establecer estado inicial completo para asegurar un reinicio limpio
+        // Establecer estado inicial completamente limpio
         setGameState({
             score: 0,
             lives: 3,
             isPlaying: true,
             isPenalized: false,
             penaltyTime: 0,
-            fallingLetters: [],
+            fallingLetters: [], // Asegurar que esté vacío
             bullets: [],
             meteorites: [],
             forceField: null,
             gameSpeed: INITIAL_GAME_SPEED,
             letterSpeed: INITIAL_LETTER_SPEED,
-            currentStage: 0, // Asegurar que siempre comience desde la primera etapa
+            currentStage: 0, // Comenzar desde la primera etapa
             pressedKey: null,
             centralMessage: null,
             showCentralMessage: false,
             countdown: null,
             isPaused: false
         });
-    }, [initAudioContext]);
-
-    // Función para mostrar mensaje central temporalmente
-    const showCentralMessage = useCallback((message: string, duration: number = 2000) => {
-        setGameState(prev => ({
-            ...prev,
-            centralMessage: message,
-            showCentralMessage: true
-        }));
-
-        setTimeout(() => {
-            setGameState(prev => ({
-                ...prev,
-                showCentralMessage: false,
-                centralMessage: null
-            }));
-        }, duration);
-    }, []);
+    }, [initAudioContext, setComboCount, setLastHitTime, setCannonAngle]);
 
     // Función para iniciar cuenta regresiva cuando se pierde una vida
     const startLifeLostCountdown = useCallback(() => {
@@ -577,9 +693,9 @@ export const Game: React.FC = () => {
         const gameAreaRect = gameArea.getBoundingClientRect();
         
         // El cañón está centrado horizontalmente en el game-area
-        // y posicionado a 30px desde el fondo (según CSS: bottom: 30px)
+        // y posicionado a 150px desde el fondo (según CSS: bottom: 150px)
         const cannonX = gameAreaRect.width / 2;
-        const cannonY = gameAreaRect.height - 30; // 30px desde el fondo según CSS
+        const cannonY = gameAreaRect.height - 150; // 150px desde el fondo según CSS
         
         return { x: cannonX, y: cannonY };
     }, []);
@@ -589,7 +705,7 @@ export const Game: React.FC = () => {
         if (!gameState.isPlaying || gameState.isPaused) return;
         
         // Solo generar meteoritos a partir de la tercera etapa
-        if (gameState.currentStage < 2) return;
+        if (gameState.currentStage < -1) return;
 
         const gameArea = gameAreaRef.current;
         if (!gameArea) return;
@@ -882,7 +998,7 @@ export const Game: React.FC = () => {
                 // Mostrar mensaje de recarga directamente sin timeout
                 setGameState(prev => ({
                     ...prev,
-                    centralMessage: `Recargando... ${gameState.penaltyTime}s`,
+                    centralMessage: `Recalibrando... ${gameState.penaltyTime}s`,
                     showCentralMessage: true
                 }));
             }
@@ -922,7 +1038,19 @@ export const Game: React.FC = () => {
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (!gameState.isPlaying || gameState.isPenalized || gameState.isPaused) return;
+            if (!gameState.isPlaying || gameState.isPenalized) return;
+            
+            // Manejar pausa con Escape o P
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                setGameState(prev => ({
+                    ...prev,
+                    isPaused: !prev.isPaused
+                }));
+                return;
+            }
+            
+            if (gameState.isPaused) return; // No procesar otras teclas si está pausado
             
             const key = event.key.toUpperCase();
             if (LETTERS.includes(key)) {
@@ -949,6 +1077,23 @@ export const Game: React.FC = () => {
         };
     }, [gameState.isPlaying, gameState.isPenalized, gameState.isPaused, shootBullet, activateForceField]);
 
+    // Efecto para mostrar mensaje de pausa
+    useEffect(() => {
+        if (gameState.isPlaying && gameState.isPaused) {
+            setGameState(prev => ({
+                ...prev,
+                showCentralMessage: true,
+                centralMessage: 'PAUSADO - Presiona ESC para continuar'
+            }));
+        } else if (gameState.isPlaying && !gameState.isPaused && gameState.centralMessage === 'PAUSADO - Presiona ESC para continuar') {
+            setGameState(prev => ({
+                ...prev,
+                showCentralMessage: false,
+                centralMessage: null
+            }));
+        }
+    }, [gameState.isPaused, gameState.isPlaying]);
+
     return (
         <div className="game-container">
             <div className="bg-grid"></div>
@@ -974,10 +1119,8 @@ export const Game: React.FC = () => {
             <HUD
                 score={gameState.score}
                 lives={gameState.lives}
-                status={gameState.isPenalized ? `Recargando... ${gameState.penaltyTime}s` : '¡Listo para disparar!'}
                 isPenalized={gameState.isPenalized}
                 stage={TYPING_STAGES[gameState.currentStage]}
-                hideStatus={gameState.showCentralMessage}
                 forceField={gameState.forceField}
             />
 
@@ -989,13 +1132,13 @@ export const Game: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'center'
             }}>
-                <Cannon isReloading={gameState.isPenalized} />
+                <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} />
                 
                 {/* Punto de debug para el centro del cañón */}
                 <div style={{
                     position: 'absolute',
                     left: '50%',
-                    bottom: '30px', // Coincide con el CSS del cañón
+                    bottom: '150px', // Coincide con el CSS del cañón
                     width: '8px',
                     height: '8px',
                     background: '#ff0000',
@@ -1012,8 +1155,8 @@ export const Game: React.FC = () => {
                         style={{
                             position: 'absolute',
                             left: '50%',
-                            bottom: '30px', // Alineado exactamente con el cañón
-                            transform: 'translate(-50%, -50%)',
+                            bottom: '150px', // Alineado exactamente con el cañón
+                            transform: 'translate(-50%, 50%)',
                             width: `${FORCE_FIELD_RADIUS * 2}px`,
                             height: `${FORCE_FIELD_RADIUS * 2}px`,
                             borderRadius: '50%',

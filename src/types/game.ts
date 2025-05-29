@@ -79,18 +79,18 @@ export const KEYBOARD_POSITIONS: Record<string, KeyboardPosition> = {
 export const TYPING_STAGES: TypingStage[] = [
     {
         name: "Primeros Dedos",
-        letters: ['A', 'S', 'Ñ', 'L'],
-        description: "Aprende las teclas de los dedos índices"
+        letters: ['A', 'S', 'Ñ', 'L','D','F','J','K'],
+        description: "Posiciona los dedos indices sobre la marca de la F y la J y manten la posición"
     },
     {
         name: "Fila Inicial Completa",
         letters: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ'],
-        description: "Domina toda la fila inicial"
+        description: "Ahora debes mover los índices para alcanzar la G y la H"
     },
     {
         name: "Fila Superior Básica",
         letters: ['Q', 'W', 'E', 'P', 'O', 'I'],
-        description: "Practica con las teclas de los dedos índices de la fila superior"
+        description: "Sin perder la posición, apretamos las teclas superiores"
     },
     {
         name: "Fila Superior Completa",
@@ -100,7 +100,7 @@ export const TYPING_STAGES: TypingStage[] = [
     {
         name: "Fila Inferior Básica",
         letters: ['Z', 'X', 'M', 'N'],
-        description: "Practica con las teclas de los dedos índices de la fila inferior"
+        description: "Practica con las teclas de la fila inferior"
     },
     {
         name: "Fila Inferior Completa",

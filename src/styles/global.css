@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
 * {
   margin: 0;
@@ -7,7 +8,7 @@
 }
 
 body {
-  font-family: "Orbitron", monospace;
+  font-family: "Press Start 2P", "Orbitron", monospace;
   background: linear-gradient(
     180deg,
     #350035 0%,
@@ -72,25 +73,49 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: linear-gradient(
-      rgba(255, 255, 255, 0.5) 1px,
-      transparent 1px
-    ),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
-  background-size: 50px 50px;
-  transform-origin: center 60%;
-  transform: perspective(2000px) rotateX(60deg);
-  animation: gridMove 2s linear infinite;
+  background-image: 
+    linear-gradient(rgba(0, 255, 255, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.3) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 
+    80px 80px,
+    80px 80px,
+    20px 20px,
+    20px 20px;
+  background-position:
+    0 0,
+    0 0,
+    0 0,
+    0 0;
+  transform-origin: center 80%;
+  transform: perspective(2000px) rotateX(80deg) translateZ(-300px) scale(1.5);
+  animation: gridMove 3s linear infinite, gridPulse 8s ease-in-out infinite alternate;
   z-index: 1;
-  opacity: 0.3;
+  opacity: 0.4;
 }
 
 @keyframes gridMove {
   0% {
-    transform: perspective(1000px) rotateX(60deg) translateY(0);
+    transform: perspective(2000px) rotateX(80deg) translateZ(-300px) scale(1.5) translateY(0);
   }
   100% {
-    transform: perspective(1000px) rotateX(60deg) translateY(50px);
+    transform: perspective(2000px) rotateX(80deg) translateZ(-300px) scale(1.5) translateY(80px);
+  }
+}
+
+@keyframes gridPulse {
+  0% {
+    opacity: 0.3;
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    opacity: 0.5;
+    filter: hue-rotate(30deg);
+  }
+  100% {
+    opacity: 0.4;
+    filter: hue-rotate(60deg);
   }
 }
 
@@ -105,27 +130,59 @@ body::before {
 
 .hud {
   position: absolute;
-  top: 20px;
+  bottom: 20px;
   left: 20px;
   right: 20px;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   z-index: 10;
+  background: linear-gradient(145deg, rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
+  border: 3px solid #00ffff;
+  border-radius: 25px;
+  padding: 15px 30px;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 255, 0.5),
+    inset 0 0 20px rgba(0, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 .score,
 .lives,
 .status,
+.stage,
 .force-field-indicator {
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.7);
   border: 2px solid #00ffff;
-  padding: 10px 20px;
-  border-radius: 10px;
+  padding: 8px 15px;
+  border-radius: 15px;
   color: #00ffff;
-  font-weight: bold;
-  text-shadow: 0 0 10px #00ffff;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  font-weight: normal;
+  text-shadow: 0 0 8px #00ffff;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+  margin: 0 10px;
+  min-width: 80px;
+  text-align: center;
+  position: relative;
+}
+
+.score::before,
+.lives::before,
+.stage::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: #ffaa00;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ffaa00;
 }
 
 .status.penalty {
@@ -156,12 +213,23 @@ body::before {
 
 .cannon {
   position: absolute;
-  bottom: 30px;
+  bottom: 150px;
   left: 50%;
   transform: translateX(-50%);
   width: 80px;
   height: 100px;
   z-index: 5;
+  transition: transform 0.05s ease-out;
+  animation: shipFloating 3s ease-in-out infinite;
+}
+
+@keyframes shipFloating {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0px);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-5px);
+  }
 }
 
 .cannon-base {
@@ -237,9 +305,11 @@ body::before {
   align-items: center;
   justify-content: center;
   color: #00ffff;
-  font-size: 24px;
-  font-weight: bold;
+  font-family: "Press Start 2P", monospace;
+  font-size: 16px;
+  font-weight: normal;
   z-index: 3;
+  text-shadow: 0 0 8px currentColor;
 }
 
 @keyframes letterFall {
@@ -308,34 +378,12 @@ body::before {
 }
 
 .explosion {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgb(255, 255, 255),
-    rgb(51, 255, 0),
-    transparent
-  );
-  animation: explode 0.2s ease-out forwards;
-  z-index: 6;
-  pointer-events: none;
+  /* Eliminado - solo usamos partículas ahora */
+  display: none;
 }
 
 @keyframes explode {
-  0% {
-    transform: scale(0);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(0.3);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
+  /* Eliminado - solo usamos partículas ahora */
 }
 
 .particle {
@@ -390,9 +438,9 @@ body::before {
   padding: 15px 30px;
   border-radius: 10px;
   color: white;
-  font-family: "Orbitron", monospace;
-  font-weight: bold;
-  font-size: 18px;
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  font-weight: normal;
   cursor: pointer;
   margin-top: 20px;
   transition: all 0.3s ease;
@@ -454,6 +502,13 @@ body::before {
   padding: 20px;
 }
 
+/* Ocultar las manos en dispositivos móviles */
+@media (max-width: 768px) {
+  .hand-maps-container {
+    display: none;
+  }
+}
+
 .hand-map {
   background: rgba(0, 0, 0, 0.9);
   border: 2px solid #00ffff;
@@ -461,7 +516,8 @@ body::before {
   padding: 15px;
   width: 180px;
   color: #00ffff;
-  font-family: "Orbitron", monospace;
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
   animation: handMapGlow 3s ease-in-out infinite alternate;
   backdrop-filter: blur(5px);
@@ -661,17 +717,11 @@ body::before {
 /* Estilos para CentralMessage */
 .central-message {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(2px);
 }
 
 .central-message-content {
@@ -697,9 +747,9 @@ body::before {
 
 .status-message {
   color: #00ffff;
-  font-family: "Orbitron", monospace;
-  font-size: 28px;
-  font-weight: bold;
+  font-family: "Press Start 2P", monospace;
+  font-size: 16px;
+  font-weight: normal;
   text-shadow: 0 0 20px #00ffff;
   animation: statusPulse 1.5s ease-in-out infinite alternate;
 }
@@ -717,12 +767,12 @@ body::before {
 
 .countdown {
   color: #ffff00;
-  font-family: "Orbitron", monospace;
+  font-family: "Press Start 2P", monospace;
 }
 
 .countdown-number {
-  font-size: 80px;
-  font-weight: 900;
+  font-size: 48px;
+  font-weight: normal;
   text-shadow: 0 0 30px #ffff00;
   animation: countdownPulse 1s ease-in-out;
   margin-bottom: 10px;
@@ -995,5 +1045,100 @@ body::before {
   100% {
     opacity: 1;
     transform: scale(1.02);
+  }
+}
+
+.stage {
+  text-align: center;
+}
+
+.stage-name {
+  font-size: 14px;
+  margin-bottom: 5px;
+  color: #ffaa00;
+  text-shadow: 0 0 10px #ffaa00;
+}
+
+.stage-description {
+  font-size: 12px;
+  color: #00ffff;
+  opacity: 0.8;
+}
+
+.instrument-panel {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  gap: 20px;
+}
+
+.instrument-label {
+  font-size: 6px;
+  color: #ffaa00;
+  text-shadow: 0 0 5px #ffaa00;
+  margin-bottom: 4px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.instrument-value {
+  font-size: 12px;
+  color: #00ffff;
+  text-shadow: 0 0 8px #00ffff;
+  text-align: center;
+  font-weight: normal;
+}
+
+.status-indicator {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #00ffff;
+  padding: 8px 15px;
+  border-radius: 15px;
+  color: #00ffff;
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  font-weight: normal;
+  text-shadow: 0 0 8px #00ffff;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+  margin: 0 10px;
+  min-width: 80px;
+  text-align: center;
+  position: relative;
+}
+
+.status-light {
+  font-size: 16px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.status-light.ready {
+  color: #00ff00;
+  text-shadow: 0 0 10px #00ff00;
+}
+
+.status-light.penalty {
+  color: #ff0066;
+  text-shadow: 0 0 10px #ff0066;
+  animation: statusAlert 0.5s infinite alternate;
+}
+
+@keyframes statusAlert {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Ajustar el área de juego en móviles para el teclado */
+@media (max-width: 768px) {
+  .game-area {
+    padding-bottom: 300px; /* Espacio para el teclado virtual */
+  }
+  
+  body {
+    height: 100vh;
+    height: 100dvh; /* Altura dinámica para móviles */
   }
 }

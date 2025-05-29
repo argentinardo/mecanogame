@@ -75,12 +75,12 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey }) => {
                     {/* Dedos */}
                     {/* Pulgar */}
                     <ellipse 
-                        cx={side === 'left' ? "25" : "95"} 
+                        cx={side === 'left' ? "95" : "25"} 
                         cy="120" 
                         rx="8" 
                         ry="25" 
                         className={`finger thumb ${highlightedFinger === 'thumb' ? 'highlighted' : ''}`}
-                        transform={side === 'left' ? "rotate(-30 25 120)" : "rotate(30 95 120)"}
+                        transform={side === 'left' ? "rotate(30 95 120)" : "rotate(-30 25 120)"}
                     />
                     
                     {/* Índice */}
@@ -112,7 +112,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey }) => {
                     
                     {/* Meñique */}
                     <ellipse 
-                        cx={side === 'left' ? "95" : "25"} 
+                        cx={side === 'left' ? "25" : "95"} 
                         cy="75" 
                         rx="6" 
                         ry="25" 
@@ -120,18 +120,6 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey }) => {
                     />
                 </svg>
             </div>
-            
-            {/* Indicador de dedo activo */}
-            {highlightedFinger && (
-                <div className="finger-indicator">
-                    <span className="finger-name">
-                        {FINGER_NAMES[highlightedFinger]}
-                    </span>
-                    <span className="key-name">
-                        {highlightedKey}
-                    </span>
-                </div>
-            )}
             
             {/* Lista de teclas para esta mano */}
             <div className="key-list">
