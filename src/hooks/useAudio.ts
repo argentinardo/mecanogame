@@ -171,6 +171,21 @@ export const useAudio = () => {
         });
     }, [createComplexSound]);
 
+    // Sonido de éxito para combos
+    const playComboSuccessSound = useCallback(() => {
+        createComplexSound({
+            frequencies: [440, 554, 659, 880, 1109],
+            durations: [0.1, 0.1, 0.1, 0.15, 0.2],
+            types: ['sine', 'triangle', 'sine', 'triangle', 'sine'],
+            volumes: [0.08, 0.1, 0.12, 0.14, 0.16],
+            delays: [0, 80, 160, 240, 320],
+            effects: {
+                filter: { frequency: 2500, type: 'highpass' },
+                distortion: false
+            }
+        });
+    }, [createComplexSound]);
+
     // Sonido de meteorito apareciendo
     const playMeteoriteSound = useCallback(() => {
         createComplexSound({
@@ -281,6 +296,7 @@ export const useAudio = () => {
         playLifeLostSound,
         playGameOverSound,
         playLevelUpSound,
+        playComboSuccessSound,
         playMeteoriteSound,
         startBackgroundMusic,
         stopBackgroundMusic,

@@ -82,6 +82,7 @@ export const Game: React.FC = () => {
         playLifeLostSound,
         playGameOverSound,
         playLevelUpSound,
+        playComboSuccessSound,
         playMeteoriteSound,
         startBackgroundMusic,
         stopBackgroundMusic,
@@ -1155,8 +1156,8 @@ export const Game: React.FC = () => {
                         style={{
                             position: 'absolute',
                             left: '50%',
-                            bottom: '150px', // Alineado exactamente con el cañón
-                            transform: 'translate(-50%, 50%)',
+                            bottom: '120px', // Más cerca del avión
+                            transform: 'translate(-50%, 30%)',
                             width: `${FORCE_FIELD_RADIUS * 2}px`,
                             height: `${FORCE_FIELD_RADIUS * 2}px`,
                             borderRadius: '50%',
