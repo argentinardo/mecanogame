@@ -49,15 +49,6 @@ const FINGER_MAPPING = {
     }
 };
 
-// Nombres de dedos en español
-const FINGER_NAMES: Record<FingerType, string> = {
-    pinky: 'Meñique',
-    ring: 'Anular',
-    middle: 'Medio',
-    index: 'Índice',
-    thumb: 'Pulgar'
-};
-
 export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpacePressed = false }) => {
     const fingerMapping = FINGER_MAPPING[side];
     const highlightedFinger = highlightedKey ? fingerMapping[highlightedKey as keyof typeof fingerMapping] : null;
