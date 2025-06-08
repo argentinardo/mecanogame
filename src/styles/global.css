@@ -147,59 +147,176 @@ body::before {
   backdrop-filter: blur(10px);
 }
 
-.score,
-.lives,
-.status,
-.stage,
-.force-field-indicator {
+.instrument-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 700px;
+  gap: 30px;
+}
+
+.score-display {
+  background: rgba(0, 0, 0, 0.7);
+  border: 3px solid #00ffff;
+  padding: 15px 25px;
+  border-radius: 20px;
+  text-align: center;
+  min-width: 250px;
+  box-shadow: 
+    0 0 25px rgba(0, 255, 255, 0.4),
+    inset 0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+.score-display .instrument-label {
+  font-size: 10px;
+  color: #ffaa00;
+  text-shadow: 0 0 8px #ffaa00;
+  margin-bottom: 8px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 2px;
+}
+
+.score-value {
+  font-size: 28px;
+  color: #00ffff;
+  text-shadow: 0 0 20px #00ffff;
+  font-family: "Press Start 2P", monospace;
+  font-weight: normal;
+  letter-spacing: 3px;
+  animation: scoreAnimation 0.5s ease-out;
+}
+
+@keyframes scoreAnimation {
+  0% {
+    transform: scale(1.1);
+    color: #ffff00;
+    text-shadow: 0 0 25px #ffff00;
+  }
+  50% {
+    transform: scale(1.05);
+    color: #00ff00;
+    text-shadow: 0 0 20px #00ff00;
+  }
+  100% {
+    transform: scale(1);
+    color: #00ffff;
+    text-shadow: 0 0 20px #00ffff;
+  }
+}
+
+.lives-display {
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid #00ffff;
-  padding: 8px 15px;
+  padding: 15px 20px;
   border-radius: 15px;
-  color: #00ffff;
-  font-family: "Press Start 2P", monospace;
-  font-size: 10px;
-  font-weight: normal;
-  text-shadow: 0 0 8px #00ffff;
+  text-align: center;
   box-shadow: 
     0 0 15px rgba(0, 255, 255, 0.3),
     inset 0 0 10px rgba(0, 255, 255, 0.1);
-  margin: 0 10px;
-  min-width: 80px;
-  text-align: center;
-  position: relative;
 }
 
-.score::before,
-.lives::before,
-.stage::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  background: #ffaa00;
-  border-radius: 50%;
-  box-shadow: 0 0 8px #ffaa00;
+.lives-display .instrument-label {
+  font-size: 10px;
+  color: #ffaa00;
+  text-shadow: 0 0 5px #ffaa00;
+  margin-bottom: 8px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 2px;
 }
 
-.status.penalty {
-  border-color: #ff0066;
-  color: #ff0066;
-  text-shadow: 0 0 10px #ff0066;
-  box-shadow: 0 0 20px rgba(255, 0, 102, 0.3);
-  animation: pulse 0.5s infinite alternate;
+.lives-ships {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
 }
 
-@keyframes pulse {
+.life-ship {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-ship {
+  width: 24px;
+  height: 24px;
+  background-image: url(../assets/images/nave.png);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 0 8px #00ffff);
+  animation: miniShipGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes miniShipGlow {
   0% {
-    opacity: 0.7;
+    filter: drop-shadow(0 0 8px #00ffff);
+    transform: scale(1);
   }
   100% {
-    opacity: 1;
+    filter: drop-shadow(0 0 12px #00ffff);
+    transform: scale(1.05);
   }
+}
+
+.mute-toggle {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #00ffff;
+  padding: 15px 20px;
+  border-radius: 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+  min-width: 100px;
+}
+
+.mute-toggle .instrument-label {
+  font-size: 8px;
+  color: #ffaa00;
+  text-shadow: 0 0 5px #ffaa00;
+  margin-bottom: 8px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 1px;
+}
+
+.mute-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mute-toggle.unmuted {
+  color: #00ffff;
+  border-color: #00ffff;
+}
+
+.mute-toggle.unmuted svg {
+  filter: drop-shadow(0 0 5px #00ffff);
+}
+
+.mute-toggle.muted {
+  color: #ff0066;
+  border-color: #ff0066;
+  box-shadow: 0 0 15px rgba(255, 0, 102, 0.3);
+}
+
+.mute-toggle.muted svg {
+  filter: drop-shadow(0 0 5px #ff0066);
+}
+
+.mute-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+.mute-toggle:active {
+  transform: scale(0.95);
 }
 
 .game-area {
@@ -445,11 +562,16 @@ body::before {
   margin-top: 20px;
   transition: all 0.3s ease;
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
 
 .start-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 0 30px rgba(0, 255, 255, 0.7);
+}
+
+.start-btn:active {
+  transform: scale(0.95);
 }
 
 .hidden {
@@ -476,6 +598,50 @@ body::before {
   margin-bottom: 20px;
   text-shadow: 0 0 20px #ff0066;
   animation: gameOverPulse 1s ease-in-out infinite alternate;
+}
+
+.game-over p {
+  font-size: 18px;
+  margin-bottom: 30px;
+  color: #ffffff;
+}
+
+.game-over p span {
+  color: #ffaa00;
+  text-shadow: 0 0 15px #ffaa00;
+  font-weight: bold;
+}
+
+.game-over-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.continue-btn {
+  background: linear-gradient(45deg, #00ff00, #00aa00);
+  border: none;
+  padding: 15px 30px;
+  border-radius: 10px;
+  color: white;
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  font-weight: normal;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+}
+
+.continue-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(0, 255, 0, 0.7);
+  background: linear-gradient(45deg, #00ff44, #00cc00);
+}
+
+.continue-btn:active {
+  transform: scale(0.95);
 }
 
 @keyframes gameOverPulse {
@@ -510,17 +676,10 @@ body::before {
 }
 
 .hand-map {
-  background: rgba(0, 0, 0, 0.9);
-  border: 2px solid #00ffff;
-  border-radius: 15px;
   padding: 15px;
   width: 180px;
   color: #00ffff;
   font-family: "Press Start 2P", monospace;
-  font-size: 10px;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-  animation: handMapGlow 3s ease-in-out infinite alternate;
-  backdrop-filter: blur(5px);
 }
 
 .hand-map-left {
@@ -540,14 +699,6 @@ body::before {
   }
 }
 
-.hand-title {
-  text-align: center;
-  font-size: 14px;
-  margin-bottom: 10px;
-  text-shadow: 0 0 10px #00ffff;
-  color: #00ffff;
-  font-weight: bold;
-}
 
 .hand-visual {
   display: flex;
@@ -717,30 +868,31 @@ body::before {
 /* Estilos para CentralMessage */
 .central-message {
   position: fixed;
-  top: 20px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   z-index: 100;
   pointer-events: none;
 }
 
 .central-message-content {
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95);
   border: 3px solid #00ffff;
   border-radius: 20px;
   padding: 30px 50px;
   text-align: center;
-  box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+  box-shadow: 0 0 50px rgba(0, 255, 255, 0.8);
   animation: centralMessageGlow 2s ease-in-out infinite alternate;
+  backdrop-filter: blur(15px);
 }
 
 @keyframes centralMessageGlow {
   0% {
-    box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+    box-shadow: 0 0 50px rgba(0, 255, 255, 0.8);
     border-color: #00ffff;
   }
   100% {
-    box-shadow: 0 0 60px rgba(0, 255, 255, 0.9);
+    box-shadow: 0 0 80px rgba(0, 255, 255, 1);
     border-color: #66ffff;
   }
 }
@@ -900,18 +1052,31 @@ body::before {
 /* Estilos para el campo de fuerza */
 .force-field {
   pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: forceFieldGrow 0.3s ease-out forwards, forceFieldPulse 0.5s ease-in-out 0.3s infinite alternate;
+}
+
+@keyframes forceFieldGrow {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes forceFieldPulse {
   0% {
     transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 50px #00ffff, inset 0 0 50px rgba(0, 255, 255, 0.2);
-    border-color: #00ffff;
+    box-shadow: 0 0 50px #ff0000, inset 0 0 50px rgba(0, 255, 255, 0.2);
+    border-color: #ff0000;
   }
   100% {
     transform: translate(-50%, -50%) scale(1.05);
-    box-shadow: 0 0 80px #00ffff, inset 0 0 80px rgba(0, 255, 255, 0.4);
-    border-color: #66ffff;
+    box-shadow: 0 0 80px #ff0000, inset 0 0 80px rgba(255, 0, 0, 0.4);
+    border-color: #ff0000;
   }
 }
 
@@ -929,11 +1094,11 @@ body::before {
   left: 50%;
   width: 6px !important;
   height: 6px !important;
-  background: #00ffff !important;
+  background: #ff0000 !important;
   border-radius: 50% !important;
   transform: translate(-50%, -50%) !important;
   z-index: 20 !important;
-  box-shadow: 0 0 8px #00ffff !important;
+  box-shadow: 0 0 8px #ff0000 !important;
 }
 
 @keyframes meteoriteGlow {
@@ -943,51 +1108,8 @@ body::before {
   }
   100% {
     box-shadow: 0 0 30px #ff4500, inset 0 0 15px rgba(255, 69, 0, 0.7);
-    border-color: #ff8800;
+    border-color: #ff8800;  
   }
-}
-
-.force-field-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-}
-
-.force-field-indicator.ready {
-  border-color: #00ff00;
-  color: #00ff00;
-  text-shadow: 0 0 10px #00ff00;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-}
-
-.force-field-indicator.active {
-  border-color: #ffff00;
-  color: #ffff00;
-  text-shadow: 0 0 10px #ffff00;
-  box-shadow: 0 0 20px rgba(255, 255, 0, 0.3);
-  animation: forceFieldIndicatorPulse 0.5s ease-in-out infinite alternate;
-}
-
-@keyframes forceFieldIndicatorPulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 20px rgba(255, 255, 0, 0.3);
-  }
-  100% {
-    transform: scale(1.05);
-    box-shadow: 0 0 30px rgba(255, 255, 0, 0.6);
-  }
-}
-
-.force-field-icon {
-  font-size: 18px;
-  filter: drop-shadow(0 0 5px currentColor);
-}
-
-.force-field-text {
-  font-size: 12px;
-  font-weight: bold;
 }
 
 /* Estilos para la sección de inicio */
@@ -1048,38 +1170,22 @@ body::before {
   }
 }
 
-.stage {
-  text-align: center;
-}
-
-.stage-name {
-  font-size: 14px;
-  margin-bottom: 5px;
-  color: #ffaa00;
-  text-shadow: 0 0 10px #ffaa00;
-}
-
-.stage-description {
-  font-size: 12px;
-  color: #00ffff;
-  opacity: 0.8;
-}
-
 .instrument-panel {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
   width: 100%;
-  gap: 20px;
+  max-width: 700px;
+  gap: 30px;
 }
 
 .instrument-label {
-  font-size: 6px;
+  font-size: 12px;
   color: #ffaa00;
-  text-shadow: 0 0 5px #ffaa00;
-  margin-bottom: 4px;
-  text-align: center;
-  letter-spacing: 1px;
+  text-shadow: 0 0 8px #ffaa00;
+  margin-bottom: 10px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 3px;
 }
 
 .instrument-value {
@@ -1140,5 +1246,1265 @@ body::before {
   body {
     height: 100vh;
     height: 100dvh; /* Altura dinámica para móviles */
+  }
+}
+
+/* Estilos para ComboMessage - independiente del CentralMessage */
+.combo-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 110; /* Mayor que central-message para que aparezca encima */
+  pointer-events: none;
+  animation: comboSlideIn 0.3s ease-out;
+}
+
+@keyframes comboSlideIn {
+  0% {
+    transform: translate(-50%, -70%) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -45%) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.combo-message-content {
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.9), rgba(255, 140, 0, 0.9));
+  border: 4px solid #ffd700;
+  border-radius: 25px;
+  padding: 25px 40px;
+  text-align: center;
+  box-shadow: 
+    0 0 50px rgba(255, 215, 0, 0.8),
+    inset 0 0 20px rgba(255, 255, 255, 0.3);
+  animation: comboGlow 1s ease-in-out infinite alternate;
+  color: #000;
+  font-family: "Press Start 2P", monospace;
+  font-size: 40px;
+  font-weight: normal;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  transform: rotate(-2deg);
+}
+
+@keyframes comboGlow {
+  0% {
+    box-shadow: 
+      0 0 50px rgba(255, 215, 0, 0.8),
+      inset 0 0 20px rgba(255, 255, 255, 0.3);
+    border-color: #ffd700;
+    transform: rotate(-2deg) scale(1);
+  }
+  100% {
+    box-shadow: 
+      0 0 80px rgba(255, 215, 0, 1),
+      inset 0 0 30px rgba(255, 255, 255, 0.5);
+    border-color: #ffed4e;
+    transform: rotate(2deg) scale(1.05);
+  }
+}
+
+/* Estilos para OrderMessage - mensaje de orden perfecto */
+.order-message {
+  position: fixed;
+  top: 35%; /* Posición más arriba para no pisarse con combo */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 115; /* Ligeramente mayor que combo para aparecer encima */
+  pointer-events: none;
+  animation: orderSlideIn 0.4s ease-out;
+}
+
+@keyframes orderSlideIn {
+  0% {
+    transform: translate(-50%, -20%) scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -30%) scale(1.3);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.order-message-content {
+  background: linear-gradient(45deg, rgba(0, 255, 127, 0.9), rgba(0, 191, 255, 0.9));
+  border: 4px solid #00ff7f;
+  border-radius: 20px;
+  padding: 20px 35px;
+  text-align: center;
+  box-shadow: 
+    0 0 40px rgba(0, 255, 127, 0.8),
+    inset 0 0 15px rgba(255, 255, 255, 0.4);
+  animation: orderGlow 0.8s ease-in-out infinite alternate;
+  color: #000;
+  font-family: "Press Start 2P", monospace;
+  font-size: 32px;
+  font-weight: normal;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+  transform: rotate(1deg);
+}
+
+@keyframes orderGlow {
+  0% {
+    box-shadow: 
+      0 0 40px rgba(0, 255, 127, 0.8),
+      inset 0 0 15px rgba(255, 255, 255, 0.4);
+    border-color: #00ff7f;
+    transform: rotate(1deg) scale(1);
+  }
+  100% {
+    box-shadow: 
+      0 0 60px rgba(0, 255, 127, 1),
+      inset 0 0 25px rgba(255, 255, 255, 0.6);
+    border-color: #40ffbf;
+    transform: rotate(-1deg) scale(1.02);
+  }
+}
+
+/* Estilos para MissileLetterComponent - Misiles con estelas de fuego */
+.missile-letter {
+  position: absolute;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.missile-body {
+  position: relative;
+  z-index: 5;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.missile-letter.highlighted .missile-body {
+  box-shadow: 
+    0 0 25px rgba(255, 255, 0, 0.8),
+    inset 0 0 15px rgba(255, 255, 0, 0.3);
+  transform: scale(1.1);
+}
+
+.missile-letter-image {
+  transition: all 0.3s ease;
+  border-radius: 5px;
+}
+
+.missile-letter.highlighted .missile-letter-image {
+  filter: drop-shadow(0 0 20px #ffff00) brightness(1.3);
+  transform: scale(1.1);
+}
+
+.missile-letter-text {
+  font-family: "Press Start 2P", monospace;
+}
+
+.missile-letter.highlighted .missile-letter-text {
+  text-shadow: 0 0 20px #ffff00;
+  transform: scale(1.1);
+}
+
+/* Estela de fuego - ahora hacia arriba del misil */
+.fire-trail {
+  position: absolute;
+  top: -90%; /* Arriba del misil en lugar de abajo */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 80px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.fire-particle {
+  position: absolute;
+  border-radius: 50%;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+  filter: blur(4px); /* Aumentar blur general */
+  box-shadow: 0 0 8px currentColor, 0 4px 12px rgba(255, 100, 0, 0.6); /* Blur adicional en dirección Y */
+}
+
+.fire-1 {
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle, #ff4500 0%, #ff6600 50%, transparent 100%);
+  left: 7px;
+  top: 64px; /* Más abajo en el trail (más cerca del misil) */
+  animation: fireParticle1 0.4s infinite;
+}
+
+.fire-2 {
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle, #ff6600 0%, #ff8800 50%, transparent 100%);
+  left: 8px;
+  top: 52px;
+  animation: fireParticle2 0.5s infinite;
+}
+
+.fire-3 {
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, #ff8800 0%, #ffaa00 50%, transparent 100%);
+  left: 9px;
+  top: 40px;
+  animation: fireParticle3 0.6s infinite;
+}
+
+.fire-4 {
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle, #ffaa00 0%, #ffcc00 50%, transparent 100%);
+  left: 10px;
+  top: 28px;
+  animation: fireParticle4 0.8s infinite;
+}
+
+.fire-5 {
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle, #ffcc00 0%, #ffee00 50%, transparent 100%);
+  left: 11px;
+  top: 16px;
+  animation: fireParticle5 1s infinite;
+}
+
+/* Animaciones invertidas - ahora van hacia arriba */
+@keyframes fireParticle1 {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-8px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.8);
+  }
+}
+
+@keyframes fireParticle2 {
+  0% {
+    opacity: 0.9;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-10px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.7);
+  }
+}
+
+@keyframes fireParticle3 {
+  0% {
+    opacity: 0.8;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateY(-12px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.6);
+  }
+}
+
+@keyframes fireParticle4 {
+  0% {
+    opacity: 0.7;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(-14px) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.5);
+  }
+}
+
+@keyframes fireParticle5 {
+  0% {
+    opacity: 0.6;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: translateY(-16px) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-32px) scale(0.4);
+  }
+}
+
+/* Información del sector en la parte superior */
+.sector-info {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.sector-panel {
+  background: linear-gradient(145deg, rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
+  border: 3px solid #00ffff;
+  border-radius: 20px;
+  padding: 15px 30px;
+  text-align: center;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 255, 0.5),
+    inset 0 0 20px rgba(0, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  animation: sectorGlow 3s ease-in-out infinite alternate;
+}
+
+.sector-label {
+  font-size: 8px;
+  color: #ffaa00;
+  text-shadow: 0 0 5px #ffaa00;
+  margin-bottom: 8px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 2px;
+}
+
+.sector-name {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: #ffaa00;
+  text-shadow: 0 0 15px #ffaa00;
+  font-family: "Press Start 2P", monospace;
+  font-weight: normal;
+}
+
+.sector-description {
+  font-size: 12px;
+  color: #00ffff;
+  opacity: 0.9;
+  font-family: "Press Start 2P", monospace;
+  font-weight: normal;
+}
+
+@keyframes sectorGlow {
+  0% {
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(0, 255, 255, 0.1);
+    border-color: #00ffff;
+  }
+  100% {
+    box-shadow: 0 0 50px rgba(0, 255, 255, 0.7), inset 0 0 30px rgba(0, 255, 255, 0.2);
+    border-color: #66ffff;
+  }
+}
+
+/* Score display - números más pequeños */
+.score-display {
+  background: rgba(0, 0, 0, 0.7);
+  border: 3px solid #00ffff;
+  padding: 15px 25px;
+  border-radius: 20px;
+  text-align: center;
+  min-width: 250px;
+  box-shadow: 
+    0 0 25px rgba(0, 255, 255, 0.4),
+    inset 0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+.score-display .instrument-label {
+  font-size: 10px;
+  color: #ffaa00;
+  text-shadow: 0 0 8px #ffaa00;
+  margin-bottom: 8px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 2px;
+}
+
+.score-value {
+  font-size: 28px;
+  color: #00ffff;
+  text-shadow: 0 0 20px #00ffff;
+  font-family: "Press Start 2P", monospace;
+  font-weight: normal;
+  letter-spacing: 3px;
+  animation: scoreAnimation 0.5s ease-out;
+}
+
+/* Lives display con naves en miniatura */
+.lives-display {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #00ffff;
+  padding: 15px 20px;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+.lives-display .instrument-label {
+  font-size: 10px;
+  color: #ffaa00;
+  text-shadow: 0 0 5px #ffaa00;
+  margin-bottom: 8px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 2px;
+}
+
+.lives-ships {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+}
+
+.life-ship {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-ship {
+  width: 24px;
+  height: 24px;
+  background-image: url(../assets/images/nave.png);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 0 8px #00ffff);
+  animation: miniShipGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes miniShipGlow {
+  0% {
+    filter: drop-shadow(0 0 8px #00ffff);
+    transform: scale(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 12px #00ffff);
+    transform: scale(1.05);
+  }
+}
+
+/* Mute toggle integrado */
+.mute-toggle {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #00ffff;
+  padding: 15px 20px;
+  border-radius: 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+  min-width: 100px;
+}
+
+.mute-toggle .instrument-label {
+  font-size: 8px;
+  color: #ffaa00;
+  text-shadow: 0 0 5px #ffaa00;
+  margin-bottom: 8px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 1px;
+}
+
+.mute-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mute-toggle.unmuted {
+  color: #00ffff;
+  border-color: #00ffff;
+}
+
+.mute-toggle.unmuted svg {
+  filter: drop-shadow(0 0 5px #00ffff);
+}
+
+.mute-toggle.muted {
+  color: #ff0066;
+  border-color: #ff0066;
+  box-shadow: 0 0 15px rgba(255, 0, 102, 0.3);
+}
+
+.mute-toggle.muted svg {
+  filter: drop-shadow(0 0 5px #ff0066);
+}
+
+.mute-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+.mute-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Mensajes de combo y orden en el HUD */
+.hud-combo-message {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: hudMessageSlide 0.5s ease-out;
+}
+
+.hud-order-message {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: hudMessageSlide 0.5s ease-out;
+}
+
+@keyframes hudMessageSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.3) rotate(180deg);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-50%) scale(1.3) rotate(10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1) rotate(0deg);
+  }
+}
+
+.hud-combo-content {
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.95), rgba(255, 140, 0, 0.95), rgba(255, 69, 0, 0.9));
+  border: 3px solid #ffd700;
+  border-radius: 20px;
+  padding: 12px 20px;
+  text-align: center;
+  box-shadow: 
+    0 0 30px rgba(255, 215, 0, 0.8),
+    0 0 60px rgba(255, 215, 0, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.3);
+  color: #000;
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  font-weight: normal;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  animation: hudComboGlow 0.6s ease-in-out infinite alternate;
+  transform: rotate(-2deg);
+  min-width: 120px;
+}
+
+.hud-order-content {
+  background: linear-gradient(45deg, rgba(0, 255, 127, 0.95), rgba(0, 191, 255, 0.95), rgba(0, 150, 255, 0.9));
+  border: 3px solid #00ff7f;
+  border-radius: 20px;
+  padding: 12px 20px;
+  text-align: center;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 127, 0.8),
+    0 0 60px rgba(0, 255, 127, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.3);
+  color: #000;
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  font-weight: normal;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  animation: hudOrderGlow 0.6s ease-in-out infinite alternate;
+  transform: rotate(2deg);
+  min-width: 120px;
+}
+
+@keyframes hudComboGlow {
+  0% {
+    box-shadow: 
+      0 0 30px rgba(255, 215, 0, 0.8),
+      0 0 60px rgba(255, 215, 0, 0.4),
+      inset 0 0 20px rgba(255, 255, 255, 0.3);
+    border-color: #ffd700;
+    transform: rotate(-2deg) scale(1) translateY(0);
+  }
+  50% {
+    box-shadow: 
+      0 0 50px rgba(255, 215, 0, 1),
+      0 0 100px rgba(255, 215, 0, 0.6),
+      inset 0 0 30px rgba(255, 255, 255, 0.5);
+    border-color: #ffed4e;
+    transform: rotate(2deg) scale(1.1) translateY(-2px);
+  }
+  100% {
+    box-shadow: 
+      0 0 40px rgba(255, 215, 0, 0.9),
+      0 0 80px rgba(255, 215, 0, 0.5),
+      inset 0 0 25px rgba(255, 255, 255, 0.4);
+    border-color: #ffaa00;
+    transform: rotate(-1deg) scale(1.05) translateY(-1px);
+  }
+}
+
+@keyframes hudOrderGlow {
+  0% {
+    box-shadow: 
+      0 0 30px rgba(0, 255, 127, 0.8),
+      0 0 60px rgba(0, 255, 127, 0.4),
+      inset 0 0 20px rgba(255, 255, 255, 0.3);
+    border-color: #00ff7f;
+    transform: rotate(2deg) scale(1) translateY(0);
+  }
+  50% {
+    box-shadow: 
+      0 0 50px rgba(0, 255, 127, 1),
+      0 0 100px rgba(0, 255, 127, 0.6),
+      inset 0 0 30px rgba(255, 255, 255, 0.5);
+    border-color: #40ffbf;
+    transform: rotate(-2deg) scale(1.1) translateY(-2px);
+  }
+  100% {
+    box-shadow: 
+      0 0 40px rgba(0, 255, 127, 0.9),
+      0 0 80px rgba(0, 255, 127, 0.5),
+      inset 0 0 25px rgba(255, 255, 255, 0.4);
+    border-color: #00dd77;
+    transform: rotate(1deg) scale(1.05) translateY(-1px);
+  }
+}
+
+/* ===== NUEVA INTERFAZ INTEGRADA CON EFECTOS NEON ===== */
+
+.game-ui-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.game-ui-container > * {
+  pointer-events: auto;
+}
+
+/* ===== PANEL DE CONTROL INTEGRADO ===== */
+
+.integrated-control-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  z-index: 10;
+  gap: 20px;
+}
+
+.control-section {
+  flex: 1;
+  max-width: 280px;
+  min-width: 250px;
+}
+
+.central-instruments {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+/* ===== HUD COMPACTO ESTILO NEON ===== */
+
+.compact-hud {
+  background: linear-gradient(145deg, 
+    rgba(0, 8, 20, 0.95), 
+    rgba(0, 15, 35, 0.98),
+    rgba(0, 25, 50, 0.95)
+  );
+  border: 2px solid #00ffff;
+  border-radius: 15px;
+  padding: 12px 20px;
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.6),
+    inset 0 0 15px rgba(0, 255, 255, 0.15),
+    0 0 40px rgba(0, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
+  animation: compactHudGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes compactHudGlow {
+  0% {
+    box-shadow: 
+      0 0 20px rgba(0, 255, 255, 0.6),
+      inset 0 0 15px rgba(0, 255, 255, 0.15),
+      0 0 40px rgba(0, 255, 255, 0.3);
+    border-color: #00ffff;
+  }
+  100% {
+    box-shadow: 
+      0 0 30px rgba(0, 255, 255, 0.8),
+      inset 0 0 20px rgba(0, 255, 255, 0.2),
+      0 0 60px rgba(0, 255, 255, 0.4);
+    border-color: #44ffff;
+  }
+}
+
+.compact-instrument-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 25px;
+}
+
+.compact-score-display {
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #00ffff;
+  padding: 10px 15px;
+  border-radius: 12px;
+  text-align: center;
+  min-width: 180px;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.5),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+.compact-instrument-label {
+  font-size: 8px;
+  color: #ffaa00;
+  text-shadow: 0 0 8px #ffaa00;
+  margin-bottom: 4px;
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 1px;
+}
+
+.compact-score-value {
+  font-size: 18px;
+  color: #00ffff;
+  text-shadow: 0 0 15px #00ffff;
+  font-family: "Press Start 2P", monospace;
+  font-weight: normal;
+  letter-spacing: 2px;
+  animation: compactScoreGlow 0.5s ease-out;
+}
+
+@keyframes compactScoreGlow {
+  0% {
+    transform: scale(1.05);
+    color: #ffff00;
+    text-shadow: 0 0 20px #ffff00;
+  }
+  50% {
+    color: #00ff00;
+    text-shadow: 0 0 15px #00ff00;
+  }
+  100% {
+    transform: scale(1);
+    color: #00ffff;
+    text-shadow: 0 0 15px #00ffff;
+  }
+}
+
+.compact-lives-display {
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #00ffff;
+  padding: 10px 15px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+.compact-lives-ships {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  align-items: center;
+}
+
+.compact-life-ship {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compact-mini-ship {
+  width: 20px;
+  height: 20px;
+  background-image: url(../assets/images/nave.png);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 0 6px #00ffff);
+  animation: compactMiniShipGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes compactMiniShipGlow {
+  0% {
+    filter: drop-shadow(0 0 6px #00ffff);
+    transform: scale(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 10px #00ffff);
+    transform: scale(1.05);
+  }
+}
+
+.compact-mute-toggle {
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #00ffff;
+  padding: 10px 15px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+  min-width: 80px;
+}
+
+.compact-mute-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.compact-mute-toggle.unmuted {
+  color: #00ffff;
+  border-color: #00ffff;
+}
+
+.compact-mute-toggle.unmuted svg {
+  filter: drop-shadow(0 0 5px #00ffff);
+}
+
+.compact-mute-toggle.muted {
+  color: #ff0066;
+  border-color: #ff0066;
+  box-shadow: 0 0 15px rgba(255, 0, 102, 0.3);
+}
+
+.compact-mute-toggle.muted svg {
+  filter: drop-shadow(0 0 5px #ff0066);
+}
+
+.compact-mute-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+}
+
+.compact-mute-toggle:active {
+  transform: scale(0.95);
+}
+
+/* ===== MENSAJES FLOTANTES DE COMBO Y ORDEN ===== */
+
+.floating-combo-message {
+  position: absolute;
+  top: 50%;
+  right: 10%;
+  transform: translateY(-50%);
+  z-index: 20;
+  animation: floatingComboSlideIn 0.5s ease-out;
+}
+
+.floating-order-message {
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  transform: translateY(-50%);
+  z-index: 20;
+  animation: floatingOrderSlideIn 0.5s ease-out;
+}
+
+@keyframes floatingComboSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(100px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+@keyframes floatingOrderSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-100px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+.floating-combo-content {
+  background: linear-gradient(145deg, 
+    rgba(255, 20, 147, 0.95),
+    rgba(255, 0, 100, 0.98),
+    rgba(200, 0, 80, 0.95)
+  );
+  color: #ffffff;
+  border: 3px solid #ff1493;
+  border-radius: 20px;
+  padding: 15px 25px;
+  text-align: center;
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px #ffffff;
+  box-shadow: 
+    0 0 30px rgba(255, 20, 147, 0.8),
+    inset 0 0 15px rgba(255, 255, 255, 0.2),
+    0 0 50px rgba(255, 20, 147, 0.5);
+  animation: floatingComboGlow 2s ease-in-out infinite alternate;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes floatingComboGlow {
+  0% {
+    box-shadow: 
+      0 0 30px rgba(255, 20, 147, 0.8),
+      inset 0 0 15px rgba(255, 255, 255, 0.2),
+      0 0 50px rgba(255, 20, 147, 0.5);
+    border-color: #ff1493;
+    text-shadow: 0 0 10px #ffffff;
+  }
+  100% {
+    box-shadow: 
+      0 0 40px rgba(255, 20, 147, 1),
+      inset 0 0 20px rgba(255, 255, 255, 0.3),
+      0 0 70px rgba(255, 20, 147, 0.7);
+    border-color: #ff1493;
+    text-shadow: 0 0 15px #ffffff;
+  }
+}
+
+.floating-order-content {
+  background: linear-gradient(145deg, 
+    rgba(50, 255, 50, 0.95),
+    rgba(0, 255, 0, 0.98),
+    rgba(0, 200, 0, 0.95)
+  );
+  color: #000000;
+  border: 3px solid #00ff00;
+  border-radius: 20px;
+  padding: 15px 25px;
+  text-align: center;
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px #000000;
+  box-shadow: 
+    0 0 30px rgba(0, 255, 0, 0.8),
+    inset 0 0 15px rgba(255, 255, 255, 0.2),
+    0 0 50px rgba(0, 255, 0, 0.5);
+  animation: floatingOrderGlow 2s ease-in-out infinite alternate;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes floatingOrderGlow {
+  0% {
+    box-shadow: 
+      0 0 30px rgba(0, 255, 0, 0.8),
+      inset 0 0 15px rgba(255, 255, 255, 0.2),
+      0 0 50px rgba(0, 255, 0, 0.5);
+    border-color: #00ff00;
+    text-shadow: 0 0 5px #000000;
+  }
+  100% {
+    box-shadow: 
+      0 0 40px rgba(0, 255, 0, 1),
+      inset 0 0 20px rgba(255, 255, 255, 0.3),
+      0 0 70px rgba(0, 255, 0, 0.7);
+    border-color: #00ff00;
+    text-shadow: 0 0 8px #000000;
+  }
+}
+
+/* ===== MANOS INTEGRADAS CON EFECTOS NEON ===== */
+
+.control-section .hand-map {
+  background: linear-gradient(145deg, 
+    rgba(0, 8, 20, 0.92), 
+    rgba(0, 15, 35, 0.95),
+    rgba(0, 25, 50, 0.92)
+  );
+  border: 2px solid #00ffff;
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 
+    0 0 25px rgba(0, 255, 255, 0.5),
+    inset 0 0 15px rgba(0, 255, 255, 0.1),
+    0 0 45px rgba(0, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
+  animation: integratedHandGlow 4s ease-in-out infinite alternate;
+  transform: scale(0.85);
+}
+
+@keyframes integratedHandGlow {
+  0% {
+    box-shadow: 
+      0 0 25px rgba(0, 255, 255, 0.5),
+      inset 0 0 15px rgba(0, 255, 255, 0.1),
+      0 0 45px rgba(0, 255, 255, 0.3);
+    border-color: #00ffff;
+  }
+  100% {
+    box-shadow: 
+      0 0 35px rgba(0, 255, 255, 0.7),
+      inset 0 0 20px rgba(0, 255, 255, 0.15),
+      0 0 65px rgba(0, 255, 255, 0.4);
+    border-color: #44ffff;
+  }
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+@media (max-width: 1200px) {
+  .integrated-control-panel {
+    gap: 15px;
+  }
+  
+  .control-section {
+    max-width: 240px;
+    min-width: 220px;
+  }
+  
+  .control-section .hand-map {
+    transform: scale(0.75);
+  }
+}
+
+@media (max-width: 768px) {
+  .integrated-control-panel {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .control-section {
+    max-width: 300px;
+  }
+  
+  .control-section .hand-map {
+    transform: scale(0.6);
+  }
+  
+  .floating-combo-message,
+  .floating-order-message {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    transform: none;
+    margin: 10px;
+  }
+}
+
+/* ===== EFECTOS DE EXPLOSIÓN NEON ESPECTACULARES ===== */
+
+/* Ondas de choque neon */
+.neon-shock-wave {
+  pointer-events: none;
+  filter: blur(1px);
+  animation: neonShockPulse 0.1s ease-out infinite alternate;
+}
+
+@keyframes neonShockPulse {
+  0% {
+    filter: blur(1px) brightness(1);
+  }
+  100% {
+    filter: blur(2px) brightness(1.3);
+  }
+}
+
+/* Chispas neon principales */
+.neon-spark {
+  pointer-events: none;
+  animation: neonSparkFlicker 0.1s ease-in-out infinite alternate;
+}
+
+@keyframes neonSparkFlicker {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+  100% {
+    filter: brightness(1.4) saturate(1.5);
+  }
+}
+
+/* Partículas brillantes con estela */
+.glow-particle {
+  pointer-events: none;
+  filter: blur(0.5px);
+  animation: glowParticleShimmer 0.2s ease-in-out infinite alternate;
+}
+
+@keyframes glowParticleShimmer {
+  0% {
+    filter: blur(0.5px) brightness(1.2);
+  }
+  100% {
+    filter: blur(1px) brightness(1.8);
+  }
+}
+
+/* Arcos eléctricos */
+.electric-arc {
+  pointer-events: none;
+  filter: blur(0.8px);
+  animation: electricFlicker 0.05s ease-in-out infinite;
+}
+
+@keyframes electricFlicker {
+  0% {
+    filter: blur(0.8px) brightness(1);
+    transform: rotate(var(--arc-angle, 0deg)) scaleX(1);
+  }
+  20% {
+    filter: blur(1.2px) brightness(1.5);
+    transform: rotate(var(--arc-angle, 0deg)) scaleX(1.05);
+  }
+  40% {
+    filter: blur(0.5px) brightness(2);
+    transform: rotate(var(--arc-angle, 0deg)) scaleX(0.95);
+  }
+  60% {
+    filter: blur(1px) brightness(1.2);
+    transform: rotate(var(--arc-angle, 0deg)) scaleX(1.02);
+  }
+  80% {
+    filter: blur(0.7px) brightness(1.8);
+    transform: rotate(var(--arc-angle, 0deg)) scaleX(0.98);
+  }
+  100% {
+    filter: blur(0.8px) brightness(1);
+    transform: rotate(var(--arc-angle, 0deg)) scaleX(1);
+  }
+}
+
+/* Anillos expansivos neon */
+.neon-ring {
+  pointer-events: none;
+  filter: blur(1px);
+  animation: neonRingPulse 0.3s ease-out infinite alternate;
+}
+
+@keyframes neonRingPulse {
+  0% {
+    filter: blur(1px) brightness(1);
+  }
+  50% {
+    filter: blur(1.5px) brightness(1.5);
+  }
+  100% {
+    filter: blur(2px) brightness(1.2);
+  }
+}
+
+/* Ondas de choque de meteoritos */
+.meteorite-shock-wave {
+  pointer-events: none;
+  filter: blur(2px);
+  animation: meteoriteShockFlash 0.1s ease-out infinite alternate;
+}
+
+@keyframes meteoriteShockFlash {
+  0% {
+    filter: blur(2px) brightness(1) hue-rotate(0deg);
+  }
+  100% {
+    filter: blur(3px) brightness(1.6) hue-rotate(20deg);
+  }
+}
+
+/* Partículas de meteorito neon */
+.meteorite-neon-particle {
+  pointer-events: none;
+  filter: blur(1px);
+  animation: meteoriteNeonGlow 0.15s ease-in-out infinite alternate;
+}
+
+@keyframes meteoriteNeonGlow {
+  0% {
+    filter: blur(1px) brightness(1.2) contrast(1);
+  }
+  100% {
+    filter: blur(1.5px) brightness(1.8) contrast(1.3);
+  }
+}
+
+/* Efecto adicional para todas las partículas de explosión */
+.neon-spark,
+.glow-particle,
+.electric-arc,
+.neon-ring,
+.neon-shock-wave,
+.meteorite-shock-wave,
+.meteorite-neon-particle {
+  will-change: transform, opacity, filter;
+}
+
+/* Efectos especiales para múltiples explosiones simultáneas */
+@keyframes explosionScreenFlash {
+  0% {
+    background: rgba(255, 255, 255, 0);
+  }
+  10% {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  20% {
+    background: rgba(0, 255, 255, 0.05);
+  }
+  100% {
+    background: rgba(255, 255, 255, 0);
+  }
+}
+
+/* Partículas con mejor rendimiento usando CSS transforms */
+.particle {
+  pointer-events: none;
+  will-change: transform, opacity;
+  transform-origin: center;
+}
+
+/* Mejoras para partículas existentes */
+.particle,
+.meteorite-particle {
+  animation: particleGlow 0.5s ease-out infinite alternate;
+}
+
+@keyframes particleGlow {
+  0% {
+    filter: brightness(1) blur(1px);
+  }
+  100% {
+    filter: brightness(1.5) blur(2px);
   }
 }

@@ -6,6 +6,7 @@ export const useAudio = () => {
     const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
     const [isMuted, setIsMuted] = useState(false);
     const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
+    const normalVolumeRef = useRef<number>(0.3); // Volumen normal de la música
 
     // Inicializar AudioContext
     const initAudioContext = useCallback(() => {
@@ -201,6 +202,30 @@ export const useAudio = () => {
         });
     }, [createComplexSound]);
 
+    // Sonido de cuenta regresiva - diferentes tonos para cada número
+    const playCountdownSound = useCallback((number: number) => {
+        // Frecuencias diferentes para cada número: 2, 1, 0 (final)
+        const frequencies = {
+            2: 900,   // Tono medio-alto (era para el 2)
+            1: 1000,  // Tono alto (era para el 1)
+            0: 1200   // Tono más alto para el final
+        };
+        
+        const freq = frequencies[number as keyof typeof frequencies] || 600;
+        
+        createComplexSound({
+            frequencies: [freq, freq * 1.2],
+            durations: [0.2, 0.3],
+            types: ['square', 'sine'],
+            volumes: [0.15, 0.1],
+            delays: [0, 100],
+            effects: {
+                filter: { frequency: 2000, type: 'bandpass' },
+                distortion: false
+            }
+        });
+    }, [createComplexSound]);
+
     // Iniciar música de fondo desde archivo MP3
     const startBackgroundMusic = useCallback(() => {
         if (isMuted) return;
@@ -222,7 +247,7 @@ export const useAudio = () => {
         // Crear nuevo elemento de audio
         const audio = new Audio(mainThemeUrl);
         audio.loop = true;
-        audio.volume = 0.3; // Volumen moderado para no opacar los efectos
+        audio.volume = normalVolumeRef.current; // Usar el volumen normal guardado
         audio.preload = 'auto';
         
         // Configurar eventos
@@ -253,6 +278,22 @@ export const useAudio = () => {
             // No limpiar completamente aquí para permitir reanudar
         }
     }, []);
+
+    // Reducir volumen de la música durante el recalibrado
+    const lowerBackgroundVolume = useCallback(() => {
+        if (backgroundMusicRef.current && !isMuted) {
+            // Reducir el volumen a 30% del volumen normal
+            backgroundMusicRef.current.volume = normalVolumeRef.current * 0.3;
+        }
+    }, [isMuted]);
+
+    // Restaurar volumen normal de la música
+    const restoreBackgroundVolume = useCallback(() => {
+        if (backgroundMusicRef.current && !isMuted) {
+            // Restaurar el volumen normal
+            backgroundMusicRef.current.volume = normalVolumeRef.current;
+        }
+    }, [isMuted]);
 
     // Toggle mute/unmute
     const toggleMute = useCallback(() => {
@@ -300,8 +341,11 @@ export const useAudio = () => {
         playMeteoriteSound,
         startBackgroundMusic,
         stopBackgroundMusic,
+        lowerBackgroundVolume,
+        restoreBackgroundVolume,
         initAudioContext,
         toggleMute,
-        isMuted
+        isMuted,
+        playCountdownSound
     };
 }; 

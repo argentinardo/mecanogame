@@ -5,7 +5,7 @@ import { Instructions } from './Instructions';
 import { GameOver } from './GameOver';
 import { HandMap } from './HandMap';
 import { CentralMessage } from './CentralMessage';
-import { SoundToggle } from './SoundToggle';
+import { MissileLetterComponent } from './MissileLetterComponent';
 import { useAudio } from '../hooks/useAudio';
 import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES, KEYBOARD_POSITIONS } from '../types/game';
@@ -48,7 +48,7 @@ const MIN_GAME_SPEED = 800; // Velocidad mínima entre letras
 const SCORE_THRESHOLD = 200; // Puntos necesarios para aumentar la dificultad
 
 // Constantes de tamaños para colisiones precisas
-const LETTER_SIZE = 60;          // Tamaño de las letras que caen
+const LETTER_SIZE = 72;          // Tamaño de las letras que caen
 const CANNON_RADIUS = 50;        // Radio de colisión del cañón (punto rojo de debug)
 const FORCE_FIELD_RADIUS = 200;  // Radio del campo de fuerza protector
 
@@ -86,9 +86,12 @@ export const Game: React.FC = () => {
         playMeteoriteSound,
         startBackgroundMusic,
         stopBackgroundMusic,
+        lowerBackgroundVolume,
+        restoreBackgroundVolume,
         initAudioContext,
         toggleMute,
-        isMuted
+        isMuted,
+        playCountdownSound
     } = useAudio();
 
     const [gameState, setGameState] = useState<GameState>({
@@ -111,9 +114,21 @@ export const Game: React.FC = () => {
         isPaused: false
     });
 
-    const [cannonAngle, setCannonAngle] = useState<number>(0);
     const [comboCount, setComboCount] = useState<number>(0);
     const [lastHitTime, setLastHitTime] = useState<number>(0);
+    const [comboMultiplier, setComboMultiplier] = useState<number>(1);
+    const [sequentialHits, setSequentialHits] = useState<number>(0);
+    
+    // Estados separados para los mensajes de combo
+    const [currentComboMessage, setCurrentComboMessage] = useState<string | null>(null);
+    const [isComboMessageVisible, setIsComboMessageVisible] = useState<boolean>(false);
+    
+    // Estados separados para los mensajes de orden perfecto
+    const [currentOrderMessage, setCurrentOrderMessage] = useState<string | null>(null);
+    const [isOrderMessageVisible, setIsOrderMessageVisible] = useState<boolean>(false);
+    
+    // Estado para manejar la tecla especial (barra espaciadora)
+    const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
 
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const gameLoopRef = useRef<number | undefined>(undefined);
@@ -121,6 +136,13 @@ export const Game: React.FC = () => {
     const lastSpawnTimeRef = useRef<number>(0);
     const lastSpawnedLetterRef = useRef<string | null>(null);
     const comboTimeoutRef = useRef<number | undefined>(undefined);
+
+    // Referencia para controlar las partículas activas
+    const activeParticlesRef = useRef<HTMLDivElement[]>([]);
+
+    // Referencias para acceder al estado actual sin dependencias
+    const gameStateRef = useRef(gameState);
+    gameStateRef.current = gameState;
 
     const getLetterPosition = useCallback((letter: string) => {
         const position = KEYBOARD_POSITIONS[letter];
@@ -148,30 +170,30 @@ export const Game: React.FC = () => {
     }, []);
 
     const spawnLetters = useCallback(() => {
-        if (!gameState.isPlaying || gameState.isPaused) return;
+        const currentGameState = gameStateRef.current;
 
-        const now = Date.now();
-        if (now - lastSpawnTimeRef.current < gameState.gameSpeed) {
-            spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
+        if (!currentGameState.isPlaying || currentGameState.isPaused) {
             return;
         }
 
-        if (gameState.fallingLetters.length >= MAX_LETTERS_ON_SCREEN) {
-            spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
+        const now = Date.now();
+        if (now - lastSpawnTimeRef.current < currentGameState.gameSpeed) {
+            return;
+        }
+
+        if (currentGameState.fallingLetters.length >= MAX_LETTERS_ON_SCREEN) {
             return;
         }
 
         // Verificar que currentStage esté dentro de los límites válidos
-        if (gameState.currentStage < 0 || gameState.currentStage >= TYPING_STAGES.length) {
-            console.warn('Índice de etapa inválido:', gameState.currentStage);
-            spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
+        if (currentGameState.currentStage < 0 || currentGameState.currentStage >= TYPING_STAGES.length) {
+            console.warn('Índice de etapa inválido:', currentGameState.currentStage);
             return;
         }
 
-        const currentStage = TYPING_STAGES[gameState.currentStage];
+        const currentStage = TYPING_STAGES[currentGameState.currentStage];
         if (!currentStage || !currentStage.letters || currentStage.letters.length === 0) {
-            console.warn('No hay letras disponibles para la etapa actual');
-            spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
+            console.warn('No hay letras disponibles para la etapa actual', currentStage);
             return;
         }
 
@@ -187,13 +209,12 @@ export const Game: React.FC = () => {
         const { x, y } = getLetterPosition(letter);
         
         // Verificar si ya existe una letra en la misma posición
-        const isPositionOccupied = gameState.fallingLetters.some(
+        const isPositionOccupied = currentGameState.fallingLetters.some(
             existingLetter => Math.abs(existingLetter.x - x) < 60 // 60 es el ancho de la letra
         );
 
         if (isPositionOccupied) {
-            // Si la posición está ocupada, intentar de nuevo en el siguiente ciclo
-            spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
+            // Si la posición está ocupada, salir y esperar al siguiente ciclo
             return;
         }
         
@@ -209,12 +230,10 @@ export const Game: React.FC = () => {
                 id: now + Math.random()
             }]
         }));
-
-        spawnIntervalRef.current = window.setTimeout(spawnLetters, gameState.gameSpeed);
-    }, [gameState.isPlaying, gameState.fallingLetters, gameState.gameSpeed, gameState.letterSpeed, gameState.currentStage, getLetterPosition]);
+    }, [getLetterPosition]); // Solo getLetterPosition como dependencia
 
     const shootBullet = useCallback((targetLetter: string) => {
-        if (gameState.isPenalized) return;
+        if (gameState.isPenalized || gameState.isPaused) return;
         
         // No permitir disparar mientras el campo de fuerza esté activo
         if (gameState.forceField?.isActive) return;
@@ -251,14 +270,27 @@ export const Game: React.FC = () => {
         const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
         
-        // Rotar el cañón hacia el objetivo
-        const cannonRotationAngle = Math.atan2(deltaX, -deltaY) * (180 / Math.PI);
-        setCannonAngle(cannonRotationAngle);
+        // Aplicar retroceso temporal al cañón en dirección opuesta al disparo
+        const cannonElement = document.querySelector('.cannon') as HTMLElement;
+        if (cannonElement) {
+            // Calcular el retroceso en dirección opuesta al láser
+            const recoilIntensity = 8; // Intensidad del retroceso
+            const recoilAngle = Math.atan2(deltaY, deltaX) + Math.PI; // Dirección opuesta
+            const recoilX = Math.cos(recoilAngle) * recoilIntensity;
+            const recoilY = Math.sin(recoilAngle) * recoilIntensity;
+            
+            cannonElement.style.transform = `translateX(calc(-50% + ${recoilX}px)) translateY(${recoilY}px)`;
+            cannonElement.style.transition = 'transform 0.05s ease-out';
+            
+            // Restaurar posición normal después del retroceso
+            setTimeout(() => {
+                cannonElement.style.transform = `translateX(-50%) translateY(0px)`;
+                cannonElement.style.transition = 'transform 0.15s ease-in-out';
+            }, 80);
+        }
         
         // Restablecer el ángulo del cañón después del disparo con animación rápida
-        setTimeout(() => {
-            setCannonAngle(0);
-        }, 150);
+
         
         // Establecer el estilo del rayo
         laser.style.position = 'fixed';
@@ -304,7 +336,7 @@ export const Game: React.FC = () => {
             // Ejecutar hitLetter de forma asíncrona para evitar problemas de dependencia
             setTimeout(() => hitLetter(targetLetterObj), 0);
         }, 100);
-    }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound, setCannonAngle]);
+    }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound]);
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {
@@ -325,14 +357,43 @@ export const Game: React.FC = () => {
             return {
                 ...prev,
                 currentStage: nextStage,
-                fallingLetters: [], // Limpiar letras actuales
+                // NO limpiar letras actuales para mantener continuidad del juego
                 gameSpeed: Math.max(INITIAL_GAME_SPEED - (nextStage * 100), MIN_GAME_SPEED),
                 letterSpeed: INITIAL_LETTER_SPEED + (nextStage * 0.5)
             };
         });
     }, [playLevelUpSound]);
 
+    // Función para mostrar mensaje de combo independiente
+    const displayComboMessage = useCallback((message: string, duration: number = 2000) => {
+        setCurrentComboMessage(message);
+        setIsComboMessageVisible(true);
+
+        setTimeout(() => {
+            setIsComboMessageVisible(false);
+            setTimeout(() => {
+                setCurrentComboMessage(null);
+            }, 300); // Tiempo extra para la animación de salida
+        }, duration);
+    }, []);
+
+    // Función para mostrar mensaje de orden perfecto independiente
+    const displayOrderMessage = useCallback((message: string, duration: number = 2000) => {
+        setCurrentOrderMessage(message);
+        setIsOrderMessageVisible(true);
+
+        setTimeout(() => {
+            setIsOrderMessageVisible(false);
+            setTimeout(() => {
+                setCurrentOrderMessage(null);
+            }, 300); // Tiempo extra para la animación de salida
+        }, duration);
+    }, []);
+
     const hitLetter = useCallback((letterObj: FallingLetter) => {
+        // No procesar hits durante la pausa
+        if (gameState.isPaused) return;
+        
         const gameArea = gameAreaRef.current?.getBoundingClientRect();
         if (!gameArea) return;
 
@@ -345,34 +406,107 @@ export const Game: React.FC = () => {
         
         createExplosion(explosionX, explosionY);
         
+        // Verificar si es un hit secuencial (la letra más antigua)
+        const isSequentialHit = gameState.fallingLetters.length > 0 && 
+            gameState.fallingLetters.reduce((oldest, current) => 
+                current.id < oldest.id ? current : oldest
+            ).id === letterObj.id;
+        
         // Sistema de combos
         const currentTime = Date.now();
         const timeSinceLastHit = currentTime - lastHitTime;
         
-        if (timeSinceLastHit <= 1500 && lastHitTime > 0) {
-            // Continuar combo (aumentado a 1500ms para facilitar los combos)
-            setComboCount(prev => {
-                const newCount = prev + 1;
-                // Programar mostrar combo con delay en lugar de inmediatamente
-                setTimeout(() => scheduleComboMessage(), 0);
-                return newCount;
-            });
+        let newComboCount: number;
+        let newSequentialHits = sequentialHits;
+        
+        if (timeSinceLastHit <= 1200 && lastHitTime > 0) {
+            // Continuar combo
+            newComboCount = comboCount + 1;
+            setComboCount(newComboCount);
+            
+            // Actualizar hits secuenciales
+            if (isSequentialHit) {
+                newSequentialHits = sequentialHits + 1;
+                setSequentialHits(newSequentialHits);
+            } else {
+                newSequentialHits = 0;
+                setSequentialHits(0);
+            }
+            
+            // Mostrar combo inmediatamente si es 3 o más
+            if (newComboCount >= 3) {
+                let adjective = '';
+                if (newComboCount >= 15) adjective = 'ULTRA';
+                else if (newComboCount >= 12) adjective = 'MEGA';
+                else if (newComboCount >= 8) adjective = 'SUPER';
+                else if (newComboCount >= 6) adjective = 'AWESOME';
+                else if (newComboCount >= 4) adjective = 'GREAT';
+                else if (newComboCount >= 3) adjective = 'GOOD';
+                
+                // Reproducir sonido de combo
+                playComboSuccessSound();
+                
+                // Mostrar mensaje inmediatamente
+                const message = `${adjective} COMBO ${newComboCount}! x${comboMultiplier}`;
+                displayComboMessage(message, 1500);
+            }
         } else {
             // Iniciar nuevo combo
-            setComboCount(1);
-            // Programar mostrar combo para el primer hit también
-            setTimeout(() => scheduleComboMessage(), 0);
+            newComboCount = 1;
+            setComboCount(newComboCount);
+            
+            // Resetear hits secuenciales
+            if (isSequentialHit) {
+                newSequentialHits = 1;
+                setSequentialHits(1);
+            } else {
+                newSequentialHits = 0;
+                setSequentialHits(0);
+            }
         }
         
-        // TODO: Feedback inmediato deshabilitado para evitar conflicto con combos
-        // if (comboCount >= 1) {
-        //     showCentralMessage(`Hit ${comboCount + 1}!`, 800);
-        // }
+        // Calcular multiplicador de combo
+        let currentMultiplier = 1;
+        if (newComboCount >= 15) currentMultiplier = 4;
+        else if (newComboCount >= 10) currentMultiplier = 3;
+        else if (newComboCount >= 6) currentMultiplier = 2.5;
+        else if (newComboCount >= 3) currentMultiplier = 2;
+        else if (newComboCount >= 2) currentMultiplier = 1.5;
+        
+        setComboMultiplier(currentMultiplier);
+        
+        // Calcular bonus por orden secuencial
+        let sequentialBonus = 0;
+        if (newSequentialHits >= 5) sequentialBonus = 50;
+        else if (newSequentialHits >= 3) sequentialBonus = 20;
+        else if (newSequentialHits >= 2) sequentialBonus = 10;
+        
+        // Calcular puntaje final
+        const baseScore = 10;
+        const comboScore = Math.floor(baseScore * currentMultiplier);
+        const totalScore = comboScore + sequentialBonus;
+        
+        // Mostrar mensaje de bonus secuencial si aplica
+        if (sequentialBonus > 0) {
+            setTimeout(() => {
+                const message = `ORDEN PERFECTO +${sequentialBonus}!`;
+                displayOrderMessage(message, 1500);
+            }, 500);
+        }
         
         setLastHitTime(currentTime);
         
         setGameState(prev => {
-            const newScore = prev.score + 10;
+            // No incrementar velocidades si el juego está pausado
+            if (prev.isPaused) {
+                return {
+                    ...prev,
+                    score: prev.score + totalScore,
+                    fallingLetters: prev.fallingLetters.filter(l => l.id !== letterObj.id)
+                };
+            }
+            
+            const newScore = prev.score + totalScore;
             const shouldIncreaseDifficulty = newScore % SCORE_THRESHOLD === 0;
             const newGameSpeed = shouldIncreaseDifficulty 
                 ? Math.max(MIN_GAME_SPEED, prev.gameSpeed - GAME_SPEED_DECREMENT)
@@ -381,8 +515,12 @@ export const Game: React.FC = () => {
                 ? prev.letterSpeed + SPEED_INCREMENT
                 : prev.letterSpeed;
             
+            // Corregir la lógica de avance de etapas
             const nextStage = prev.currentStage + 1;
-            const shouldAdvanceStage = newScore >= (prev.currentStage + 1) * SCORE_THRESHOLD && nextStage < TYPING_STAGES.length;
+            const shouldAdvanceStage = newScore >= (prev.currentStage + 1) * SCORE_THRESHOLD && 
+                                     nextStage < TYPING_STAGES.length;
+            
+            const finalStage = shouldAdvanceStage ? nextStage : prev.currentStage;
             
             return {
                 ...prev,
@@ -390,15 +528,18 @@ export const Game: React.FC = () => {
                 gameSpeed: newGameSpeed,
                 letterSpeed: newLetterSpeed,
                 fallingLetters: prev.fallingLetters.filter(l => l.id !== letterObj.id),
-                currentStage: shouldAdvanceStage ? nextStage : prev.currentStage
+                currentStage: finalStage
             };
         });
 
-        if (gameState.score >= (gameState.currentStage + 1) * SCORE_THRESHOLD && 
+        // Llamar advanceStage solo si realmente necesitamos avanzar
+        const currentScore = gameState.score + totalScore;
+        if (currentScore >= (gameState.currentStage + 1) * SCORE_THRESHOLD && 
             gameState.currentStage + 1 < TYPING_STAGES.length) {
-            advanceStage();
+            // Usar setTimeout para evitar problemas de estado
+            setTimeout(() => advanceStage(), 0);
         }
-    }, [gameState.score, gameState.currentStage, advanceStage, playExplosionSound, lastHitTime, setComboCount, setLastHitTime]);
+    }, [gameState.isPaused, gameState.fallingLetters, advanceStage, playExplosionSound, lastHitTime, comboCount, sequentialHits, comboMultiplier, playComboSuccessSound, displayComboMessage, displayOrderMessage]);
 
     // Función para mostrar mensaje central temporalmente
     const showCentralMessage = useCallback((message: string, duration: number = 2000) => {
@@ -417,22 +558,6 @@ export const Game: React.FC = () => {
         }, duration);
     }, []);
 
-    // Función para mostrar mensaje de combo
-    const showComboMessage = useCallback((count: number) => {
-        if (count < 2) return; // Mostrar combo desde 2 aciertos (más fácil)
-        
-        let adjective = '';
-        if (count >= 15) adjective = 'ULTRA';
-        else if (count >= 12) adjective = 'MEGA';
-        else if (count >= 8) adjective = 'SUPER';
-        else if (count >= 6) adjective = 'AWESOME';
-        else if (count >= 4) adjective = 'GREAT';
-        else if (count >= 2) adjective = 'GOOD';
-        
-        const message = `${adjective} COMBO ${count}!`;
-        showCentralMessage(message, 2500);
-    }, [showCentralMessage]);
-
     // Función para resetear combo
     const resetCombo = useCallback(() => {
         // Limpiar timeout pendiente
@@ -441,38 +566,11 @@ export const Game: React.FC = () => {
             comboTimeoutRef.current = undefined;
         }
         
-        if (comboCount >= 2) {
-            showComboMessage(comboCount);
-        }
         setComboCount(0);
         setLastHitTime(0);
-    }, [comboCount, showComboMessage, setComboCount, setLastHitTime]);
-
-    // Función para programar mostrar combo con delay
-    const scheduleComboMessage = useCallback(() => {
-        // Limpiar timeout anterior si existe
-        if (comboTimeoutRef.current) {
-            clearTimeout(comboTimeoutRef.current);
-        }
-        
-        // Programar mostrar el combo después de 500ms de inactividad (más rápido)
-        comboTimeoutRef.current = window.setTimeout(() => {
-            if (comboCount >= 2) {
-                let adjective = '';
-                if (comboCount >= 15) adjective = 'ULTRA';
-                else if (comboCount >= 12) adjective = 'MEGA';
-                else if (comboCount >= 8) adjective = 'SUPER';
-                else if (comboCount >= 6) adjective = 'AWESOME';
-                else if (comboCount >= 4) adjective = 'GREAT';
-                else if (comboCount >= 2) adjective = 'GOOD';
-                
-                const message = `${adjective} COMBO ${comboCount}!`;
-                showCentralMessage(message, 2000);
-            }
-        }, 500);
-    }, [comboCount, showCentralMessage]);
-
-    // Efecto para mostrar mensajes de combo eliminado - ahora usa delay
+        setComboMultiplier(1);
+        setSequentialHits(0);
+    }, [setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits]);
 
     const handleMiss = useCallback(() => {
         // Reproducir sonido de fallo
@@ -481,29 +579,42 @@ export const Game: React.FC = () => {
         // Resetear combo al fallar
         resetCombo();
         
+        // Bajar el volumen de la música durante el recalibrado
+        lowerBackgroundVolume();
+        
+        // Comenzar con 4 segundos para que muestre 3, 2, 1 correctamente
         setGameState(prev => ({
             ...prev,
             isPenalized: true,
-            penaltyTime: 3,
+            penaltyTime: 4,
             showCentralMessage: true,
             centralMessage: 'Recalibrando... 3s'
         }));
+
+        // Programar sonidos en las transiciones
+        setTimeout(() => playCountdownSound(2), 1000); // Suena al pasar de 3 a 2
+        setTimeout(() => playCountdownSound(1), 2000); // Suena al pasar de 2 a 1
+        setTimeout(() => playCountdownSound(0), 3000); // Suena al desaparecer el mensaje
 
         const penaltyInterval = setInterval(() => {
             setGameState(prev => {
                 const newPenaltyTime = prev.penaltyTime - 1;
                 
-                if (newPenaltyTime > 0) {
+                // Mostrar el tiempo correcto (restando 1 para que se vea 3, 2, 1)
+                if (newPenaltyTime > 1) {
+                    const displayTime = newPenaltyTime - 1;
+                    
                     return {
                         ...prev,
                         penaltyTime: newPenaltyTime,
                         showCentralMessage: true,
-                        centralMessage: `Recalibrando... ${newPenaltyTime}s`
+                        centralMessage: `Recalibrando... ${displayTime}s`
                     };
                 }
                 
-                // Cuando llegue a 0, limpiar todo
+                // Cuando llegue a 1 (que representa 0), limpiar todo y restaurar el volumen
                 clearInterval(penaltyInterval);
+                restoreBackgroundVolume();
                 return {
                     ...prev,
                     isPenalized: false,
@@ -513,80 +624,305 @@ export const Game: React.FC = () => {
                 };
             });
         }, 1000);
-    }, [playMissSound, resetCombo]);
+    }, [playMissSound, resetCombo, lowerBackgroundVolume, restoreBackgroundVolume, playCountdownSound]);
 
     const createExplosion = (x: number, y: number) => {
-        // Solo crear partículas, sin la bola de explosión
-        for (let i = 0; i < 20; i++) {
-            createParticle(x, y);
+        // Limpiar partículas viejas si hay demasiadas
+        if (activeParticlesRef.current.length > 30) {
+            const oldParticles = activeParticlesRef.current.splice(0, 15);
+            oldParticles.forEach(particle => {
+                if (particle.parentNode) {
+                    particle.remove();
+                }
+            });
         }
+
+        // Solo crear onda de choque circular (más eficiente)
+        createShockWave(x, y);
+        
+        // Reducir efectos para mejor rendimiento
+        createNeonSparks(x, y, 8); // Reducido de 12 a 8
+        createGlowParticles(x, y, 5); // Reducido de 8 a 5
+        // Eliminar arcos eléctricos y anillos para optimizar
     };
 
-    const createParticle = (x: number, y: number) => {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.position = 'fixed';
-        particle.style.left = `${x}px`;
-        particle.style.top = `${y}px`;
-        particle.style.transform = 'translate(-50%, -50%)';
-        document.body.appendChild(particle);
+    // Crear onda de choque expansiva (simplificada)
+    const createShockWave = (x: number, y: number) => {
+        const shockWave = document.createElement('div');
+        shockWave.className = 'neon-shock-wave';
+        shockWave.style.position = 'fixed';
+        shockWave.style.left = `${x}px`;
+        shockWave.style.top = `${y}px`;
+        shockWave.style.width = '10px';
+        shockWave.style.height = '10px';
+        shockWave.style.border = '3px solid #00ffff';
+        shockWave.style.borderRadius = '50%';
+        shockWave.style.transform = 'translate(-50%, -50%)';
+        shockWave.style.zIndex = '15';
+        shockWave.style.pointerEvents = 'none';
+        shockWave.style.boxShadow = '0 0 20px #00ffff, inset 0 0 20px #00ffff';
+        document.body.appendChild(shockWave);
         
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 8 + 4;
-        const vx = Math.cos(angle) * speed;
-        let vy = Math.sin(angle) * speed;
-        const gravity = 0.2;
+        activeParticlesRef.current.push(shockWave);
         
-        let px = x, py = y;
-        const particleInterval = setInterval(() => {
-            px += vx;
-            vy += gravity;
-            py += vy;
+        let scale = 1;
+        let opacity = 1;
+        const shockInterval = setInterval(() => {
+            scale += 0.6; // Reducido de 0.8 a 0.6
+            opacity -= 0.08; // Más rápido para liberar recursos
             
-            particle.style.left = `${px}px`;
-            particle.style.top = `${py}px`;
-            particle.style.opacity = String(parseFloat(particle.style.opacity || '1') - 0.01);
+            shockWave.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            shockWave.style.opacity = String(opacity);
+            shockWave.style.borderColor = `rgba(0, 255, 255, ${opacity})`;
+            shockWave.style.boxShadow = `0 0 ${15 * scale}px rgba(0, 255, 255, ${opacity})`;
             
-            if (parseFloat(particle.style.opacity) <= 0 || py > window.innerHeight) {
-                clearInterval(particleInterval);
-                particle.remove();
+            if (opacity <= 0) {
+                clearInterval(shockInterval);
+                const index = activeParticlesRef.current.indexOf(shockWave);
+                if (index > -1) {
+                    activeParticlesRef.current.splice(index, 1);
+                }
+                shockWave.remove();
             }
         }, 16);
     };
 
-    const startGame = useCallback(() => {
-        if (spawnIntervalRef.current) {
-            clearTimeout(spawnIntervalRef.current);
+    // Crear chispas neon principales (optimizadas)
+    const createNeonSparks = (x: number, y: number, count: number) => {
+        for (let i = 0; i < count; i++) {
+            const spark = document.createElement('div');
+            spark.className = 'neon-spark';
+            
+            // Colores neon vibrantes (reducidos)
+            const colors = [
+                '#00ffff', '#ff0080', '#ffff00', '#00ff00'
+            ];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            const size = Math.random() * 6 + 4; // Reducido de 8+6 a 6+4
+            
+            spark.style.position = 'fixed';
+            spark.style.left = `${x}px`;
+            spark.style.top = `${y}px`;
+            spark.style.width = `${size}px`;
+            spark.style.height = `${size}px`;
+            spark.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
+            spark.style.borderRadius = '50%';
+            spark.style.transform = 'translate(-50%, -50%)';
+            spark.style.zIndex = '10';
+            spark.style.pointerEvents = 'none';
+            spark.style.boxShadow = `0 0 ${size * 2}px ${color}`;
+            document.body.appendChild(spark);
+            
+            activeParticlesRef.current.push(spark);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 10 + 6; // Reducido
+            const vx = Math.cos(angle) * speed;
+            let vy = Math.sin(angle) * speed;
+            const gravity = 0.3;
+            
+            let px = x, py = y;
+            let opacity = 1;
+            
+            const sparkInterval = setInterval(() => {
+                px += vx;
+                vy += gravity;
+                py += vy;
+                
+                opacity -= 0.04; // Más rápido
+                
+                spark.style.left = `${px}px`;
+                spark.style.top = `${py}px`;
+                spark.style.opacity = String(opacity);
+                
+                if (opacity <= 0 || py > window.innerHeight) {
+                    clearInterval(sparkInterval);
+                    const index = activeParticlesRef.current.indexOf(spark);
+                    if (index > -1) {
+                        activeParticlesRef.current.splice(index, 1);
+                    }
+                    spark.remove();
+                }
+            }, 16);
         }
-        if (gameLoopRef.current) {
-            cancelAnimationFrame(gameLoopRef.current);
+    };
+
+    // Crear partículas brillantes con estela (simplificadas)
+    const createGlowParticles = (x: number, y: number, count: number) => {
+        for (let i = 0; i < count; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'glow-particle';
+            
+            const colors = ['#ffffff', '#ffff00', '#00ffff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            particle.style.position = 'fixed';
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            particle.style.width = '4px';
+            particle.style.height = '4px';
+            particle.style.background = color;
+            particle.style.borderRadius = '50%';
+            particle.style.transform = 'translate(-50%, -50%)';
+            particle.style.zIndex = '8';
+            particle.style.pointerEvents = 'none';
+            particle.style.boxShadow = `0 0 10px ${color}`;
+            document.body.appendChild(particle);
+            
+            activeParticlesRef.current.push(particle);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 12 + 8;
+            const vx = Math.cos(angle) * speed;
+            let vy = Math.sin(angle) * speed;
+            const gravity = 0.2;
+            
+            let px = x, py = y;
+            let opacity = 1;
+            
+            const particleInterval = setInterval(() => {
+                px += vx;
+                vy += gravity;
+                py += vy;
+                
+                opacity -= 0.05; // Más rápido
+                
+                particle.style.left = `${px}px`;
+                particle.style.top = `${py}px`;
+                particle.style.opacity = String(opacity);
+                
+                if (opacity <= 0 || py > window.innerHeight) {
+                    clearInterval(particleInterval);
+                    const index = activeParticlesRef.current.indexOf(particle);
+                    if (index > -1) {
+                        activeParticlesRef.current.splice(index, 1);
+                    }
+                    particle.remove();
+                }
+            }, 16);
         }
+    };
 
-        lastSpawnTimeRef.current = 0;
+    // Función para crear partículas de meteorito mejoradas (simplificadas)
+    const createMeteoriteParticles = (x: number, y: number) => {
+        // Crear onda de choque específica para meteoritos
+        createMeteoriteShockWave(x, y);
+        
+        // Crear menos partículas de fuego para optimizar
+        for (let i = 0; i < 8; i++) { // Reducido de 15 a 8
+            const particle = document.createElement('div');
+            particle.className = 'meteorite-neon-particle';
+            
+            // Colores de fuego con efectos neon (reducidos)
+            const colors = [
+                '#ff4500', '#ff6600', '#ffff00', '#ff0000'
+            ];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            const size = Math.random() * 8 + 6; // Reducido de 10+8 a 8+6
+            
+            particle.style.position = 'fixed';
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
+            particle.style.borderRadius = '50%';
+            particle.style.transform = 'translate(-50%, -50%)';
+            particle.style.zIndex = '100';
+            particle.style.pointerEvents = 'none';
+            particle.style.boxShadow = `0 0 ${size * 2}px ${color}`;
+            document.body.appendChild(particle);
+            
+            activeParticlesRef.current.push(particle);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 12 + 6;
+            const vx = Math.cos(angle) * speed;
+            let vy = Math.sin(angle) * speed;
+            const gravity = 0.35;
+            
+            let px = x, py = y;
+            let opacity = 1;
+            
+            const particleInterval = setInterval(() => {
+                px += vx;
+                vy += gravity;
+                py += vy;
+                
+                opacity -= 0.04; // Más rápido
+                
+                particle.style.left = `${px}px`;
+                particle.style.top = `${py}px`;
+                particle.style.opacity = String(opacity);
+                
+                if (opacity <= 0 || py > window.innerHeight) {
+                    clearInterval(particleInterval);
+                    const index = activeParticlesRef.current.indexOf(particle);
+                    if (index > -1) {
+                        activeParticlesRef.current.splice(index, 1);
+                    }
+                    particle.remove();
+                }
+            }, 16);
+        }
+    };
 
-        // Solo inicializar contexto de audio, no iniciar música aquí
-        initAudioContext();
+    // Crear onda de choque específica para meteoritos (simplificada)
+    const createMeteoriteShockWave = (x: number, y: number) => {
+        const shockWave = document.createElement('div');
+        shockWave.className = 'meteorite-shock-wave';
+        shockWave.style.position = 'fixed';
+        shockWave.style.left = `${x}px`;
+        shockWave.style.top = `${y}px`;
+        shockWave.style.width = '15px';
+        shockWave.style.height = '15px';
+        shockWave.style.border = '4px solid #ff4500';
+        shockWave.style.borderRadius = '50%';
+        shockWave.style.transform = 'translate(-50%, -50%)';
+        shockWave.style.zIndex = '20';
+        shockWave.style.pointerEvents = 'none';
+        shockWave.style.boxShadow = '0 0 20px #ff4500';
+        document.body.appendChild(shockWave);
+        
+        activeParticlesRef.current.push(shockWave);
+        
+        let scale = 1;
+        let opacity = 1;
+        const shockInterval = setInterval(() => {
+            scale += 1.0; // Reducido de 1.2 a 1.0
+            opacity -= 0.08; // Más rápido
+            
+            shockWave.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            shockWave.style.opacity = String(opacity);
+            shockWave.style.borderColor = `rgba(255, 69, 0, ${opacity})`;
+            
+            if (opacity <= 0) {
+                clearInterval(shockInterval);
+                const index = activeParticlesRef.current.indexOf(shockWave);
+                if (index > -1) {
+                    activeParticlesRef.current.splice(index, 1);
+                }
+                shockWave.remove();
+            }
+        }, 16);
+    };
 
-        setGameState({
-            score: 0,
-            lives: 3,
-            isPlaying: true,
-            isPenalized: false,
-            penaltyTime: 0,
-            fallingLetters: [],
-            bullets: [],
-            meteorites: [],
-            forceField: null,
-            gameSpeed: INITIAL_GAME_SPEED,
-            letterSpeed: INITIAL_LETTER_SPEED,
-            currentStage: 0,
-            pressedKey: null,
-            centralMessage: null,
-            showCentralMessage: false,
-            countdown: null,
-            isPaused: false
-        });
-    }, [initAudioContext]);
+    // Función para obtener las coordenadas exactas del centro del cañón
+    const getCannonCenterCoordinates = useCallback(() => {
+        const gameArea = gameAreaRef.current;
+        if (!gameArea) return { x: 0, y: 0 };
+        
+        const gameAreaRect = gameArea.getBoundingClientRect();
+        
+        // El cañón está centrado horizontalmente en el game-area
+        // y posicionado a 150px desde el fondo (según CSS: bottom: 150px)
+        const cannonX = gameAreaRect.width / 2;
+        const cannonY = gameAreaRect.height - 150; // 150px desde el fondo según CSS
+        
+        return { x: cannonX, y: cannonY };
+    }, []);
 
     const endGame = useCallback(() => {
         // Reproducir sonido de game over
@@ -595,63 +931,28 @@ export const Game: React.FC = () => {
         // Detener música de fondo
         stopBackgroundMusic();
         
-        setGameState(prev => ({
-            ...prev,
-            isPlaying: false
-        }));
-        
+        // Limpiar todos los timeouts e intervalos cuando el juego termina
         if (spawnIntervalRef.current) {
-            clearTimeout(spawnIntervalRef.current);
-        }
-        if (gameLoopRef.current) {
-            cancelAnimationFrame(gameLoopRef.current);
-        }
-    }, [playGameOverSound, stopBackgroundMusic]);
-
-    const restartGame = useCallback(() => {
-        // Limpiar todos los timeouts e intervalos
-        if (spawnIntervalRef.current) {
-            clearTimeout(spawnIntervalRef.current);
+            clearInterval(spawnIntervalRef.current);
             spawnIntervalRef.current = undefined;
         }
         if (gameLoopRef.current) {
             cancelAnimationFrame(gameLoopRef.current);
             gameLoopRef.current = undefined;
         }
+        if (comboTimeoutRef.current) {
+            clearTimeout(comboTimeoutRef.current);
+            comboTimeoutRef.current = undefined;
+        }
         
-        // Resetear completamente las referencias
-        lastSpawnTimeRef.current = 0;
-        lastSpawnedLetterRef.current = null;
-        
-        // Resetear estados de combo
-        setComboCount(0);
-        setLastHitTime(0);
-        setCannonAngle(0);
-        
-        // Inicializar contexto de audio
-        initAudioContext();
-        
-        // Establecer estado inicial completamente limpio
-        setGameState({
-            score: 0,
-            lives: 3,
-            isPlaying: true,
-            isPenalized: false,
-            penaltyTime: 0,
-            fallingLetters: [], // Asegurar que esté vacío
-            bullets: [],
-            meteorites: [],
-            forceField: null,
-            gameSpeed: INITIAL_GAME_SPEED,
-            letterSpeed: INITIAL_LETTER_SPEED,
-            currentStage: 0, // Comenzar desde la primera etapa
-            pressedKey: null,
-            centralMessage: null,
-            showCentralMessage: false,
-            countdown: null,
+        setGameState(prev => ({
+            ...prev,
+            isPlaying: false,
+            fallingLetters: [], // Limpiar letras al terminar el juego
+            meteorites: [], // Limpiar meteoritos al terminar el juego
             isPaused: false
-        });
-    }, [initAudioContext, setComboCount, setLastHitTime, setCannonAngle]);
+        }));
+    }, [playGameOverSound, stopBackgroundMusic]);
 
     // Función para iniciar cuenta regresiva cuando se pierde una vida
     const startLifeLostCountdown = useCallback(() => {
@@ -664,6 +965,11 @@ export const Game: React.FC = () => {
             countdown: 3,
             showCentralMessage: true
         }));
+
+        // Programar sonidos en las transiciones
+        setTimeout(() => playCountdownSound(2), 1000); // Suena al pasar de 3 a 2
+        setTimeout(() => playCountdownSound(1), 2000); // Suena al pasar de 2 a 1
+        setTimeout(() => playCountdownSound(0), 3000); // Suena al desaparecer el mensaje
 
         let currentCount = 3;
         const countdownInterval = setInterval(() => {
@@ -684,29 +990,15 @@ export const Game: React.FC = () => {
                 showCentralMessage('¡Continúa!', 1000);
             }
         }, 1000);
-    }, [showCentralMessage, playLifeLostSound]);
-
-    // Función para obtener las coordenadas exactas del centro del cañón
-    const getCannonCenterCoordinates = useCallback(() => {
-        const gameArea = gameAreaRef.current;
-        if (!gameArea) return { x: 0, y: 0 };
-        
-        const gameAreaRect = gameArea.getBoundingClientRect();
-        
-        // El cañón está centrado horizontalmente en el game-area
-        // y posicionado a 150px desde el fondo (según CSS: bottom: 150px)
-        const cannonX = gameAreaRect.width / 2;
-        const cannonY = gameAreaRect.height - 150; // 150px desde el fondo según CSS
-        
-        return { x: cannonX, y: cannonY };
-    }, []);
+    }, [showCentralMessage, playLifeLostSound, playCountdownSound]);
 
     // Función para generar meteoritos
     const spawnMeteorite = useCallback(() => {
-        if (!gameState.isPlaying || gameState.isPaused) return;
+        const currentGameState = gameStateRef.current;
+        if (!currentGameState.isPlaying || currentGameState.isPaused) return;
         
         // Solo generar meteoritos a partir de la tercera etapa
-        if (gameState.currentStage < -1) return;
+        if (currentGameState.currentStage < 2) return;
 
         const gameArea = gameAreaRef.current;
         if (!gameArea) return;
@@ -725,18 +1017,18 @@ export const Game: React.FC = () => {
         const deltaY = cannonY - startY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-        // Velocidad más controlada y predecible
-        const baseSpeed = 1.0; // Velocidad base ligeramente reducida
-        const speedVariation = 0.4; // Menor variación para trayectorias más consistentes
+        // Velocidad aumentada significativamente
+        const baseSpeed = 2.0; // Aumentado de 1.0 a 2.0 
+        const speedVariation = 0.8; // Aumentado de 0.4 a 0.8
         const speed = baseSpeed + (Math.random() * speedVariation);
         
         // Normalizar la dirección y aplicar velocidad
         const speedX = (deltaX / distance) * speed;
         const speedY = (deltaY / distance) * speed;
 
-        // Tamaño consistente
-        const minSize = 40;
-        const maxSize = 60;
+        // Tamaño más pequeño para coincidir con la cola
+        const minSize = 25; // Reducido de 40 a 25
+        const maxSize = 35; // Reducido de 60 a 35
         const size = minSize + Math.random() * (maxSize - minSize);
 
         const meteorite = {
@@ -756,7 +1048,7 @@ export const Game: React.FC = () => {
             ...prev,
             meteorites: [...prev.meteorites, meteorite]
         }));
-    }, [gameState.isPlaying, gameState.isPaused, gameState.currentStage, getCannonCenterCoordinates, playMeteoriteSound]);
+    }, [getCannonCenterCoordinates, playMeteoriteSound]);
 
     // Función para activar el campo de fuerza
     const activateForceField = useCallback(() => {
@@ -782,7 +1074,8 @@ export const Game: React.FC = () => {
 
     // Función para verificar colisiones entre meteoritos y campo de fuerza
     const checkMeteoriteCollisions = useCallback(() => {
-        if (!gameState.forceField?.isActive) return;
+        const currentGameState = gameStateRef.current;
+        if (!currentGameState.forceField?.isActive) return;
 
         setGameState(prev => {
             const destroyedMeteoriteIds: number[] = [];
@@ -790,9 +1083,15 @@ export const Game: React.FC = () => {
             const forceFieldRadius = FORCE_FIELD_RADIUS; // 200px
             
             prev.meteorites.forEach(meteorite => {
+                // Calcular la posición del meteorito en el extremo delantero
+                const fireAngle = Math.atan2(-meteorite.speedY, -meteorite.speedX) * (180 / Math.PI);
+                const meteoriteOffsetDistance = 40;
+                const meteoriteOffsetX = Math.cos((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                const meteoriteOffsetY = Math.sin((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                
                 // Calcular el centro exacto del meteorito basado en su posición relativa
-                const meteoriteCenterX = meteorite.x + (meteorite.size / 2);
-                const meteoriteCenterY = meteorite.y + (meteorite.size / 2);
+                const meteoriteCenterX = meteorite.x + meteoriteOffsetX + (meteorite.size / 2);
+                const meteoriteCenterY = meteorite.y + meteoriteOffsetY + (meteorite.size / 2);
                 
                 // Calcular distancia entre centros usando coordenadas relativas del game-area
                 const deltaX = meteoriteCenterX - cannonX;
@@ -810,7 +1109,7 @@ export const Game: React.FC = () => {
                     if (gameAreaRect) {
                         const explosionX = gameAreaRect.left + meteoriteCenterX;
                         const explosionY = gameAreaRect.top + meteoriteCenterY;
-                        createExplosion(explosionX, explosionY);
+                        createMeteoriteParticles(explosionX, explosionY);
                     }
                     playExplosionSound();
                 }
@@ -822,7 +1121,7 @@ export const Game: React.FC = () => {
                 score: prev.score + (destroyedMeteoriteIds.length * 5) // 5 puntos por meteorito destruido
             };
         });
-    }, [gameState.forceField, getCannonCenterCoordinates, createExplosion, playExplosionSound]);
+    }, [getCannonCenterCoordinates, createMeteoriteParticles, playExplosionSound]);
 
     // Función para verificar colisiones entre meteoritos y el cañón
     const checkMeteoriteCannonCollisions = useCallback(() => {
@@ -833,9 +1132,15 @@ export const Game: React.FC = () => {
             const hitMeteoriteIds: number[] = [];
             
             prev.meteorites.forEach(meteorite => {
+                // Calcular la posición del meteorito en el extremo delantero
+                const fireAngle = Math.atan2(-meteorite.speedY, -meteorite.speedX) * (180 / Math.PI);
+                const meteoriteOffsetDistance = 40;
+                const meteoriteOffsetX = Math.cos((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                const meteoriteOffsetY = Math.sin((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                
                 // Calcular el centro exacto del meteorito basado en su posición relativa
-                const meteoriteCenterX = meteorite.x + (meteorite.size / 2);
-                const meteoriteCenterY = meteorite.y + (meteorite.size / 2);
+                const meteoriteCenterX = meteorite.x + meteoriteOffsetX + (meteorite.size / 2);
+                const meteoriteCenterY = meteorite.y + meteoriteOffsetY + (meteorite.size / 2);
                 
                 // Calcular distancia entre centros usando coordenadas relativas del game-area
                 const deltaX = meteoriteCenterX - cannonX;
@@ -863,9 +1168,15 @@ export const Game: React.FC = () => {
                 hitMeteoriteIds.forEach(id => {
                     const meteorite = prev.meteorites.find(m => m.id === id);
                     if (meteorite && gameAreaRect) {
-                        const meteoriteCenterX = gameAreaRect.left + meteorite.x + (meteorite.size / 2);
-                        const meteoriteCenterY = gameAreaRect.top + meteorite.y + (meteorite.size / 2);
-                        createExplosion(meteoriteCenterX, meteoriteCenterY);
+                        // Calcular la posición del meteorito en el extremo delantero para la explosión
+                        const fireAngle = Math.atan2(-meteorite.speedY, -meteorite.speedX) * (180 / Math.PI);
+                        const meteoriteOffsetDistance = 40;
+                        const meteoriteOffsetX = Math.cos((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                        const meteoriteOffsetY = Math.sin((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                        
+                        const meteoriteCenterX = gameAreaRect.left + meteorite.x + meteoriteOffsetX + (meteorite.size / 2);
+                        const meteoriteCenterY = gameAreaRect.top + meteorite.y + meteoriteOffsetY + (meteorite.size / 2);
+                        createMeteoriteParticles(meteoriteCenterX, meteoriteCenterY);
                     }
                 });
                 
@@ -882,14 +1193,33 @@ export const Game: React.FC = () => {
 
             return prev;
         });
-    }, [getCannonCenterCoordinates, endGame, createExplosion, playLifeLostSound, startLifeLostCountdown]);
+    }, [getCannonCenterCoordinates, endGame, createMeteoriteParticles, playLifeLostSound, startLifeLostCountdown]);
 
-    // Efecto para iniciar el spawn de letras cuando isPlaying cambia a true
+    // Efecto para manejar el spawn de letras con setInterval
     useEffect(() => {
-        if (gameState.isPlaying) {
-            spawnLetters();
+        if (!gameState.isPlaying || gameState.isPaused) {
+            // Limpiar cualquier intervalo anterior
+            if (spawnIntervalRef.current) {
+                clearInterval(spawnIntervalRef.current);
+                spawnIntervalRef.current = undefined;
+            }
+            return;
         }
-    }, [gameState.isPlaying, spawnLetters]);
+
+        // Crear un nuevo intervalo para el spawn de letras
+        const letterSpawnInterval = setInterval(() => {
+            spawnLetters();
+        }, 100); // Verificar cada 100ms si es hora de spawear una letra
+
+        spawnIntervalRef.current = letterSpawnInterval;
+
+        return () => {
+            if (spawnIntervalRef.current) {
+                clearInterval(spawnIntervalRef.current);
+                spawnIntervalRef.current = undefined;
+            }
+        };
+    }, [gameState.isPlaying, gameState.isPaused, spawnLetters]);
 
     // Efecto para el game loop
     useEffect(() => {
@@ -965,29 +1295,50 @@ export const Game: React.FC = () => {
 
     // Efecto para spawn de meteoritos
     useEffect(() => {
-        if (!gameState.isPlaying || gameState.isPaused) return;
+        const currentGameState = gameStateRef.current;
+        if (!currentGameState.isPlaying || currentGameState.isPaused) return;
         
         // Solo generar meteoritos a partir de la tercera etapa
-        if (gameState.currentStage < 2) return;
+        if (currentGameState.currentStage < 2) return;
+
+        // Calcular frecuencia y probabilidad basada en la etapa actual
+        const baseFrequency = 3000; // Frecuencia base más lenta
+        const baseProbability = 0.1; // Probabilidad base más baja
+        
+        // Incremento progresivo basado en la etapa (currentStage - 2 porque empezamos en la etapa 2)
+        const stageProgression = Math.max(0, currentGameState.currentStage - 2);
+        
+        // Incremento adicional basado en el puntaje (cada 500 puntos)
+        const scoreProgression = Math.floor(currentGameState.score / 500);
+        
+        // Calcular valores finales con límites
+        const frequency = Math.max(800, baseFrequency - (stageProgression * 300) - (scoreProgression * 200));
+        const probability = Math.min(0.7, baseProbability + (stageProgression * 0.08) + (scoreProgression * 0.05));
 
         const meteoriteInterval = setInterval(() => {
-            // Spawn meteorito con mucha menos frecuencia
-            if (Math.random() < 0.15) { // Reducido significativamente de 0.4 a 0.15
+            const latestGameState = gameStateRef.current;
+            if (latestGameState.isPlaying && !latestGameState.isPaused && Math.random() < probability) {
                 spawnMeteorite();
             }
-        }, 2500); // Aumentado significativamente de 1200ms a 2500ms
+        }, frequency);
 
         return () => clearInterval(meteoriteInterval);
-    }, [gameState.isPlaying, gameState.isPaused, gameState.currentStage, spawnMeteorite]);
+    }, [gameState.isPlaying, gameState.isPaused, gameState.currentStage, gameState.score, spawnMeteorite]);
 
     // Efecto de limpieza
     useEffect(() => {
         return () => {
             if (spawnIntervalRef.current) {
-                clearTimeout(spawnIntervalRef.current);
+                clearInterval(spawnIntervalRef.current);
+                spawnIntervalRef.current = undefined;
             }
             if (gameLoopRef.current) {
                 cancelAnimationFrame(gameLoopRef.current);
+                gameLoopRef.current = undefined;
+            }
+            if (comboTimeoutRef.current) {
+                clearTimeout(comboTimeoutRef.current);
+                comboTimeoutRef.current = undefined;
             }
         };
     }, []);
@@ -1060,6 +1411,7 @@ export const Game: React.FC = () => {
             } else if (event.code === 'Space') {
                 event.preventDefault(); // Prevenir scroll de la página
                 activateForceField();
+                setIsSpacePressed(true);
             }
         };
 
@@ -1067,6 +1419,8 @@ export const Game: React.FC = () => {
             const key = event.key.toUpperCase();
             if (LETTERS.includes(key)) {
                 setGameState(prev => ({ ...prev, pressedKey: null }));
+            } else if (event.code === 'Space') {
+                setIsSpacePressed(false);
             }
         };
 
@@ -1081,34 +1435,276 @@ export const Game: React.FC = () => {
     // Efecto para mostrar mensaje de pausa
     useEffect(() => {
         if (gameState.isPlaying && gameState.isPaused) {
+            // Pausar todas las actividades del juego
+            if (spawnIntervalRef.current) {
+                clearInterval(spawnIntervalRef.current);
+                spawnIntervalRef.current = undefined;
+            }
+            if (gameLoopRef.current) {
+                cancelAnimationFrame(gameLoopRef.current);
+                gameLoopRef.current = undefined;
+            }
+            
             setGameState(prev => ({
                 ...prev,
                 showCentralMessage: true,
                 centralMessage: 'PAUSADO - Presiona ESC para continuar'
             }));
-        } else if (gameState.isPlaying && !gameState.isPaused && gameState.centralMessage === 'PAUSADO - Presiona ESC para continuar') {
-            setGameState(prev => ({
-                ...prev,
-                showCentralMessage: false,
-                centralMessage: null
-            }));
+        } else if (gameState.isPlaying && !gameState.isPaused) {
+            // Reanudar el juego solo si estaba pausado antes
+            if (gameState.centralMessage === 'PAUSADO - Presiona ESC para continuar') {
+                setGameState(prev => ({
+                    ...prev,
+                    showCentralMessage: false,
+                    centralMessage: null
+                }));
+                
+                // El spawn se reiniciará automáticamente por el efecto anterior
+                // No necesitamos llamar spawnLetters() aquí
+            }
         }
     }, [gameState.isPaused, gameState.isPlaying]);
+
+    const startGame = useCallback(() => {
+        if (spawnIntervalRef.current) {
+            clearInterval(spawnIntervalRef.current);
+        }
+        if (gameLoopRef.current) {
+            cancelAnimationFrame(gameLoopRef.current);
+        }
+
+        lastSpawnTimeRef.current = 0;
+
+        // Solo inicializar contexto de audio, no iniciar música aquí
+        initAudioContext();
+
+        // Resetear completamente para nuevo juego
+        setComboCount(0);
+        setLastHitTime(0);
+        setComboMultiplier(1);
+        setSequentialHits(0);
+        
+        // Limpiar mensajes
+        setCurrentComboMessage(null);
+        setIsComboMessageVisible(false);
+        setCurrentOrderMessage(null);
+        setIsOrderMessageVisible(false);
+
+        setGameState({
+            score: 0, // Siempre empezar desde 0 en nuevo juego
+            lives: 3,
+            isPlaying: true,
+            isPenalized: false,
+            penaltyTime: 0,
+            fallingLetters: [],
+            bullets: [],
+            meteorites: [],
+            forceField: null,
+            gameSpeed: INITIAL_GAME_SPEED,
+            letterSpeed: INITIAL_LETTER_SPEED,
+            currentStage: 0,
+            pressedKey: null,
+            centralMessage: null,
+            showCentralMessage: false,
+            countdown: null,
+            isPaused: false
+        });
+    }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
+
+    const continueGame = useCallback(() => {
+        // Limpiar timeouts pendientes
+        if (spawnIntervalRef.current) {
+            clearInterval(spawnIntervalRef.current);
+            spawnIntervalRef.current = undefined;
+        }
+        if (gameLoopRef.current) {
+            cancelAnimationFrame(gameLoopRef.current);
+            gameLoopRef.current = undefined;
+        }
+        if (comboTimeoutRef.current) {
+            clearTimeout(comboTimeoutRef.current);
+            comboTimeoutRef.current = undefined;
+        }
+        
+        // Resetear referencias de spawn
+        lastSpawnTimeRef.current = 0;
+        lastSpawnedLetterRef.current = null;
+        
+        // Resetear estados de combo
+        setComboCount(0);
+        setLastHitTime(0);
+        setComboMultiplier(1);
+        setSequentialHits(0);
+        
+        // Limpiar mensajes
+        setCurrentComboMessage(null);
+        setIsComboMessageVisible(false);
+        setCurrentOrderMessage(null);
+        setIsOrderMessageVisible(false);
+        
+        // Inicializar contexto de audio
+        initAudioContext();
+        
+        // Continuar desde donde se quedó, pero resetear niveles y velocidad
+        setGameState(prev => ({
+            ...prev,
+            lives: 3, // Restaurar vidas
+            isPlaying: true,
+            isPenalized: false,
+            penaltyTime: 0,
+            fallingLetters: [], // Limpiar letras en pantalla
+            bullets: [],
+            meteorites: [], // Limpiar meteoritos en pantalla
+            forceField: null,
+            pressedKey: null,
+            centralMessage: null,
+            showCentralMessage: false,
+            countdown: null,
+            isPaused: false,
+            // Resetear nivel y velocidades para continuar desde el principio
+            currentStage: 0,
+            gameSpeed: INITIAL_GAME_SPEED,
+            letterSpeed: INITIAL_LETTER_SPEED
+            // Mantener score solamente
+        }));
+    }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
+
+    const newGame = useCallback(() => {
+        // Limpiar todos los timeouts e intervalos
+        if (spawnIntervalRef.current) {
+            clearInterval(spawnIntervalRef.current);
+            spawnIntervalRef.current = undefined;
+        }
+        if (gameLoopRef.current) {
+            cancelAnimationFrame(gameLoopRef.current);
+            gameLoopRef.current = undefined;
+        }
+        if (comboTimeoutRef.current) {
+            clearTimeout(comboTimeoutRef.current);
+            comboTimeoutRef.current = undefined;
+        }
+        
+        // Resetear completamente las referencias
+        lastSpawnTimeRef.current = 0;
+        lastSpawnedLetterRef.current = null;
+        
+        // Resetear estados de combo
+        setComboCount(0);
+        setLastHitTime(0);
+        setComboMultiplier(1);
+        setSequentialHits(0);
+        
+        // Limpiar mensajes
+        setCurrentComboMessage(null);
+        setIsComboMessageVisible(false);
+        setCurrentOrderMessage(null);
+        setIsOrderMessageVisible(false);
+        
+        // Detener música de fondo
+        stopBackgroundMusic();
+        
+        // Inicializar contexto de audio
+        initAudioContext();
+        
+        // Establecer estado inicial completamente limpio
+        setGameState({
+            score: 0,
+            lives: 3,
+            isPlaying: true,
+            isPenalized: false,
+            penaltyTime: 0,
+            fallingLetters: [], // Asegurar que esté vacío
+            bullets: [],
+            meteorites: [],
+            forceField: null,
+            gameSpeed: INITIAL_GAME_SPEED, // Resetear a velocidad inicial
+            letterSpeed: INITIAL_LETTER_SPEED, // Resetear a velocidad inicial
+            currentStage: 0, // Comenzar desde la primera etapa
+            pressedKey: null,
+            centralMessage: null,
+            showCentralMessage: false,
+            countdown: null,
+            isPaused: false
+        });
+    }, [initAudioContext, stopBackgroundMusic, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
 
     return (
         <div className="game-container">
             <div className="bg-grid"></div>
             
-            {/* Botón de sonido */}
-            <SoundToggle isMuted={isMuted} onToggle={toggleMute} />
-            
-            {/* Mapas de manos */}
-            {gameState.isPlaying && (
-                <div className="hand-maps-container">
-                    <HandMap side="left" highlightedKey={gameState.pressedKey || undefined} />
-                    <HandMap side="right" highlightedKey={gameState.pressedKey || undefined} />
+            {/* Nueva estructura de UI integrada */}
+            <div className="game-ui-container">
+                {/* Panel superior con información de sector */}
+                <div className="sector-info">
+                    <div className="sector-panel">
+                        <div className="sector-label">SECTOR</div>
+                        <div className="sector-name">{TYPING_STAGES[gameState.currentStage]?.name || 'N/A'}</div>
+                        <div className="sector-description">{TYPING_STAGES[gameState.currentStage]?.description || '---'}</div>
+                    </div>
                 </div>
-            )}
+
+                {/* Mensajes de combo y orden - posicionados independientemente */}
+                {isComboMessageVisible && currentComboMessage && (
+                    <div className="floating-combo-message">
+                        <div className="floating-combo-content">
+                            {currentComboMessage}
+                        </div>
+                    </div>
+                )}
+
+                {isOrderMessageVisible && currentOrderMessage && (
+                    <div className="floating-order-message">
+                        <div className="floating-order-content">
+                            {currentOrderMessage}
+                        </div>
+                    </div>
+                )}
+
+                {/* Panel de control inferior integrado con manos */}
+                <div className="integrated-control-panel">
+                    {/* Mano izquierda integrada */}
+                    <div className="control-section left-section">
+                        <HandMap 
+                            side="left" 
+                            highlightedKey={gameState.pressedKey || undefined} 
+                            isSpacePressed={isSpacePressed}
+                        />
+                    </div>
+
+                    {/* Panel central de instrumentos compacto */}
+                    <div className="central-instruments">
+                        <HUD
+                            score={gameState.score}
+                            lives={gameState.lives}
+                            isMuted={isMuted}
+                            onToggleMute={toggleMute}
+                        />
+                    </div>
+
+                    {/* Mano derecha integrada */}
+                    <div className="control-section right-section">
+                        <HandMap 
+                            side="right" 
+                            highlightedKey={gameState.pressedKey || undefined} 
+                            isSpacePressed={isSpacePressed}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Mapas de manos - mantener ocultos ahora que están integrados */}
+            <div className="hand-maps-container" style={{ display: 'none' }}>
+                <HandMap 
+                    side="left" 
+                    highlightedKey={gameState.pressedKey || undefined} 
+                    isSpacePressed={isSpacePressed}
+                />
+                <HandMap 
+                    side="right" 
+                    highlightedKey={gameState.pressedKey || undefined} 
+                    isSpacePressed={isSpacePressed}
+                />
+            </div>
             
             {/* Mensaje central */}
             <CentralMessage 
@@ -1117,13 +1713,15 @@ export const Game: React.FC = () => {
                 show={gameState.showCentralMessage}
             />
             
-            <HUD
-                score={gameState.score}
-                lives={gameState.lives}
-                isPenalized={gameState.isPenalized}
-                stage={TYPING_STAGES[gameState.currentStage]}
-                forceField={gameState.forceField}
-            />
+            {/* HUD original - ahora comentado porque usamos la nueva estructura */}
+            <div style={{ display: 'none' }}>
+                <HUD
+                    score={gameState.score}
+                    lives={gameState.lives}
+                    isMuted={isMuted}
+                    onToggleMute={toggleMute}
+                />
+            </div>
 
             <div className="game-area" ref={gameAreaRef} style={{ 
                 position: 'relative',
@@ -1133,7 +1731,7 @@ export const Game: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'center'
             }}>
-                <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} />
+                <Cannon isReloading={gameState.isPenalized} angle={0} />
                 
                 {/* Punto de debug para el centro del cañón */}
                 <div style={{
@@ -1152,138 +1750,193 @@ export const Game: React.FC = () => {
                 {/* Campo de fuerza */}
                 {gameState.forceField?.isActive && (
                     <div
+                        key={`force-field-${gameState.forceField.startTime}`}
                         className="force-field"
                         style={{
                             position: 'absolute',
                             left: '50%',
-                            bottom: '120px', // Más cerca del avión
-                            transform: 'translate(-50%, 30%)',
+                            top: '80%', // Mismo nivel que el cañón
                             width: `${FORCE_FIELD_RADIUS * 2}px`,
                             height: `${FORCE_FIELD_RADIUS * 2}px`,
                             borderRadius: '50%',
-                            border: '3px solid #00ffff',
-                            background: 'radial-gradient(circle, rgba(0, 255, 255, 0.1) 0%, rgba(0, 255, 255, 0.05) 50%, transparent 100%)',
-                            boxShadow: '0 0 50px #00ffff, inset 0 0 50px rgba(0, 255, 255, 0.2)',
-                            animation: 'forceFieldPulse 0.5s ease-in-out infinite alternate',
+                            border: '3px solid #ff0000',
+                            background: 'radial-gradient(circle, rgba(255, 0, 0, 0.1) 0%, rgba(255, 0, 0, 0.05) 50%, transparent 100%)',
+                            boxShadow: '0 0 50px #ff0000, inset 0 0 50px rgba(255, 0, 0, 0.2)',
                             pointerEvents: 'none',
-                            zIndex: 10
+                            zIndex: 5
                         }}
                     />
                 )}
                 
                 {/* Meteoritos */}
-                {gameState.meteorites.map(meteorite => (
-                    <div
-                        key={meteorite.id}
-                        className="meteorite"
-                        style={{
-                            left: meteorite.x + 'px',
-                            top: meteorite.y + 'px',
-                            position: 'absolute',
-                            width: meteorite.size + 'px',
-                            height: meteorite.size + 'px',
-                            background: 'radial-gradient(circle, #ff4500 0%, #8b0000 50%, #2f1b14 100%)',
-                            borderRadius: '50%',
-                            border: '2px solid #ff6600',
-                            boxShadow: '0 0 20px #ff4500, inset 0 0 10px rgba(255, 69, 0, 0.5)',
-                            transform: `rotate(${meteorite.rotation}deg)`,
-                            zIndex: 5,
-                            pointerEvents: 'none'
-                        }}
-                    >
-                        {/* Punto central para debug de colisiones */}
-                        <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            width: '4px',
-                            height: '4px',
-                            background: '#00ffff',
-                            borderRadius: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            zIndex: 10
-                        }} />
-                        
-                        {/* Detalles del meteorito */}
-                        <div style={{
-                            position: 'absolute',
-                            top: '20%',
-                            left: '30%',
-                            width: '15%',
-                            height: '15%',
-                            background: '#2f1b14',
-                            borderRadius: '50%'
-                        }} />
-                        <div style={{
-                            position: 'absolute',
-                            top: '60%',
-                            left: '70%',
-                            width: '10%',
-                            height: '10%',
-                            background: '#2f1b14',
-                            borderRadius: '50%'
-                        }} />
-                        <div style={{
-                            position: 'absolute',
-                            top: '40%',
-                            left: '15%',
-                            width: '8%',
-                            height: '8%',
-                            background: '#2f1b14',
-                            borderRadius: '50%'
-                        }} />
-                    </div>
-                ))}
+                {gameState.meteorites.map(meteorite => {
+                    // Calcular el ángulo de la cola de fuego (opuesta a la dirección del movimiento)
+                    const fireAngle = Math.atan2(-meteorite.speedY, -meteorite.speedX) * (180 / Math.PI);
+                    
+                    // Calcular la posición del meteorito en el extremo delantero de la cola
+                    const meteoriteOffsetDistance = 40; // Distancia desde el centro hacia el frente
+                    const meteoriteOffsetX = Math.cos((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                    const meteoriteOffsetY = Math.sin((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
+                    
+                    return (
+                        <div key={meteorite.id}>
+                            {/* Cola de fuego principal - simplificada */}
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    left: (meteorite.x + meteorite.size / 2) + 'px',
+                                    top: (meteorite.y + meteorite.size / 2) + 'px',
+                                    width: '100px', // Reducido de 120px
+                                    height: '18px', // Reducido de 20px
+                                    background: 'linear-gradient(90deg, transparent 0%, #ff4500 20%, #ff6600 40%, #ffa500 60%, #ffff00 80%, transparent 100%)',
+                                    borderRadius: '9px',
+                                    transform: `translate(-50%, -50%) rotate(${fireAngle}deg)`,
+                                    transformOrigin: '50% 50%',
+                                    boxShadow: '0 0 15px #ff4500', // Simplificado
+                                    opacity: '0.9',
+                                    zIndex: 3,
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                            
+                            {/* Cola de fuego secundaria - simplificada */}
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    left: (meteorite.x + meteorite.size / 2) + 'px',
+                                    top: (meteorite.y + meteorite.size / 2) + 'px',
+                                    width: '130px', // Reducido de 160px
+                                    height: '28px', // Reducido de 35px
+                                    background: 'linear-gradient(90deg, transparent 0%, rgba(255, 69, 0, 0.3) 30%, rgba(255, 165, 0, 0.4) 60%, transparent 100%)',
+                                    borderRadius: '14px',
+                                    transform: `translate(-50%, -50%) rotate(${fireAngle}deg)`,
+                                    transformOrigin: '50% 50%',
+                                    boxShadow: '0 0 20px rgba(255, 69, 0, 0.4)', // Simplificado
+                                    opacity: '0.6',
+                                    zIndex: 2,
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                            
+                            {/* Partículas de la cola - reducidas */}
+                            {Array.from({ length: 5 }).map((_, i) => { // Reducido de 8 a 5
+                                const distance = 25 + i * 12; // Ajustado
+                                const offsetX = Math.cos((fireAngle * Math.PI) / 180) * distance;
+                                const offsetY = Math.sin((fireAngle * Math.PI) / 180) * distance;
+                                const size = 6 - i * 0.8; // Reducido
+                                
+                                return (
+                                    <div
+                                        key={`particle-${i}`}
+                                        style={{
+                                            position: 'absolute',
+                                            left: (meteorite.x + meteorite.size / 2 + offsetX) + 'px',
+                                            top: (meteorite.y + meteorite.size / 2 + offsetY) + 'px',
+                                            width: size + 'px',
+                                            height: size + 'px',
+                                            background: i < 2 ? '#ffff00' : i < 3 ? '#ff6600' : '#ff4500',
+                                            borderRadius: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            opacity: (1 - i * 0.15),
+                                            boxShadow: `0 0 ${4 - i}px ${i < 2 ? '#ffff00' : i < 3 ? '#ff6600' : '#ff4500'}`, // Simplificado
+                                            zIndex: 1,
+                                            pointerEvents: 'none'
+                                        }}
+                                    />
+                                );
+                            })}
+                            
+                            {/* Meteorito principal - posicionado en el extremo delantero */}
+                            <div
+                                className="meteorite"
+                                style={{
+                                    left: (meteorite.x + meteoriteOffsetX) + 'px', // Posición en el extremo delantero
+                                    top: (meteorite.y + meteoriteOffsetY) + 'px', // Posición en el extremo delantero
+                                    position: 'absolute',
+                                    width: meteorite.size + 'px',
+                                    height: meteorite.size + 'px',
+                                    background: 'radial-gradient(circle, #ff4500 0%, #8b0000 50%, #2f1b14 100%)',
+                                    borderRadius: '50%',
+                                    border: '2px solid #ff6600',
+                                    boxShadow: '0 0 15px #ff4500', // Simplificado
+                                    transform: `rotate(${meteorite.rotation}deg)`,
+                                    zIndex: 5,
+                                    pointerEvents: 'none'
+                                }}
+                            >
+                                {/* Punto central para debug de colisiones */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    width: '4px',
+                                    height: '4px',
+                                    background: '#00ffff',
+                                    borderRadius: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    zIndex: 10
+                                }} />
+                                
+                                {/* Detalles del meteorito - reducidos */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '25%',
+                                    left: '35%',
+                                    width: '12%',
+                                    height: '12%',
+                                    background: '#2f1b14',
+                                    borderRadius: '50%'
+                                }} />
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '65%',
+                                    left: '65%',
+                                    width: '8%',
+                                    height: '8%',
+                                    background: '#2f1b14',
+                                    borderRadius: '50%'
+                                }} />
+                            </div>
+                        </div>
+                    );
+                })}
                 
-                {/* Letras que caen */}
+                {/* Letras que caen como misiles con estelas de fuego */}
                 {gameState.fallingLetters.map(letter => {
                     const row = getLetterRow(letter.letter);
                     const isHomeRow = row === 'home';
                     const letterImage = LETTER_IMAGES[letter.letter];
                     const isHighlighted = gameState.pressedKey === letter.letter;
+                    const color = LETTER_COLORS[letter.letter] || '#00ffff';
                     
                     return (
-                        <div
+                        <MissileLetterComponent
                             key={letter.id}
-                            className={`falling-letter ${isHighlighted ? 'highlighted' : ''}`}
-                            style={{
-                                left: letter.x + 'px',
-                                top: letter.y + 'px',
-                                position: 'absolute',
-                                width: '60px',
-                                height: '60px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '36px',
-                                fontWeight: 'bold',
-                            }}
-                        >
-                            {isHomeRow && letterImage ? (
-                                <img 
-                                    src={letterImage} 
-                                    alt={letter.letter}
-                                    style={{
-                                        width: '45px',
-                                        height: '45px',
-                                        objectFit: 'contain',
-                                        filter: `drop-shadow(0 0 8px ${LETTER_COLORS[letter.letter] || '#00ffff'})`
-                                    }}
-                                />
-                            ) : (
-                                letter.letter
-                            )}
-                        </div>
+                            letter={letter.letter}
+                            x={letter.x}
+                            y={letter.y}
+                            isHighlighted={isHighlighted}
+                            letterImage={isHomeRow ? letterImage : undefined}
+                            color={color}
+                        />
                     );
                 })}
             </div>
 
             {!gameState.isPlaying && gameState.lives > 0 && (
-                <Instructions onStart={startGame} />
+                <Instructions 
+                    onStart={startGame} 
+                    onContinue={continueGame}
+                    showContinue={gameState.score > 0}
+                />
             )}
 
             {!gameState.isPlaying && gameState.lives <= 0 && (
-                <GameOver score={gameState.score} onRestart={restartGame} />
+                <GameOver 
+                    score={gameState.score} 
+                    onContinue={continueGame}
+                    onNewGame={newGame}
+                />
             )}
         </div>
     );
