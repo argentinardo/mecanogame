@@ -42,10 +42,24 @@ const INITIAL_LETTER_SPEED = 0.4;
 const INITIAL_GAME_SPEED = 2200;
 
 // Constantes para la progresión de dificultad
-const SPEED_INCREMENT = 0.1; // Incremento más pequeño de velocidad
-const GAME_SPEED_DECREMENT = 100; // Reducción más gradual del tiempo entre letras
+const SPEED_INCREMENT = 0.05; // Incremento más pequeño de velocidad
+const GAME_SPEED_DECREMENT = 50; // Reducción más gradual del tiempo entre letras
 const MIN_GAME_SPEED = 800; // Velocidad mínima entre letras
-const SCORE_THRESHOLD = 200; // Puntos necesarios para aumentar la dificultad
+
+// Umbrales de puntuación para cada nivel
+const SCORE_THRESHOLDS = [
+    75,    // Sector 1
+    175,   // Sector 2
+    500,   // Sector 3
+    1500,   // Sector 4
+    3000,   // Sector 5
+    5000,  // Sector 6
+    7000,  // Sector 7
+    9500,  // Sector 8
+    20000,  // Sector 9
+    30000, // Sector 10
+    40000  // Juego completado
+];
 
 // Constantes de tamaños para colisiones precisas
 const LETTER_SIZE = 72;          // Tamaño de las letras que caen
@@ -111,7 +125,9 @@ export const Game: React.FC = () => {
         centralMessage: null,
         showCentralMessage: false,
         countdown: null,
-        isPaused: false
+        isPaused: false,
+        showSectorInfo: false,
+        sectorInfoTimeout: null
     });
 
     const [comboCount, setComboCount] = useState<number>(0);
@@ -143,6 +159,9 @@ export const Game: React.FC = () => {
     // Referencias para acceder al estado actual sin dependencias
     const gameStateRef = useRef(gameState);
     gameStateRef.current = gameState;
+
+    // Estado para las explosiones
+    const [explosions, setExplosions] = useState<Array<{ id: number; x: number; y: number; createdAt: number }>>([]);
 
     const getLetterPosition = useCallback((letter: string) => {
         const position = KEYBOARD_POSITIONS[letter];
@@ -354,12 +373,25 @@ export const Game: React.FC = () => {
             // Reproducir sonido de level up
             playLevelUpSound();
             
+            // Mostrar el cartel de sector y pausar el juego
+            const timeout = setTimeout(() => {
+                setGameState(prev => ({
+                    ...prev,
+                    showSectorInfo: false,
+                    isPaused: false,
+                    sectorInfoTimeout: null
+                }));
+            }, nextStage === 0 ? 5000 : 15000); // 5 segundos para Sector 0, 15 segundos para los demás
+
             return {
                 ...prev,
                 currentStage: nextStage,
-                // NO limpiar letras actuales para mantener continuidad del juego
                 gameSpeed: Math.max(INITIAL_GAME_SPEED - (nextStage * 100), MIN_GAME_SPEED),
-                letterSpeed: INITIAL_LETTER_SPEED + (nextStage * 0.5)
+                letterSpeed: INITIAL_LETTER_SPEED + (nextStage * 0.5),
+                showSectorInfo: true,
+                isPaused: true,
+                sectorInfoTimeout: timeout,
+                showCentralMessage: false // Ocultar el mensaje de pausa original
             };
         });
     }, [playLevelUpSound]);
@@ -390,6 +422,38 @@ export const Game: React.FC = () => {
         }, duration);
     }, []);
 
+    // Función para crear explosión
+    const createExplosion = useCallback((x: number, y: number) => {
+        const explosion = {
+            id: Date.now(),
+            x,
+            y,
+            createdAt: Date.now()
+        };
+        setExplosions(prev => [...prev, explosion]);
+    }, []);
+
+    // Función para crear efectos visuales de explosión
+    const createVisualExplosion = useCallback((x: number, y: number) => {
+        // Limpiar partículas viejas si hay demasiadas
+        if (activeParticlesRef.current.length > 30) {
+            const oldParticles = activeParticlesRef.current.splice(0, 15);
+            oldParticles.forEach(particle => {
+                if (particle.parentNode) {
+                    particle.remove();
+                }
+            });
+        }
+
+        // Solo crear onda de choque circular (más eficiente)
+        createShockWave(x, y);
+        
+        // Reducir efectos para mejor rendimiento
+        createNeonSparks(x, y, 8); // Reducido de 12 a 8
+        createGlowParticles(x, y, 5); // Reducido de 8 a 5
+        // Eliminar arcos eléctricos y anillos para optimizar
+    }, []);
+
     const hitLetter = useCallback((letterObj: FallingLetter) => {
         // No procesar hits durante la pausa
         if (gameState.isPaused) return;
@@ -404,7 +468,14 @@ export const Game: React.FC = () => {
         // Reproducir sonido de explosión
         playExplosionSound();
         
-        createExplosion(explosionX, explosionY);
+        // Crear explosión visual
+        createVisualExplosion(explosionX, explosionY);
+        
+        // Eliminar la letra inmediatamente
+        setGameState(prev => ({
+            ...prev,
+            fallingLetters: prev.fallingLetters.filter(l => l.id !== letterObj.id)
+        }));
         
         // Verificar si es un hit secuencial (la letra más antigua)
         const isSequentialHit = gameState.fallingLetters.length > 0 && 
@@ -507,7 +578,8 @@ export const Game: React.FC = () => {
             }
             
             const newScore = prev.score + totalScore;
-            const shouldIncreaseDifficulty = newScore % SCORE_THRESHOLD === 0;
+            const currentThreshold = SCORE_THRESHOLDS[prev.currentStage] || SCORE_THRESHOLDS[SCORE_THRESHOLDS.length - 1];
+            const shouldIncreaseDifficulty = newScore >= currentThreshold;
             const newGameSpeed = shouldIncreaseDifficulty 
                 ? Math.max(MIN_GAME_SPEED, prev.gameSpeed - GAME_SPEED_DECREMENT)
                 : prev.gameSpeed;
@@ -515,31 +587,24 @@ export const Game: React.FC = () => {
                 ? prev.letterSpeed + SPEED_INCREMENT
                 : prev.letterSpeed;
             
-            // Corregir la lógica de avance de etapas
-            const nextStage = prev.currentStage + 1;
-            const shouldAdvanceStage = newScore >= (prev.currentStage + 1) * SCORE_THRESHOLD && 
-                                     nextStage < TYPING_STAGES.length;
-            
-            const finalStage = shouldAdvanceStage ? nextStage : prev.currentStage;
-            
             return {
                 ...prev,
                 score: newScore,
                 gameSpeed: newGameSpeed,
                 letterSpeed: newLetterSpeed,
-                fallingLetters: prev.fallingLetters.filter(l => l.id !== letterObj.id),
-                currentStage: finalStage
+                fallingLetters: prev.fallingLetters.filter(l => l.id !== letterObj.id)
             };
         });
 
         // Llamar advanceStage solo si realmente necesitamos avanzar
         const currentScore = gameState.score + totalScore;
-        if (currentScore >= (gameState.currentStage + 1) * SCORE_THRESHOLD && 
+        const currentThreshold = SCORE_THRESHOLDS[gameState.currentStage] || SCORE_THRESHOLDS[SCORE_THRESHOLDS.length - 1];
+        if (currentScore >= currentThreshold && 
             gameState.currentStage + 1 < TYPING_STAGES.length) {
             // Usar setTimeout para evitar problemas de estado
             setTimeout(() => advanceStage(), 0);
         }
-    }, [gameState.isPaused, gameState.fallingLetters, advanceStage, playExplosionSound, lastHitTime, comboCount, sequentialHits, comboMultiplier, playComboSuccessSound, displayComboMessage, displayOrderMessage]);
+    }, [playExplosionSound, createVisualExplosion, gameState.isPaused, gameState.fallingLetters, lastHitTime, sequentialHits, playComboSuccessSound, playMeteoriteSound, gameState.score, gameState.currentStage, advanceStage]);
 
     // Función para mostrar mensaje central temporalmente
     const showCentralMessage = useCallback((message: string, duration: number = 2000) => {
@@ -582,13 +647,15 @@ export const Game: React.FC = () => {
         // Bajar el volumen de la música durante el recalibrado
         lowerBackgroundVolume();
         
-        // Comenzar con 4 segundos para que muestre 3, 2, 1 correctamente
+        let countdown = 3;
+        
+        // Mostrar el mensaje inicial y mantenerlo visible
         setGameState(prev => ({
             ...prev,
             isPenalized: true,
-            penaltyTime: 4,
+            penaltyTime: countdown,
             showCentralMessage: true,
-            centralMessage: 'Recalibrando... 3s'
+            centralMessage: `Recalibrando... ${countdown}s`
         }));
 
         // Programar sonidos en las transiciones
@@ -597,54 +664,28 @@ export const Game: React.FC = () => {
         setTimeout(() => playCountdownSound(0), 3000); // Suena al desaparecer el mensaje
 
         const penaltyInterval = setInterval(() => {
-            setGameState(prev => {
-                const newPenaltyTime = prev.penaltyTime - 1;
-                
-                // Mostrar el tiempo correcto (restando 1 para que se vea 3, 2, 1)
-                if (newPenaltyTime > 1) {
-                    const displayTime = newPenaltyTime - 1;
-                    
-                    return {
-                        ...prev,
-                        penaltyTime: newPenaltyTime,
-                        showCentralMessage: true,
-                        centralMessage: `Recalibrando... ${displayTime}s`
-                    };
-                }
-                
-                // Cuando llegue a 1 (que representa 0), limpiar todo y restaurar el volumen
+            countdown--;
+            
+            if (countdown > 0) {
+                setGameState(prev => ({
+                    ...prev,
+                    penaltyTime: countdown,
+                    centralMessage: `Recalibrando... ${countdown}s`
+                }));
+            } else {
+                // Cuando llegue a 0, limpiar todo y restaurar el volumen
                 clearInterval(penaltyInterval);
                 restoreBackgroundVolume();
-                return {
+                setGameState(prev => ({
                     ...prev,
                     isPenalized: false,
                     penaltyTime: 0,
                     showCentralMessage: false,
                     centralMessage: null
-                };
-            });
+                }));
+            }
         }, 1000);
     }, [playMissSound, resetCombo, lowerBackgroundVolume, restoreBackgroundVolume, playCountdownSound]);
-
-    const createExplosion = (x: number, y: number) => {
-        // Limpiar partículas viejas si hay demasiadas
-        if (activeParticlesRef.current.length > 30) {
-            const oldParticles = activeParticlesRef.current.splice(0, 15);
-            oldParticles.forEach(particle => {
-                if (particle.parentNode) {
-                    particle.remove();
-                }
-            });
-        }
-
-        // Solo crear onda de choque circular (más eficiente)
-        createShockWave(x, y);
-        
-        // Reducir efectos para mejor rendimiento
-        createNeonSparks(x, y, 8); // Reducido de 12 a 8
-        createGlowParticles(x, y, 5); // Reducido de 8 a 5
-        // Eliminar arcos eléctricos y anillos para optimizar
-    };
 
     // Crear onda de choque expansiva (simplificada)
     const createShockWave = (x: number, y: number) => {
@@ -1347,15 +1388,17 @@ export const Game: React.FC = () => {
     useEffect(() => {
         if (gameState.isPlaying && !gameState.isPaused) {
             if (gameState.isPenalized && gameState.penaltyTime > 0) {
-                // Mostrar mensaje de recarga directamente sin timeout
-                setGameState(prev => ({
-                    ...prev,
-                    centralMessage: `Recalibrando... ${gameState.penaltyTime}s`,
-                    showCentralMessage: true
-                }));
+                // Solo actualizar el mensaje si no hay uno visible
+                if (!gameState.showCentralMessage) {
+                    setGameState(prev => ({
+                        ...prev,
+                        centralMessage: `Recalibrando... ${gameState.penaltyTime}s`,
+                        showCentralMessage: true
+                    }));
+                }
             }
         }
-    }, [gameState.penaltyTime, gameState.isPenalized, gameState.isPlaying, gameState.isPaused]);
+    }, [gameState.penaltyTime, gameState.isPenalized, gameState.isPlaying, gameState.isPaused, gameState.showCentralMessage]);
 
     // Efecto para mostrar mensaje de listo al inicio del juego
     useEffect(() => {
@@ -1434,7 +1477,7 @@ export const Game: React.FC = () => {
 
     // Efecto para mostrar mensaje de pausa
     useEffect(() => {
-        if (gameState.isPlaying && gameState.isPaused) {
+        if (gameState.isPlaying && gameState.isPaused && !gameState.showSectorInfo) {
             // Pausar todas las actividades del juego
             if (spawnIntervalRef.current) {
                 clearInterval(spawnIntervalRef.current);
@@ -1463,7 +1506,7 @@ export const Game: React.FC = () => {
                 // No necesitamos llamar spawnLetters() aquí
             }
         }
-    }, [gameState.isPaused, gameState.isPlaying]);
+    }, [gameState.isPaused, gameState.isPlaying, gameState.showSectorInfo]);
 
     const startGame = useCallback(() => {
         if (spawnIntervalRef.current) {
@@ -1507,7 +1550,9 @@ export const Game: React.FC = () => {
             centralMessage: null,
             showCentralMessage: false,
             countdown: null,
-            isPaused: false
+            isPaused: false,
+            showSectorInfo: false,
+            sectorInfoTimeout: null
         });
     }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
 
@@ -1545,7 +1590,7 @@ export const Game: React.FC = () => {
         // Inicializar contexto de audio
         initAudioContext();
         
-        // Continuar desde donde se quedó, pero resetear niveles y velocidad
+        // Continuar desde donde se quedó, manteniendo el sector actual
         setGameState(prev => ({
             ...prev,
             lives: 3, // Restaurar vidas
@@ -1561,13 +1606,13 @@ export const Game: React.FC = () => {
             showCentralMessage: false,
             countdown: null,
             isPaused: false,
-            // Resetear nivel y velocidades para continuar desde el principio
-            currentStage: 0,
-            gameSpeed: INITIAL_GAME_SPEED,
-            letterSpeed: INITIAL_LETTER_SPEED
+            // Mantener el sector actual y ajustar velocidades según el sector
+            currentStage: prev.currentStage,
+            gameSpeed: Math.max(INITIAL_GAME_SPEED - (prev.currentStage * 100), MIN_GAME_SPEED),
+            letterSpeed: INITIAL_LETTER_SPEED + (prev.currentStage * 0.5)
             // Mantener score solamente
         }));
-    }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
+    }, [initAudioContext]);
 
     const newGame = useCallback(() => {
         // Limpiar todos los timeouts e intervalos
@@ -1624,9 +1669,36 @@ export const Game: React.FC = () => {
             centralMessage: null,
             showCentralMessage: false,
             countdown: null,
-            isPaused: false
+            isPaused: false,
+            showSectorInfo: false,
+            sectorInfoTimeout: null
         });
     }, [initAudioContext, stopBackgroundMusic, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
+
+    // Agregar manejador de teclas para cerrar el cartel
+    const handleKeyPress = useCallback((event: KeyboardEvent) => {
+        if (gameState.showSectorInfo && (event.key === 'Enter' || event.key === 'Escape')) {
+            // Limpiar el timeout existente
+            if (gameState.sectorInfoTimeout) {
+                clearTimeout(gameState.sectorInfoTimeout);
+            }
+            
+            setGameState(prev => ({
+                ...prev,
+                showSectorInfo: false,
+                isPaused: false,
+                sectorInfoTimeout: null
+            }));
+        }
+    }, [gameState.showSectorInfo, gameState.sectorInfoTimeout]);
+
+    // Agregar y remover el event listener
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyPress);
+        return () => {
+            window.removeEventListener('keydown', handleKeyPress);
+        };
+    }, [handleKeyPress]);
 
     return (
         <div className="game-container">
@@ -1642,6 +1714,17 @@ export const Game: React.FC = () => {
                         <div className="sector-description">{TYPING_STAGES[gameState.currentStage]?.description || '---'}</div>
                     </div>
                 </div>
+
+                {/* Cartel grande de sector */}
+                {gameState.showSectorInfo && (
+                    <div className="sector-info-large">
+                        <div className="sector-panel-large">
+                            <div className="sector-label-large">NUEVO SECTOR</div>
+                            <div className="sector-name-large">{TYPING_STAGES[gameState.currentStage]?.name || 'N/A'}</div>
+                            <div className="sector-description-large">{TYPING_STAGES[gameState.currentStage]?.description || '---'}</div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Mensajes de combo y orden - posicionados independientemente */}
                 {isComboMessageVisible && currentComboMessage && (

@@ -16,6 +16,8 @@ export interface GameState {
     showCentralMessage: boolean;
     countdown: number | null;
     isPaused: boolean;
+    showSectorInfo: boolean;
+    sectorInfoTimeout: number | null;
 }
 
 export interface FallingLetter {
@@ -78,37 +80,57 @@ export const KEYBOARD_POSITIONS: Record<string, KeyboardPosition> = {
 // Etapas de mecanografía para teclado español
 export const TYPING_STAGES: TypingStage[] = [
     {
-        name: "Primeros Dedos",
-        letters: ['A', 'S', 'Ñ', 'L','D','F','J','K'],
-        description: "Posiciona los dedos indices sobre la marca de la F y la J y manten la posición"
+        name: "Sector 0: Posición Base",
+        letters: ['F', 'J'],
+        description: "Posiciona los dedos índices sobre las marcas del teclado"
     },
     {
-        name: "Fila Inicial Completa",
-        letters: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ'],
+        name: "Sector 1: Dedos Índices Extendidos",
+        letters: ['F', 'J', 'G', 'H'],
         description: "Ahora debes mover los índices para alcanzar la G y la H"
     },
     {
-        name: "Fila Superior Básica",
-        letters: ['Q', 'W', 'E', 'P', 'O', 'I'],
-        description: "Sin perder la posición, apretamos las teclas superiores"
+        name: "Sector 2: Fila Inicial Básica",
+        letters: ['A', 'S', 'D', 'F', 'J', 'K', 'L'],
+        description: "Mantén los índices en sus marcas y pon cada dedo en la fila del medio"
     },
     {
-        name: "Fila Superior Completa",
+        name: "Sector 3: Fila Inicial Completa",
+        letters: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ'],
+        description: "Ahora toda la fila, recuerda mover los índices para la G y la H"
+    },
+    {
+        name: "Sector 4: Fila Superior Básica",
+        letters: ['Q', 'W', 'E', 'I', 'O', 'P'],
+        description: "Apretamos las teclas superiores y volvemos los indices a su marca"
+    },
+    {
+        name: "Sector 5: Fila Superior Intermedia",
         letters: ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-        description: "Domina toda la fila superior"
+        description: "Practica con más teclas de la fila superior"
     },
     {
-        name: "Fila Inferior Básica",
+        name: "Sector 6: Fila Inferior Básica",
         letters: ['Z', 'X', 'M', 'N'],
-        description: "Practica con las teclas de la fila inferior"
+        description: "Practica con las teclas básicas de la fila inferior"
     },
     {
-        name: "Fila Inferior Completa",
+        name: "Sector 7: Fila Inferior Intermedia",
         letters: ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
-        description: "Domina toda la fila inferior"
+        description: "Domina las teclas intermedias de la fila inferior"
     },
     {
-        name: "Todas las Letras",
+        name: "Sector 8: Combinación Básica",
+        letters: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ', 'Q', 'W', 'E', 'I', 'O', 'P'],
+        description: "Combina las filas inicial y superior"
+    },
+    {
+        name: "Sector 9: Combinación Intermedia",
+        letters: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Z', 'X', 'M', 'N'],
+        description: "Practica con todas las teclas excepto las más difíciles"
+    },
+    {
+        name: "Sector 10: Todas las Letras",
         letters: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split(''),
         description: "¡Demuestra tu dominio con todas las letras!"
     }

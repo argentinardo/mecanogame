@@ -1,5 +1,1 @@
 tareas:
-los combos no funcionan correctamente, o no aparecen o se pisan entre ellos, me gustaria que el cuadro de dialogo sea independiente del que pone 
-el cartel de la penalizacion abre con retrazo, esto provoca que en vez de aparecer 3 seg, aparece 2 porque un segundo se gasto antes de que el cartel sea visible
-las letras son en realidad imagenes de misiles que caen del cielo, me gustaria hacer un efecto de estela de fuego por detras la caja de las letras debe ser de 72px x 72px
-me gustaria que el volumen de la musica baje cuando está en el estado de recalibrando...

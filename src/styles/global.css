@@ -9,42 +9,12 @@
 
 body {
   font-family: "Press Start 2P", "Orbitron", monospace;
-  background: linear-gradient(
-    180deg,
-    #350035 0%,
-    #9e0000 10%,
-    #000000 35%,
-    #000000 80%,
-    #5c0000 100%
-  );
   min-height: 100vh;
   overflow: hidden;
   position: relative;
+  background-color: black;
 }
 
-body::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(
-      circle at 50% 0%,
-      rgba(255, 255, 255, 0.1) 0%,
-      transparent 50%
-    ),
-    linear-gradient(
-      90deg,
-      rgba(255, 0, 255, 0.1) 0%,
-      rgba(255, 20, 147, 0.1) 25%,
-      rgba(255, 69, 0, 0.1) 50%,
-      rgba(255, 140, 0, 0.1) 75%,
-      rgba(255, 0, 255, 0.1) 100%
-    );
-  animation: sunsetGlow 5s ease-in-out infinite alternate;
-  z-index: 0;
-}
 
 @keyframes sunsetGlow {
   0% {
@@ -58,6 +28,17 @@ body::before {
 }
 
 .game-container {
+  border: 5px solid rgb(37 36 36);
+  box-shadow: inset 0 0 20px 0px rgba(255, 255, 255, 0.5);
+  border-radius: 30px;
+   background: linear-gradient(
+    180deg,
+    #350035 0%,
+    #9e0000 10%,
+    #000000 35%,
+    #000000 80%,
+    #5c0000 100%
+  );
   position: relative;
   max-width: 1600px;
   width: 95%;
@@ -1558,15 +1539,11 @@ body::before {
 
 /* Información del sector en la parte superior */
 .sector-info {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  margin: 10px;
   z-index: 10;
 }
 
 .sector-panel {
-  background: linear-gradient(145deg, rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
   border: 3px solid #00ffff;
   border-radius: 20px;
   padding: 15px 30px;
@@ -1574,7 +1551,7 @@ body::before {
   box-shadow: 
     0 0 30px rgba(0, 255, 255, 0.5),
     inset 0 0 20px rgba(0, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(4px);
   animation: sectorGlow 3s ease-in-out infinite alternate;
 }
 
@@ -1921,11 +1898,6 @@ body::before {
   gap: 20px;
 }
 
-.control-section {
-  flex: 1;
-  max-width: 280px;
-  min-width: 250px;
-}
 
 .central-instruments {
   flex: 0 0 auto;
@@ -2507,4 +2479,95 @@ body::before {
   100% {
     filter: brightness(1.5) blur(2px);
   }
+}
+
+/* Cartel grande de sector */
+.sector-info-large {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000; /* Aumentar el z-index para asegurar que esté por encima de todo */
+    width: 80%;
+    max-width: 800px;
+    animation: sectorInfoAppear 0.5s ease-out;
+}
+
+.sector-panel-large {
+    background: linear-gradient(145deg, rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
+    border: 5px solid #00ffff;
+    border-radius: 30px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 
+        0 0 50px rgba(0, 255, 255, 0.7),
+        inset 0 0 30px rgba(0, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    animation: sectorLargeGlow 3s ease-in-out infinite alternate;
+}
+
+.sector-label-large {
+    font-size: 16px;
+    color: #ffaa00;
+    text-shadow: 0 0 10px #ffaa00;
+    margin-bottom: 20px;
+    font-family: "Press Start 2P", monospace;
+    letter-spacing: 3px;
+}
+
+.sector-name-large {
+    font-size: 36px;
+    margin-bottom: 20px;
+    color: #ffaa00;
+    text-shadow: 0 0 25px #ffaa00;
+    font-family: "Press Start 2P", monospace;
+    font-weight: normal;
+}
+
+.sector-description-large {
+    font-size: 18px;
+    color: #00ffff;
+    opacity: 0.9;
+    font-family: "Press Start 2P", monospace;
+    font-weight: normal;
+    line-height: 1.5;
+}
+
+/* Agregar instrucción para cerrar */
+.sector-panel-large::after {
+    content: "Presiona ENTER o ESC para continuar";
+    display: block;
+    font-size: 14px;
+    color: #00ffff;
+    margin-top: 30px;
+    opacity: 0.8;
+    font-family: "Press Start 2P", monospace;
+    animation: blinkText 1.5s infinite;
+}
+
+@keyframes blinkText {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 0.4; }
+}
+
+@keyframes sectorInfoAppear {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes sectorLargeGlow {
+    0% {
+        box-shadow: 0 0 50px rgba(0, 255, 255, 0.7), inset 0 0 30px rgba(0, 255, 255, 0.2);
+        border-color: #00ffff;
+    }
+    100% {
+        box-shadow: 0 0 80px rgba(0, 255, 255, 0.9), inset 0 0 50px rgba(0, 255, 255, 0.3);
+        border-color: #66ffff;
+    }
 }
