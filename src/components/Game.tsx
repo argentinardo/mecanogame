@@ -10,9 +10,6 @@ import { useAudio } from '../hooks/useAudio';
 import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES, KEYBOARD_POSITIONS } from '../types/game';
 
-// Importar imágenes de letras de la fila del medio (home row)
-
-
 
 
 const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
