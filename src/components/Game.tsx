@@ -11,30 +11,9 @@ import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES, KEYBOARD_POSITIONS } from '../types/game';
 
 // Importar imágenes de letras de la fila del medio (home row)
-import letterA from '../assets/images/letter/A.png';
-import letterS from '../assets/images/letter/s.png';
-import letterD from '../assets/images/letter/d.png';
-import letterF from '../assets/images/letter/f.png';
-import letterG from '../assets/images/letter/g.png';
-import letterH from '../assets/images/letter/h.png';
-import letterJ from '../assets/images/letter/j.png';
-import letterK from '../assets/images/letter/k.png';
-import letterL from '../assets/images/letter/l.png';
-import letterEnie from '../assets/images/letter/enie.png';
 
-// Mapa de imágenes para las letras de la fila del medio (home row)
-const LETTER_IMAGES: Record<string, string> = {
-    'A': letterA,
-    'S': letterS,
-    'D': letterD,
-    'F': letterF,
-    'G': letterG,
-    'H': letterH,
-    'J': letterJ,
-    'K': letterK,
-    'L': letterL,
-    'Ñ': letterEnie
-};
+
+
 
 const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
 const MAX_LETTERS_ON_SCREEN = 10000;
@@ -76,17 +55,7 @@ const LETTER_COLORS: Record<string, string> = {
     Z: '#ff4bb2', Ñ: '#ff4b7a'
 };
 
-// Función para determinar la hilera de una letra
-const getLetterRow = (letter: string): 'top' | 'home' | 'bottom' => {
-    const topRow = 'QWERTYUIOP';
-    const homeRow = 'ASDFGHJKLÑ';
-    const bottomRow = 'ZXCVBNM';
-    
-    if (topRow.includes(letter)) return 'top';
-    if (homeRow.includes(letter)) return 'home';
-    if (bottomRow.includes(letter)) return 'bottom';
-    return 'home'; // Por defecto
-};
+
 
 export const Game: React.FC = () => {
     const {
@@ -121,13 +90,16 @@ export const Game: React.FC = () => {
         gameSpeed: INITIAL_GAME_SPEED,
         letterSpeed: INITIAL_LETTER_SPEED,
         currentStage: 0,
+        lettersDestroyed: 0,
         pressedKey: null,
         centralMessage: null,
         showCentralMessage: false,
         countdown: null,
         isPaused: false,
         showSectorInfo: false,
-        sectorInfoTimeout: null
+        sectorInfoTimeout: null,
+        firstMeteoritePause: false,
+        forceFieldActivationMessage: false
     });
 
     const [comboCount, setComboCount] = useState<number>(0);
@@ -161,7 +133,6 @@ export const Game: React.FC = () => {
     gameStateRef.current = gameState;
 
     // Estado para las explosiones
-    const [explosions, setExplosions] = useState<Array<{ id: number; x: number; y: number; createdAt: number }>>([]);
 
     const getLetterPosition = useCallback((letter: string) => {
         const position = KEYBOARD_POSITIONS[letter];
@@ -420,17 +391,6 @@ export const Game: React.FC = () => {
                 setCurrentOrderMessage(null);
             }, 300); // Tiempo extra para la animación de salida
         }, duration);
-    }, []);
-
-    // Función para crear explosión
-    const createExplosion = useCallback((x: number, y: number) => {
-        const explosion = {
-            id: Date.now(),
-            x,
-            y,
-            createdAt: Date.now()
-        };
-        setExplosions(prev => [...prev, explosion]);
     }, []);
 
     // Función para crear efectos visuales de explosión
@@ -845,110 +805,86 @@ export const Game: React.FC = () => {
         }
     };
 
-    // Función para crear partículas de meteorito mejoradas (simplificadas)
-    const createMeteoriteParticles = (x: number, y: number) => {
-        // Crear onda de choque específica para meteoritos
-        createMeteoriteShockWave(x, y);
-        
-        // Crear menos partículas de fuego para optimizar
-        for (let i = 0; i < 8; i++) { // Reducido de 15 a 8
-            const particle = document.createElement('div');
-            particle.className = 'meteorite-neon-particle';
-            
-            // Colores de fuego con efectos neon (reducidos)
-            const colors = [
-                '#ff4500', '#ff6600', '#ffff00', '#ff0000'
-            ];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            
-            const size = Math.random() * 8 + 6; // Reducido de 10+8 a 8+6
-            
-            particle.style.position = 'fixed';
-            particle.style.left = `${x}px`;
-            particle.style.top = `${y}px`;
-            particle.style.width = `${size}px`;
-            particle.style.height = `${size}px`;
-            particle.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
-            particle.style.borderRadius = '50%';
-            particle.style.transform = 'translate(-50%, -50%)';
-            particle.style.zIndex = '100';
-            particle.style.pointerEvents = 'none';
-            particle.style.boxShadow = `0 0 ${size * 2}px ${color}`;
-            document.body.appendChild(particle);
-            
-            activeParticlesRef.current.push(particle);
-            
-            const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 12 + 6;
-            const vx = Math.cos(angle) * speed;
-            let vy = Math.sin(angle) * speed;
-            const gravity = 0.35;
-            
-            let px = x, py = y;
-            let opacity = 1;
-            
-            const particleInterval = setInterval(() => {
-                px += vx;
-                vy += gravity;
-                py += vy;
-                
-                opacity -= 0.04; // Más rápido
-                
-                particle.style.left = `${px}px`;
-                particle.style.top = `${py}px`;
-                particle.style.opacity = String(opacity);
-                
-                if (opacity <= 0 || py > window.innerHeight) {
-                    clearInterval(particleInterval);
-                    const index = activeParticlesRef.current.indexOf(particle);
-                    if (index > -1) {
-                        activeParticlesRef.current.splice(index, 1);
-                    }
-                    particle.remove();
-                }
-            }, 16);
-        }
-    };
+
 
     // Crear onda de choque específica para meteoritos (simplificada)
-    const createMeteoriteShockWave = (x: number, y: number) => {
+    const createMeteoriteShockWave = useCallback((x: number, y: number) => {
         const shockWave = document.createElement('div');
         shockWave.className = 'meteorite-shock-wave';
         shockWave.style.position = 'fixed';
         shockWave.style.left = `${x}px`;
         shockWave.style.top = `${y}px`;
-        shockWave.style.width = '15px';
-        shockWave.style.height = '15px';
-        shockWave.style.border = '4px solid #ff4500';
-        shockWave.style.borderRadius = '50%';
-        shockWave.style.transform = 'translate(-50%, -50%)';
-        shockWave.style.zIndex = '20';
-        shockWave.style.pointerEvents = 'none';
-        shockWave.style.boxShadow = '0 0 20px #ff4500';
         document.body.appendChild(shockWave);
-        
-        activeParticlesRef.current.push(shockWave);
-        
-        let scale = 1;
-        let opacity = 1;
-        const shockInterval = setInterval(() => {
-            scale += 1.0; // Reducido de 1.2 a 1.0
-            opacity -= 0.08; // Más rápido
+
+        setTimeout(() => {
+            shockWave.remove();
+        }, 500);
+    }, []);
+
+        // Función para crear partículas de meteorito mejoradas (simplificadas)
+        const createMeteoriteParticles = useCallback((x: number, y: number) => {
+            // Crear onda de choque específica para meteoritos
+            createMeteoriteShockWave(x, y);
             
-            shockWave.style.transform = `translate(-50%, -50%) scale(${scale})`;
-            shockWave.style.opacity = String(opacity);
-            shockWave.style.borderColor = `rgba(255, 69, 0, ${opacity})`;
-            
-            if (opacity <= 0) {
-                clearInterval(shockInterval);
-                const index = activeParticlesRef.current.indexOf(shockWave);
-                if (index > -1) {
-                    activeParticlesRef.current.splice(index, 1);
-                }
-                shockWave.remove();
+            // Crear menos partículas de fuego para optimizar
+            for (let i = 0; i < 8; i++) { // Reducido de 15 a 8
+                const particle = document.createElement('div');
+                particle.className = 'meteorite-neon-particle';
+                
+                // Colores de fuego con efectos neon (reducidos)
+                const colors = [
+                    '#ff4500', '#ff6600', '#ffff00', '#ff0000'
+                ];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                const size = Math.random() * 8 + 6; // Reducido de 10+8 a 8+6
+                
+                particle.style.position = 'fixed';
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
+                particle.style.borderRadius = '50%';
+                particle.style.transform = 'translate(-50%, -50%)';
+                particle.style.zIndex = '100';
+                particle.style.pointerEvents = 'none';
+                particle.style.boxShadow = `0 0 ${size * 2}px ${color}`;
+                document.body.appendChild(particle);
+                
+                activeParticlesRef.current.push(particle);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 12 + 6;
+                const vx = Math.cos(angle) * speed;
+                let vy = Math.sin(angle) * speed;
+                const gravity = 0.35;
+                
+                let px = x, py = y;
+                let opacity = 1;
+                
+                const particleInterval = setInterval(() => {
+                    px += vx;
+                    vy += gravity;
+                    py += vy;
+                    
+                    opacity -= 0.04; // Más rápido
+                    
+                    particle.style.left = `${px}px`;
+                    particle.style.top = `${py}px`;
+                    particle.style.opacity = String(opacity);
+                    
+                    if (opacity <= 0 || py > window.innerHeight) {
+                        clearInterval(particleInterval);
+                        const index = activeParticlesRef.current.indexOf(particle);
+                        if (index > -1) {
+                            activeParticlesRef.current.splice(index, 1);
+                        }
+                        particle.remove();
+                    }
+                }, 16);
             }
-        }, 16);
-    };
+        }, [createMeteoriteShockWave]);
 
     // Función para obtener las coordenadas exactas del centro del cañón
     const getCannonCenterCoordinates = useCallback(() => {
@@ -1405,7 +1341,7 @@ export const Game: React.FC = () => {
         if (gameState.isPlaying && !gameState.isPaused && !gameState.isPenalized && 
             !gameState.showCentralMessage && gameState.score === 0 && 
             gameState.fallingLetters.length === 0) {
-            showCentralMessage('¡Listo para disparar!', 2000);
+            showCentralMessage('¡PAOLO prepárate para disparar!', 2000);
         }
     }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.showCentralMessage, gameState.score, gameState.fallingLetters.length, showCentralMessage]);
 
@@ -1546,13 +1482,16 @@ export const Game: React.FC = () => {
             gameSpeed: INITIAL_GAME_SPEED,
             letterSpeed: INITIAL_LETTER_SPEED,
             currentStage: 0,
+            lettersDestroyed: 0,
             pressedKey: null,
             centralMessage: null,
             showCentralMessage: false,
             countdown: null,
             isPaused: false,
             showSectorInfo: false,
-            sectorInfoTimeout: null
+            sectorInfoTimeout: null,
+            firstMeteoritePause: false,
+            forceFieldActivationMessage: false
         });
     }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
 
@@ -1665,13 +1604,16 @@ export const Game: React.FC = () => {
             gameSpeed: INITIAL_GAME_SPEED, // Resetear a velocidad inicial
             letterSpeed: INITIAL_LETTER_SPEED, // Resetear a velocidad inicial
             currentStage: 0, // Comenzar desde la primera etapa
+            lettersDestroyed: 0,
             pressedKey: null,
             centralMessage: null,
             showCentralMessage: false,
             countdown: null,
             isPaused: false,
             showSectorInfo: false,
-            sectorInfoTimeout: null
+            sectorInfoTimeout: null,
+            firstMeteoritePause: false,
+            forceFieldActivationMessage: false
         });
     }, [initAudioContext, stopBackgroundMusic, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
 
@@ -1986,9 +1928,6 @@ export const Game: React.FC = () => {
                 
                 {/* Letras que caen como misiles con estelas de fuego */}
                 {gameState.fallingLetters.map(letter => {
-                    const row = getLetterRow(letter.letter);
-                    const isHomeRow = row === 'home';
-                    const letterImage = LETTER_IMAGES[letter.letter];
                     const isHighlighted = gameState.pressedKey === letter.letter;
                     const color = LETTER_COLORS[letter.letter] || '#00ffff';
                     
@@ -1999,7 +1938,6 @@ export const Game: React.FC = () => {
                             x={letter.x}
                             y={letter.y}
                             isHighlighted={isHighlighted}
-                            letterImage={isHomeRow ? letterImage : undefined}
                             color={color}
                         />
                     );

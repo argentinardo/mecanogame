@@ -11,6 +11,7 @@ export interface GameState {
     gameSpeed: number;
     letterSpeed: number;
     currentStage: number;
+    lettersDestroyed: number; // Contador de letras destruidas para la dificultad
     pressedKey: string | null;
     centralMessage: string | null;
     showCentralMessage: boolean;
@@ -18,6 +19,8 @@ export interface GameState {
     isPaused: boolean;
     showSectorInfo: boolean;
     sectorInfoTimeout: number | null;
+    firstMeteoritePause: boolean;
+    forceFieldActivationMessage: boolean;
 }
 
 export interface FallingLetter {

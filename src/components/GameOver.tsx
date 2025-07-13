@@ -1,4 +1,5 @@
 import React from 'react';
+import { MemoryIcon } from './MemoryIcons';
 
 interface GameOverProps {
     score: number;
@@ -13,10 +14,12 @@ export const GameOver: React.FC<GameOverProps> = ({ score, onContinue, onNewGame
             <p>Puntuación Final: <span>{score}</span></p>
             <div className="game-over-buttons">
                 <button className="continue-btn" onClick={onContinue}>
-                    ▶️ CONTINUAR
+                    <MemoryIcon name="play" size={16} className="btn-icon" />
+                    CONTINUAR
                 </button>
                 <button className="start-btn" onClick={onNewGame}>
-                    🔄 NUEVO JUEGO
+                    <MemoryIcon name="gamepad" size={16} className="btn-icon" />
+                    NUEVO JUEGO
                 </button>
             </div>
         </div>

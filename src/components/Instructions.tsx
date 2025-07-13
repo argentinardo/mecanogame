@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { MemoryIcon } from './MemoryIcons';
 
 interface InstructionsProps {
     onStart: () => void;
@@ -9,14 +10,15 @@ interface InstructionsProps {
 export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue, showContinue = false }) => {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                onStart();
-            } else if (event.key === 'c' || event.key === 'C') {
+            if (event.key === 'c' || event.key === 'C') {
                 if (showContinue && onContinue) {
                     event.preventDefault();
                     onContinue();
                 }
+            } else {
+                // Cualquier otra tecla inicia el juego
+                event.preventDefault();
+                onStart();
             }
         };
 
@@ -27,12 +29,24 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
         };
     }, [onStart, onContinue, showContinue]);
 
+    const handleContainerClick = (event: React.MouseEvent) => {
+        // Solo activar si el click no fue en un botón
+        if (!(event.target as HTMLElement).closest('button')) {
+            if (showContinue && onContinue) {
+                onContinue();
+            } else {
+                onStart();
+            }
+        }
+    };
+
     return (
-        <div className="instructions">
+        <div className="instructions" onClick={handleContainerClick} style={{ cursor: 'pointer' }}>
             <h2>🎯 CAÑÓN DE LETRAS 🎯</h2>
             <p>• Las letras caerán desde arriba</p>
             <p>• Presiona la tecla correcta para disparar</p>
             <p>• Si te equivocas, tendrás 3 segundos de penalización</p>
+            <p>• Presiona <strong>BACKSPACE</strong> durante la penalización para saltearla</p>
             <p>• Usa <strong>ESPACIO</strong> para activar el escudo</p>
             <p>• Presiona <strong>ESC</strong> para pausar</p>
             <p>• ¡Mejora tu velocidad de escritura!</p>
@@ -43,18 +57,16 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                             Presiona <strong>C</strong> para continuar donde te quedaste
                         </p>
                         <button className="continue-btn" onClick={onContinue}>
-                            ▶️ CONTINUAR
+                            <MemoryIcon name="play" size={16} className="btn-icon" />
+                            CONTINUAR
                         </button>
                         <br />
                         <br />
                     </>
                 )}
                 <p className="start-instruction">
-                    Presiona <strong>ENTER</strong> para {showContinue ? 'nuevo juego' : 'comenzar'}
+                    Presiona <strong>cualquier tecla</strong> o <strong>haz click</strong> para {showContinue ? 'nuevo juego' : 'comenzar'}
                 </p>
-                <button className="start-btn" onClick={onStart}>
-                    🚀 {showContinue ? 'NUEVO JUEGO' : 'VAMOS!'}
-                </button>
             </div>
         </div>
     );

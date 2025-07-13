@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface CannonProps {
     isReloading: boolean;
@@ -6,10 +6,38 @@ interface CannonProps {
 }
 
 export const Cannon: React.FC<CannonProps> = ({ isReloading, angle = 0 }) => {
+    const [floatingOffset, setFloatingOffset] = useState(0);
+
+    useEffect(() => {
+        let animationId: number;
+        const startTime = Date.now();
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const floatY = Math.sin(elapsed * 0.002) * 2.5; // Flotación más sutil
+            setFloatingOffset(floatY);
+            animationId = requestAnimationFrame(animate);
+        };
+
+        animate();
+
+        return () => {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        };
+    }, []);
+
     return (
-        <div className={`cannon ${isReloading ? 'reloading' : ''}`}>
-            <div className="cannon-base"></div>
-            <div className="cannon-barrel" style={{ transform: `translateX(-50%) rotate(${angle}deg)` }}></div>
+        <div 
+            className={`cannon ${isReloading ? 'reloading' : ''}`} 
+            style={{ 
+                transform: `translateX(-50%) translateY(${floatingOffset - 40}px) rotate(${angle}deg)`,
+                animation: 'none' // Desactivar la animación CSS para permitir rotación
+            }}
+        >
+            <div className="cannon-base" style={{ transform: 'scale(0.5)' }}></div>
+            <div className="cannon-barrel" style={{ transform: 'translateX(-50%)' }}></div>
         </div>
     );
 }; 

@@ -5,12 +5,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  cursor: default;
-}
-
-/* Sobrescribir el cursor pixelado de nes.css */
-html, body {
-  cursor: default;
 }
 
 body {
@@ -348,7 +342,7 @@ body {
 
 .cannon-barrel {
   position: absolute;
-  left: 50%;
+  left: calc(50%-4px);
   top: 42px;
   transform: translateX(-50%);
   width: 8px;
@@ -690,10 +684,6 @@ body {
 .hand-visual {
   display: flex;
   justify-content: center;
-  align-items: center;
-  position: relative;
-  width: 120px;
-  height: 200px;
   margin-bottom: 10px;
 }
 
@@ -703,93 +693,6 @@ body {
   height: 140px;
 }
 
-/* Contenedor para elementos pixel art */
-.hand-visual .pixel-palm,
-.hand-visual .pixel-finger {
-  filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.6));
-}
-
-/* Animaciones para letras con brillo dinámico */
-@keyframes letterPulse {
-  0% {
-    color: currentColor;
-    textShadow: 0 0 8px currentColor;
-    border-color: currentColor;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.5);
-  }
-  50% {
-    color: currentColor;
-    textShadow: 0 0 12px currentColor, 0 0 20px currentColor;
-    border-color: currentColor;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.5), 0 0 8px currentColor;
-  }
-  100% {
-    color: currentColor;
-    textShadow: 0 0 8px currentColor;
-    border-color: currentColor;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.5);
-  }
-}
-
-@keyframes letterGlow {
-  0% {
-    color: currentColor;
-    textShadow: 0 0 12px currentColor, 0 0 20px currentColor;
-    border-color: currentColor;
-    box-shadow: 0 0 15px currentColor, inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3);
-  }
-  50% {
-    color: currentColor;
-    textShadow: 0 0 20px currentColor, 0 0 30px currentColor, 0 0 40px currentColor;
-    border-color: currentColor;
-    box-shadow: 0 0 25px currentColor, 0 0 35px currentColor, inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3);
-  }
-  100% {
-    color: currentColor;
-    textShadow: 0 0 12px currentColor, 0 0 20px currentColor;
-    border-color: currentColor;
-    box-shadow: 0 0 15px currentColor, inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3);
-  }
-}
-
-@keyframes innerGlow {
-  0% {
-    background: radial-gradient(circle, currentColor20 0%, transparent 70%);
-    opacity: 0.3;
-  }
-  50% {
-    background: radial-gradient(circle, currentColor40 0%, currentColor20 50%, transparent 70%);
-    opacity: 0.6;
-  }
-  100% {
-    background: radial-gradient(circle, currentColor20 0%, transparent 70%);
-    opacity: 0.3;
-  }
-}
-
-/* Estilos pixel art para manos */
-.pixel-palm {
-  background: rgba(0, 255, 255, 0.2);
-  border: 2px solid #00ffff;
-  transition: all 0.3s ease;
-}
-
-.pixel-finger {
-  background: rgba(0, 255, 255, 0.3);
-  border: 1.5px solid #00ffff;
-  transition: all 0.3s ease;
-}
-
-.pixel-palm.highlighted,
-.pixel-finger.highlighted {
-  background: rgba(255, 255, 0, 0.7);
-  border-color: #ffff00;
-  border-width: 3px;
-  filter: drop-shadow(0 0 10px #ffff00);
-  animation: fingerPulse 0.6s ease-in-out infinite alternate;
-}
-
-/* Mantener estilos SVG para compatibilidad */
 .palm {
   fill: rgba(0, 255, 255, 0.2);
   stroke: #00ffff;
@@ -1920,7 +1823,7 @@ body {
 
 .cannon-barrel {
   position: absolute;
-  left: 50%;
+  left: calc(50%-4px);
   top: 42px;
   transform: translateX(-50%);
   width: 8px;
@@ -5659,6 +5562,22 @@ svg {
   z-index: 5;
   transition: transform 0.05s ease-out;
   animation: shipFloating 3s ease-in-out infinite;
+}
+
+/* Corrección del cannon-barrel para alineación correcta */
+.cannon-barrel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 28px;
+  background: linear-gradient(to top, #444, #777);
+  border: 2px solid #1900ff;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+  animation: cannonGlow 2s ease-in-out infinite alternate;
+  z-index: 5;
+  transform-origin: center bottom;
 }
 
 @keyframes shipFloating {

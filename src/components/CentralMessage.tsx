@@ -19,7 +19,18 @@ export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdo
                     </div>
                 ) : (
                     <div className="status-message">
-                        {message}
+                        {message?.split('\n').map((line, index) => (
+                            <div key={index} className="message-line">
+                                {line.split('BACKSPACE').map((part, partIndex) => (
+                                    <React.Fragment key={partIndex}>
+                                        {part}
+                                        {partIndex < line.split('BACKSPACE').length - 1 && (
+                                            <span className="key-highlight">BACKSPACE</span>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

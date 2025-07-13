@@ -4,7 +4,7 @@ import mainThemeUrl from '../assets/sound/main-theme.mp3';
 export const useAudio = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
     const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(true); // Cambiado a true por defecto
     const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
     const normalVolumeRef = useRef<number>(0.3); // Volumen normal de la música
 
