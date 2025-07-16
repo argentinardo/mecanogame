@@ -1,0 +1,162 @@
+// =============================================================================
+// SECTOR HUD STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// =============================================================================
+// SECTOR INFO BÁSICO
+// =============================================================================
+
+.sector-info {
+  margin: $spacing-sm;
+  z-index: $z-ui;
+}
+
+.sector-panel {
+  border: 3px solid $color-cyan;
+  border-radius: $radius-main;
+  padding: $spacing-md $spacing-xl;
+  text-align: center;
+  box-shadow: 0 0 30px rgba($color-cyan, $opacity-medium), inset 0 0 20px rgba($color-cyan, 0.1);
+  @include backdrop-blur(4px);
+  animation: sectorGlow 3s ease-in-out infinite alternate;
+}
+
+.sector-label {
+  font-size: $font-size-small;
+  color: $color-cyan;
+  @include text-glow($color-cyan, 5px);
+  margin-bottom: $spacing-sm;
+  font-family: $font-main;
+  letter-spacing: 2px;
+}
+
+.sector-name {
+  font-size: $font-size-large;
+  margin-bottom: $spacing-sm;
+  color: $color-cyan;
+  @include text-glow($color-cyan, 15px);
+  font-family: $font-main;
+  font-weight: normal;
+}
+
+.sector-description {
+  font-size: $font-size-base;
+  color: $color-cyan;
+  opacity: 0.9;
+  font-family: $font-main;
+  font-weight: normal;
+}
+
+// =============================================================================
+// SECTOR INFO LARGE (MODAL)
+// =============================================================================
+
+.sector-info-large {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: $z-modal;
+  width: 80%;
+  max-width: 800px;
+  animation: sectorInfoAppear 0.5s ease-out;
+}
+
+.sector-panel-large {
+  @include gradient-bg(rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
+  border: 5px solid $color-cyan;
+  border-radius: $radius-panel;
+  padding: $spacing-xxl;
+  text-align: center;
+  box-shadow: 0 0 50px rgba($color-cyan, 0.7), inset 0 0 30px rgba($color-cyan, 0.2);
+  @include backdrop-blur(10px);
+  animation: sectorLargeGlow 3s ease-in-out infinite alternate;
+}
+
+.sector-label-large {
+  font-size: 16px;
+  color: $color-cyan;
+  @include text-glow($color-cyan, 10px);
+  margin-bottom: $spacing-lg;
+  font-family: $font-main;
+  letter-spacing: 3px;
+}
+
+.sector-name-large {
+  font-size: $font-size-xxl;
+  margin-bottom: $spacing-lg;
+  color: $color-cyan;
+  @include text-glow($color-cyan, 25px);
+  font-family: $font-main;
+  font-weight: normal;
+}
+
+.sector-description-large {
+  font-size: $font-size-large;
+  color: $color-cyan;
+  opacity: 0.9;
+  font-family: $font-main;
+  font-weight: normal;
+  line-height: 1.5;
+}
+
+.sector-panel-large::after {
+  content: "Presiona cualquier tecla para continuar";
+  display: block;
+  font-size: 14px;
+  color: $color-cyan;
+  margin-top: $spacing-xl;
+  opacity: 0.8;
+  font-family: $font-main;
+  animation: blinkText 1.5s infinite;
+}
+
+// =============================================================================
+// SECTOR ANIMATIONS
+// =============================================================================
+
+@keyframes sectorGlow {
+  0% { 
+    box-shadow: 0 0 30px rgba($color-cyan, $opacity-medium), inset 0 0 20px rgba($color-cyan, 0.1); 
+    border-color: $color-cyan; 
+  }
+  100% { 
+    box-shadow: 0 0 50px rgba($color-cyan, 0.7), inset 0 0 30px rgba($color-cyan, 0.2); 
+    border-color: $color-cyan-light; 
+  }
+}
+
+@keyframes sectorLargeGlow {
+  0% { 
+    box-shadow: 0 0 50px rgba($color-cyan, 0.7), inset 0 0 30px rgba($color-cyan, 0.2); 
+    border-color: $color-cyan; 
+  }
+  100% { 
+    box-shadow: 0 0 80px rgba($color-cyan, 0.9), inset 0 0 50px rgba($color-cyan, 0.3); 
+    border-color: $color-cyan-light; 
+  }
+}
+
+@keyframes sectorInfoAppear {
+  0% { 
+    opacity: 0; 
+    transform: translate(-50%, -50%) scale(0.8); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(1); 
+  }
+}
+
+@keyframes blinkText {
+  0%, 100% { 
+    opacity: 0.8; 
+  }
+  50% { 
+    opacity: 0.4; 
+  }
+} 

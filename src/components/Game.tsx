@@ -42,15 +42,7 @@ const LETTER_SIZE = 72;          // Tamaño de las letras que caen
 const CANNON_RADIUS = 50;        // Radio de colisión del cañón (punto rojo de debug)
 const FORCE_FIELD_RADIUS = 200;  // Radio del campo de fuerza protector
 
-// Mapa de colores para cada letra
-const LETTER_COLORS: Record<string, string> = {
-    A: '#ff4b4b', B: '#ff914d', C: '#ffd24d', D: '#eaff4b', E: '#aaff4b',
-    F: '#4bff6e', G: '#4bffd2', H: '#4bd2ff', I: '#4b6eff', J: '#914bff',
-    K: '#d24bff', L: '#ff4bea', M: '#ff4bb2', N: '#ff4b7a', O: '#ff7a4b',
-    P: '#ffb24b', Q: '#eaff4b', R: '#b2ff4b', S: '#4bff91', T: '#4bffd2',
-    U: '#4bb2ff', V: '#4b7aff', W: '#7a4bff', X: '#b24bff', Y: '#ff4be0',
-    Z: '#ff4bb2', Ñ: '#ff4b7a'
-};
+
 
 
 
@@ -64,6 +56,7 @@ export const Game: React.FC = () => {
         playLevelUpSound,
         playComboSuccessSound,
         playMeteoriteSound,
+        playProximityBeep,
         startBackgroundMusic,
         stopBackgroundMusic,
         lowerBackgroundVolume,
@@ -114,6 +107,16 @@ export const Game: React.FC = () => {
     
     // Estado para manejar la tecla especial (barra espaciadora)
     const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
+    
+    // Estado para el ángulo del cañón
+    const [cannonAngle, setCannonAngle] = useState<number>(0);
+    
+    // Estado para detectar si estamos en móvil
+    const [isMobile, setIsMobile] = useState<boolean>(false);
+    
+    // Referencia para controlar el beep de proximidad
+    const lastProximityBeepRef = useRef<number>(0);
+    const proximityBeepIntervalRef = useRef<number | undefined>(undefined);
 
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const gameLoopRef = useRef<number | undefined>(undefined);
@@ -237,25 +240,27 @@ export const Game: React.FC = () => {
         const laser = document.createElement('div');
         laser.className = 'bullet';
         
-        const cannonRect = document.querySelector('.cannon-barrel')?.getBoundingClientRect();
-        if (!cannonRect) return;
-
-        // Posición de inicio del láser (punta del cañón)
-        const startX = cannonRect.left + (cannonRect.width / 2);
-        const startY = cannonRect.top;
-        
-        // Posición objetivo (centro de la letra)
+        // Obtener las coordenadas del centro de la nave (pivote)
+        const { x: cannonX, y: cannonY } = getCannonCenterCoordinates();
         const gameArea = gameAreaRef.current?.getBoundingClientRect();
         if (!gameArea) return;
 
-        const targetX = gameArea.left + targetLetterObj.x + (LETTER_SIZE / 2);
-        const targetY = gameArea.top + targetLetterObj.y + (LETTER_SIZE / 2);
+        // Posición objetivo (centro de la letra)
+        const targetX = targetLetterObj.x + (LETTER_SIZE / 2);
+        const targetY = targetLetterObj.y + (LETTER_SIZE / 2);
         
-        // Calcular la longitud y ángulo del rayo
-        const deltaX = targetX - startX;
-        const deltaY = targetY - startY;
+        // Calcular la longitud y ángulo del rayo usando coordenadas relativas
+        const deltaX = targetX - cannonX;
+        const deltaY = targetY - cannonY;
         const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+        
+        // Ajustar el ángulo para que el cañón apunte correctamente
+        // El cañón necesita rotar 270 grados (90 + 180) en sentido horario para alinearse
+        const adjustedAngle = angle - 270;
+        
+        // Actualizar el ángulo del cañón
+        setCannonAngle(adjustedAngle);
         
         // Aplicar retroceso temporal al cañón en dirección opuesta al disparo
         const cannonElement = document.querySelector('.cannon') as HTMLElement;
@@ -280,14 +285,14 @@ export const Game: React.FC = () => {
 
         
         // Establecer el estilo del rayo
-        laser.style.position = 'fixed';
-        laser.style.left = `${startX}px`;
-        laser.style.top = `${startY}px`;
+        laser.style.position = 'absolute'; // Cambiar a absolute para posicionamiento relativo al game-area
+        laser.style.left = `${cannonX}px`; // Usar coordenadas relativas al game-area
+        laser.style.top = `${cannonY - 2}px`; // Ajustar para centrar verticalmente
         laser.style.width = `${length}px`;
         laser.style.height = '4px';
         laser.style.background = '#ff0000';
         laser.style.boxShadow = '0 0 15px #ff0000, 0 0 30px #ff0000';
-        laser.style.transformOrigin = '0 0';
+        laser.style.transformOrigin = '0 2px'; // Centrar verticalmente el láser
         laser.style.transform = `rotate(${angle}deg)`;
         laser.style.opacity = '0.9';
         
@@ -323,6 +328,11 @@ export const Game: React.FC = () => {
             // Ejecutar hitLetter de forma asíncrona para evitar problemas de dependencia
             setTimeout(() => hitLetter(targetLetterObj), 0);
         }, 100);
+        
+        // Resetear el ángulo del cañón después de un tiempo
+        setTimeout(() => {
+            setCannonAngle(0);
+        }, 500);
     }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound]);
 
     const advanceStage = useCallback(() => {
@@ -580,6 +590,44 @@ export const Game: React.FC = () => {
         }, duration);
     }, []);
 
+    // Función para detectar proximidad de letras (60% de la altura)
+    const checkProximityWarning = useCallback(() => {
+        if (!gameState.isPlaying || gameState.isPaused || gameState.isPenalized) return;
+        
+        const gameArea = gameAreaRef.current;
+        if (!gameArea) return;
+        
+        const gameAreaHeight = gameArea.offsetHeight;
+        const dangerThreshold = gameAreaHeight * 0.6; // 60% de la altura - zona de peligro
+        
+        // Verificar si hay letras en la zona de peligro (60% o más abajo)
+        const lettersInDangerZone = gameState.fallingLetters.filter(letter => 
+            letter.y >= dangerThreshold
+        );
+        
+        // Si hay letras en la zona de peligro, mantener beep continuo
+        if (lettersInDangerZone.length > 0) {
+            if (!proximityBeepIntervalRef.current) {
+                // Iniciar beep inmediatamente
+                playProximityBeep();
+                lastProximityBeepRef.current = Date.now();
+                
+                // Configurar beep continuo cada 500ms
+                proximityBeepIntervalRef.current = window.setInterval(() => {
+                    if (gameState.isPlaying && !gameState.isPaused && !gameState.isPenalized && !isMuted) {
+                        playProximityBeep();
+                    }
+                }, 500);
+            }
+        } else {
+            // Solo detener el beep si NO hay letras en la zona de peligro
+            if (proximityBeepIntervalRef.current) {
+                clearInterval(proximityBeepIntervalRef.current);
+                proximityBeepIntervalRef.current = undefined;
+            }
+        }
+    }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.fallingLetters, playProximityBeep, isMuted]);
+
     // Función para resetear combo
     const resetCombo = useCallback(() => {
         // Limpiar timeout pendiente
@@ -612,7 +660,7 @@ export const Game: React.FC = () => {
             isPenalized: true,
             penaltyTime: countdown,
             showCentralMessage: true,
-            centralMessage: `Recalibrando... ${countdown}s`
+            centralMessage: `Recalibrando... ${countdown}s\n(Presiona BACKSPACE para saltear)`
         }));
 
         // Programar sonidos en las transiciones
@@ -627,7 +675,7 @@ export const Game: React.FC = () => {
                 setGameState(prev => ({
                     ...prev,
                     penaltyTime: countdown,
-                    centralMessage: `Recalibrando... ${countdown}s`
+                    centralMessage: `Recalibrando... ${countdown}s\n(Presiona BACKSPACE para saltear)`
                 }));
             } else {
                 // Cuando llegue a 0, limpiar todo y restaurar el volumen
@@ -890,10 +938,10 @@ export const Game: React.FC = () => {
         
         const gameAreaRect = gameArea.getBoundingClientRect();
         
-        // El cañón está centrado horizontalmente en el game-area
-        // y posicionado a 150px desde el fondo (según CSS: bottom: 150px)
+        // El cañón está centrado horizontal y verticalmente en el game-area
+        // (según CSS: top: 50%, left: 50%, transform: translate(-50%, -50%))
         const cannonX = gameAreaRect.width / 2;
-        const cannonY = gameAreaRect.height - 150; // 150px desde el fondo según CSS
+        const cannonY = gameAreaRect.height / 2; // Centro exacto de la pantalla
         
         return { x: cannonX, y: cannonY };
     }, []);
@@ -1177,6 +1225,11 @@ export const Game: React.FC = () => {
                 clearInterval(spawnIntervalRef.current);
                 spawnIntervalRef.current = undefined;
             }
+            // Detener beep de proximidad cuando se pausa
+            if (proximityBeepIntervalRef.current) {
+                clearInterval(proximityBeepIntervalRef.current);
+                proximityBeepIntervalRef.current = undefined;
+            }
             return;
         }
 
@@ -1194,6 +1247,22 @@ export const Game: React.FC = () => {
             }
         };
     }, [gameState.isPlaying, gameState.isPaused, spawnLetters]);
+
+    // Efecto para detectar si estamos en móvil
+    useEffect(() => {
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+            const isSmallScreen = window.innerWidth <= 768;
+            
+            setIsMobile(isMobileDevice || isSmallScreen);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Efecto para el game loop
     useEffect(() => {
@@ -1234,6 +1303,13 @@ export const Game: React.FC = () => {
                     }
                     // Cuando se pierde una vida, limpiar todas las letras y meteoritos, e iniciar cuenta regresiva
                     startLifeLostCountdown();
+                    
+                    // Detener el beep de proximidad cuando se pierde una vida
+                    if (proximityBeepIntervalRef.current) {
+                        clearInterval(proximityBeepIntervalRef.current);
+                        proximityBeepIntervalRef.current = undefined;
+                    }
+                    
                     return {
                         ...prev,
                         lives: newLives,
@@ -1253,6 +1329,9 @@ export const Game: React.FC = () => {
             checkMeteoriteCollisions();
             checkMeteoriteCannonCollisions();
             
+            // Verificar proximidad de letras para el beep de advertencia
+            checkProximityWarning();
+            
             gameLoopRef.current = requestAnimationFrame(gameLoop);
         };
 
@@ -1265,7 +1344,7 @@ export const Game: React.FC = () => {
                 cancelAnimationFrame(gameLoopRef.current);
             }
         };
-    }, [gameState.isPlaying, gameState.isPaused, endGame, startLifeLostCountdown, checkMeteoriteCollisions, checkMeteoriteCannonCollisions]);
+    }, [gameState.isPlaying, gameState.isPaused, endGame, startLifeLostCountdown, checkMeteoriteCollisions, checkMeteoriteCannonCollisions, checkProximityWarning]);
 
     // Efecto para spawn de meteoritos
     useEffect(() => {
@@ -1314,24 +1393,29 @@ export const Game: React.FC = () => {
                 clearTimeout(comboTimeoutRef.current);
                 comboTimeoutRef.current = undefined;
             }
+            if (proximityBeepIntervalRef.current) {
+                clearInterval(proximityBeepIntervalRef.current);
+                proximityBeepIntervalRef.current = undefined;
+            }
         };
     }, []);
 
     // Efecto para mostrar mensajes de estado solo cuando cambian
-    useEffect(() => {
-        if (gameState.isPlaying && !gameState.isPaused) {
-            if (gameState.isPenalized && gameState.penaltyTime > 0) {
-                // Solo actualizar el mensaje si no hay uno visible
-                if (!gameState.showCentralMessage) {
-                    setGameState(prev => ({
-                        ...prev,
-                        centralMessage: `Recalibrando... ${gameState.penaltyTime}s`,
-                        showCentralMessage: true
-                    }));
-                }
-            }
-        }
-    }, [gameState.penaltyTime, gameState.isPenalized, gameState.isPlaying, gameState.isPaused, gameState.showCentralMessage]);
+    // Comentado porque el mensaje de recalibración se maneja directamente en handleMiss
+    // useEffect(() => {
+    //     if (gameState.isPlaying && !gameState.isPaused) {
+    //         if (gameState.isPenalized && gameState.penaltyTime > 0) {
+    //             // Solo actualizar el mensaje si no hay uno visible
+    //             if (!gameState.showCentralMessage) {
+    //                 setGameState(prev => ({
+    //                     ...prev,
+    //                     centralMessage: `Recalibrando... ${gameState.penaltyTime}s`,
+    //                     showCentralMessage: true
+    //                 }));
+    //             }
+    //         }
+    //     }
+    // }, [gameState.penaltyTime, gameState.isPenalized, gameState.isPlaying, gameState.isPaused, gameState.showCentralMessage]);
 
     // Efecto para mostrar mensaje de listo al inicio del juego
     useEffect(() => {
@@ -1343,11 +1427,12 @@ export const Game: React.FC = () => {
     }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.showCentralMessage, gameState.score, gameState.fallingLetters.length, showCentralMessage]);
 
     // Efecto para ocultar mensaje central cuando el usuario interactúa
+    // No ocultar durante penalización para que se vea el mensaje de recalibración
     useEffect(() => {
-        if (gameState.pressedKey && gameState.showCentralMessage) {
+        if (gameState.pressedKey && gameState.showCentralMessage && !gameState.isPenalized) {
             setGameState(prev => ({ ...prev, showCentralMessage: false, centralMessage: '' }));
         }
-    }, [gameState.pressedKey, gameState.showCentralMessage]);
+    }, [gameState.pressedKey, gameState.showCentralMessage, gameState.isPenalized]);
 
     // Efecto para manejar la música de fondo durante el juego
     useEffect(() => {
@@ -1364,11 +1449,58 @@ export const Game: React.FC = () => {
         }
     }, [gameState.isPlaying, gameState.isPaused, isMuted, startBackgroundMusic, stopBackgroundMusic]);
 
+    // Efecto para manejar el beep de proximidad cuando cambia el estado de mute
+    useEffect(() => {
+        if (isMuted && proximityBeepIntervalRef.current) {
+            // Si se activa el mute, detener el beep inmediatamente
+            clearInterval(proximityBeepIntervalRef.current);
+            proximityBeepIntervalRef.current = undefined;
+        } else if (!isMuted && !proximityBeepIntervalRef.current) {
+            // Si se desactiva el mute y no hay intervalo activo, verificar si hay letras en peligro
+            const gameArea = gameAreaRef.current;
+            if (gameArea && gameState.isPlaying && !gameState.isPaused && !gameState.isPenalized) {
+                const gameAreaHeight = gameArea.offsetHeight;
+                const dangerThreshold = gameAreaHeight * 0.6;
+                const lettersInDangerZone = gameState.fallingLetters.filter(letter => 
+                    letter.y >= dangerThreshold
+                );
+                
+                if (lettersInDangerZone.length > 0) {
+                    // Reiniciar el beep si hay letras en peligro
+                    playProximityBeep();
+                    proximityBeepIntervalRef.current = window.setInterval(() => {
+                        if (gameState.isPlaying && !gameState.isPaused && !gameState.isPenalized && !isMuted) {
+                            playProximityBeep();
+                        }
+                    }, 500);
+                }
+            }
+        }
+    }, [isMuted, gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.fallingLetters, playProximityBeep]);
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (!gameState.isPlaying || gameState.isPenalized) return;
+            if (!gameState.isPlaying) return;
             
-            // Manejar pausa con Escape o P
+            // Manejar BACKSPACE durante penalización
+            if (gameState.isPenalized && event.key === 'Backspace') {
+                event.preventDefault();
+                // Saltar la penalización
+                setGameState(prev => ({
+                    ...prev,
+                    isPenalized: false,
+                    penaltyTime: 0,
+                    showCentralMessage: false,
+                    centralMessage: null
+                }));
+                restoreBackgroundVolume();
+                return;
+            }
+            
+            // No procesar otras teclas si está penalizado
+            if (gameState.isPenalized) return;
+            
+            // Manejar pausa con Escape
             if (event.key === 'Escape') {
                 event.preventDefault();
                 setGameState(prev => ({
@@ -1400,13 +1532,38 @@ export const Game: React.FC = () => {
             }
         };
 
+        // Event listeners para teclado físico y virtual
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('keyup', handleKeyUp);
+        
+        // En móvil, también escuchar eventos de input para el teclado virtual
+        if (isMobile) {
+            const handleInput = (event: Event) => {
+                if (!gameState.isPlaying || gameState.isPenalized || gameState.isPaused) return;
+                
+                const inputEvent = event as InputEvent;
+                const input = inputEvent.data;
+                if (input && LETTERS.includes(input.toUpperCase())) {
+                    const key = input.toUpperCase();
+                    setGameState(prev => ({ ...prev, pressedKey: key }));
+                    shootBullet(key);
+                }
+            };
+            
+            document.addEventListener('input', handleInput);
+            
+            return () => {
+                document.removeEventListener('keydown', handleKeyDown);
+                document.removeEventListener('keyup', handleKeyUp);
+                document.removeEventListener('input', handleInput);
+            };
+        }
+        
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('keyup', handleKeyUp);
         };
-    }, [gameState.isPlaying, gameState.isPenalized, gameState.isPaused, shootBullet, activateForceField]);
+    }, [gameState.isPlaying, gameState.isPenalized, gameState.isPaused, shootBullet, activateForceField, isMobile]);
 
     // Efecto para mostrar mensaje de pausa
     useEffect(() => {
@@ -1753,7 +1910,7 @@ export const Game: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'center'
             }}>
-                <Cannon isReloading={gameState.isPenalized} angle={0} />
+                <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} />
                 
                 {/* Punto de debug para el centro del cañón */}
                 <div style={{
@@ -1762,7 +1919,7 @@ export const Game: React.FC = () => {
                     bottom: '150px', // Coincide con el CSS del cañón
                     width: '8px',
                     height: '8px',
-                    background: '#ff0000',
+                    background: '#00ffff',
                     borderRadius: '50%',
                     transform: 'translate(-50%, 50%)',
                     zIndex: 15,
@@ -1777,13 +1934,13 @@ export const Game: React.FC = () => {
                         style={{
                             position: 'absolute',
                             left: '50%',
-                            top: '80%', // Mismo nivel que el cañón
+                            top: '50%', // Centro exacto de la pantalla
                             width: `${FORCE_FIELD_RADIUS * 2}px`,
                             height: `${FORCE_FIELD_RADIUS * 2}px`,
                             borderRadius: '50%',
-                            border: '3px solid #ff0000',
-                            background: 'radial-gradient(circle, rgba(255, 0, 0, 0.1) 0%, rgba(255, 0, 0, 0.05) 50%, transparent 100%)',
-                            boxShadow: '0 0 50px #ff0000, inset 0 0 50px rgba(255, 0, 0, 0.2)',
+                            border: '4px solid #00ffff',
+                            background: 'radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, rgba(0, 128, 255, 0.1) 50%, transparent 100%)',
+                            boxShadow: '0 0 80px #00ffff, inset 0 0 60px rgba(0, 255, 255, 0.3)',
                             pointerEvents: 'none',
                             zIndex: 5
                         }}
@@ -1802,38 +1959,38 @@ export const Game: React.FC = () => {
                     
                     return (
                         <div key={meteorite.id}>
-                            {/* Cola de fuego principal - simplificada */}
+                            {/* Cola de fuego principal - estilo Tron */}
                             <div
                                 style={{
                                     position: 'absolute',
                                     left: (meteorite.x + meteorite.size / 2) + 'px',
                                     top: (meteorite.y + meteorite.size / 2) + 'px',
-                                    width: '100px', // Reducido de 120px
-                                    height: '18px', // Reducido de 20px
-                                    background: 'linear-gradient(90deg, transparent 0%, #ff4500 20%, #ff6600 40%, #ffa500 60%, #ffff00 80%, transparent 100%)',
+                                    width: '100px',
+                                    height: '18px',
+                                    background: 'linear-gradient(90deg, transparent 0%, #00ffff 20%, #0080ff 40%, #0040ff 60%, #002080 80%, transparent 100%)',
                                     borderRadius: '9px',
                                     transform: `translate(-50%, -50%) rotate(${fireAngle}deg)`,
                                     transformOrigin: '50% 50%',
-                                    boxShadow: '0 0 15px #ff4500', // Simplificado
+                                    boxShadow: '0 0 20px #00ffff',
                                     opacity: '0.9',
                                     zIndex: 3,
                                     pointerEvents: 'none'
                                 }}
                             />
                             
-                            {/* Cola de fuego secundaria - simplificada */}
+                            {/* Cola de fuego secundaria - estilo Tron */}
                             <div
                                 style={{
                                     position: 'absolute',
                                     left: (meteorite.x + meteorite.size / 2) + 'px',
                                     top: (meteorite.y + meteorite.size / 2) + 'px',
-                                    width: '130px', // Reducido de 160px
-                                    height: '28px', // Reducido de 35px
-                                    background: 'linear-gradient(90deg, transparent 0%, rgba(255, 69, 0, 0.3) 30%, rgba(255, 165, 0, 0.4) 60%, transparent 100%)',
+                                    width: '130px',
+                                    height: '28px',
+                                    background: 'linear-gradient(90deg, transparent 0%, rgba(0, 255, 255, 0.3) 30%, rgba(0, 128, 255, 0.4) 60%, transparent 100%)',
                                     borderRadius: '14px',
                                     transform: `translate(-50%, -50%) rotate(${fireAngle}deg)`,
                                     transformOrigin: '50% 50%',
-                                    boxShadow: '0 0 20px rgba(255, 69, 0, 0.4)', // Simplificado
+                                    boxShadow: '0 0 25px rgba(0, 255, 255, 0.4)',
                                     opacity: '0.6',
                                     zIndex: 2,
                                     pointerEvents: 'none'
@@ -1856,11 +2013,11 @@ export const Game: React.FC = () => {
                                             top: (meteorite.y + meteorite.size / 2 + offsetY) + 'px',
                                             width: size + 'px',
                                             height: size + 'px',
-                                            background: i < 2 ? '#ffff00' : i < 3 ? '#ff6600' : '#ff4500',
+                                            background: i < 2 ? '#00ffff' : i < 3 ? '#0080ff' : '#0040ff',
                                             borderRadius: '50%',
                                             transform: 'translate(-50%, -50%)',
                                             opacity: (1 - i * 0.15),
-                                            boxShadow: `0 0 ${4 - i}px ${i < 2 ? '#ffff00' : i < 3 ? '#ff6600' : '#ff4500'}`, // Simplificado
+                                            boxShadow: `0 0 ${4 - i}px ${i < 2 ? '#00ffff' : i < 3 ? '#0080ff' : '#0040ff'}`,
                                             zIndex: 1,
                                             pointerEvents: 'none'
                                         }}
@@ -1868,19 +2025,19 @@ export const Game: React.FC = () => {
                                 );
                             })}
                             
-                            {/* Meteorito principal - posicionado en el extremo delantero */}
+                            {/* Meteorito principal - estilo Tron */}
                             <div
                                 className="meteorite"
                                 style={{
-                                    left: (meteorite.x + meteoriteOffsetX) + 'px', // Posición en el extremo delantero
-                                    top: (meteorite.y + meteoriteOffsetY) + 'px', // Posición en el extremo delantero
+                                    left: (meteorite.x + meteoriteOffsetX) + 'px',
+                                    top: (meteorite.y + meteoriteOffsetY) + 'px',
                                     position: 'absolute',
                                     width: meteorite.size + 'px',
                                     height: meteorite.size + 'px',
-                                    background: 'radial-gradient(circle, #ff4500 0%, #8b0000 50%, #2f1b14 100%)',
+                                    background: 'radial-gradient(circle, #00ffff 0%, #0080ff 50%, #0040ff 100%)',
                                     borderRadius: '50%',
-                                    border: '2px solid #ff6600',
-                                    boxShadow: '0 0 15px #ff4500', // Simplificado
+                                    border: '2px solid #00ffff',
+                                    boxShadow: '0 0 25px #00ffff',
                                     transform: `rotate(${meteorite.rotation}deg)`,
                                     zIndex: 5,
                                     pointerEvents: 'none'
@@ -1899,14 +2056,14 @@ export const Game: React.FC = () => {
                                     zIndex: 10
                                 }} />
                                 
-                                {/* Detalles del meteorito - reducidos */}
+                                {/* Detalles del meteorito - estilo Tron */}
                                 <div style={{
                                     position: 'absolute',
                                     top: '25%',
                                     left: '35%',
                                     width: '12%',
                                     height: '12%',
-                                    background: '#2f1b14',
+                                    background: '#0040ff',
                                     borderRadius: '50%'
                                 }} />
                                 <div style={{
@@ -1915,7 +2072,7 @@ export const Game: React.FC = () => {
                                     left: '65%',
                                     width: '8%',
                                     height: '8%',
-                                    background: '#2f1b14',
+                                    background: '#002080',
                                     borderRadius: '50%'
                                 }} />
                             </div>
@@ -1926,7 +2083,6 @@ export const Game: React.FC = () => {
                 {/* Letras que caen como misiles con estelas de fuego */}
                 {gameState.fallingLetters.map(letter => {
                     const isHighlighted = gameState.pressedKey === letter.letter;
-                    const color = LETTER_COLORS[letter.letter] || '#00ffff';
                     
                     return (
                         <MissileLetterComponent
@@ -1935,7 +2091,6 @@ export const Game: React.FC = () => {
                             x={letter.x}
                             y={letter.y}
                             isHighlighted={isHighlighted}
-                            color={color}
                         />
                     );
                 })}
@@ -1956,6 +2111,8 @@ export const Game: React.FC = () => {
                     onNewGame={newGame}
                 />
             )}
+
+
         </div>
     );
 }; 

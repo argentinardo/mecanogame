@@ -1,0 +1,377 @@
+// =============================================================================
+// MOBILE STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// =============================================================================
+// Optimizaciones para teclado nativo móvil
+// =============================================================================
+
+// Asegurar que el juego funcione bien con el teclado virtual nativo
+.game-container {
+  @include mobile {
+    // Prevenir zoom en input
+    input, textarea {
+      font-size: 16px !important;
+    }
+    
+    // Asegurar que el viewport esté configurado correctamente
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+}
+
+// =============================================================================
+// Adaptaciones móviles para HUD integrado
+// =============================================================================
+
+.integrated-control-panel {
+  @include mobile {
+    flex-direction: column;
+    gap: 4px;
+    
+    .control-section {
+      display: none; // Ocultar las manos en móvil
+    }
+    
+    .central-instruments {
+      width: 100%;
+      max-width: 100%;
+      
+      .compact-hud {
+        .compact-instrument-panel {
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 8px;
+          background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 26, 51, 0.9) 100%);
+          border: 1px solid $color-cyan;
+          border-radius: 6px;
+          box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+          
+          .compact-score-display,
+          .compact-lives-display,
+          .compact-mute-toggle {
+            flex: 1;
+            text-align: center;
+            
+            .compact-instrument-label {
+              font-size: 7px;
+              margin-bottom: 1px;
+              letter-spacing: 0.3px;
+            }
+            
+            .compact-score-value {
+              font-size: 10px;
+              letter-spacing: 0.5px;
+            }
+            
+            .compact-lives-ships {
+              justify-content: center;
+              gap: 2px;
+              
+              .compact-life-ship {
+                .compact-mini-ship {
+                  width: 12px;
+                  height: 12px;
+                }
+              }
+            }
+            
+            .compact-mute-icon {
+              svg {
+                width: 12px;
+                height: 12px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Ocultar elementos innecesarios en móvil
+// =============================================================================
+
+.hand-maps-container {
+  @include mobile {
+    display: none !important;
+  }
+}
+
+// =============================================================================
+// Ajustes del área de juego para móvil
+// =============================================================================
+
+.game-area {
+  @include mobile {
+    padding-bottom: 20px; // Espacio mínimo ya que usamos teclado nativo
+  }
+}
+
+// =============================================================================
+// Ajustes de letras que caen para móvil
+// =============================================================================
+
+.falling-letter {
+  @include mobile {
+    width: 40px !important;
+    height: 40px !important;
+    
+    span {
+      font-size: 20px !important;
+    }
+  }
+}
+
+// =============================================================================
+// Ajustes del cañón para móvil
+// =============================================================================
+
+.cannon {
+  @include mobile {
+    .cannon-base {
+      width: 40px;
+      height: 40px;
+      
+      &::before {
+        width: 20px;
+        height: 20px;
+      }
+    }
+    
+    .cannon-barrel {
+      width: 4px;
+      height: 30px;
+    }
+  }
+}
+
+// =============================================================================
+// Ajustes de meteoritos para móvil
+// =============================================================================
+
+.meteorite {
+  @include mobile {
+    width: 20px !important;
+    height: 20px !important;
+  }
+}
+
+// =============================================================================
+// Ajustes de mensajes para móvil
+// =============================================================================
+
+.central-message,
+.floating-combo-message,
+.floating-order-message {
+  @include mobile {
+    font-size: 12px;
+    padding: 6px 8px;
+    max-width: 95%;
+    border-radius: 4px;
+    border: 1px solid $color-cyan;
+  }
+}
+
+// =============================================================================
+// Ajustes de instrucciones para móvil
+// =============================================================================
+
+.instructions-panel {
+  @include mobile {
+    padding: 8px;
+    
+    .instructions-content {
+      font-size: 10px;
+      
+      h2 {
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+      
+      .instruction-step {
+        font-size: 9px;
+        margin-bottom: 4px;
+        line-height: 1.2;
+      }
+      
+      .instruction-buttons {
+        gap: 6px;
+        
+        button {
+          padding: 6px 8px;
+          font-size: 10px;
+          border-radius: 4px;
+        }
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Ajustes de game over para móvil
+// =============================================================================
+
+.game-over-panel {
+  @include mobile {
+    padding: 8px;
+    
+    .game-over-content {
+      h2 {
+        font-size: 16px;
+        margin-bottom: 6px;
+      }
+      
+      .final-score {
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+      
+      .game-over-buttons {
+        flex-direction: column;
+        gap: 6px;
+        
+        button {
+          width: 100%;
+          padding: 6px 8px;
+          font-size: 10px;
+          border-radius: 4px;
+        }
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Ajustes adicionales para móvil
+// =============================================================================
+
+// Reducir márgenes generales en móvil
+.game-container {
+  @include mobile {
+    padding: 4px;
+  }
+}
+
+// Optimizar el HUD de sector
+.sector-hud {
+  @include mobile {
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid $color-cyan;
+    
+    .sector-info {
+      font-size: 8px;
+      letter-spacing: 0.3px;
+    }
+    
+    .sector-progress {
+      height: 4px;
+      border-radius: 2px;
+    }
+  }
+}
+
+// Optimizar mensajes flotantes
+.floating-message {
+  @include mobile {
+    font-size: 10px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    border: 1px solid $color-cyan;
+    max-width: 90%;
+  }
+}
+
+// Optimizar el grid de fondo
+.bg-grid {
+  @include mobile {
+    background-size: 40px 40px; // Grid más pequeño
+  }
+}
+
+// Optimizar campos de fuerza
+.force-field {
+  @include mobile {
+    border-width: 2px !important;
+    box-shadow: 0 0 40px $color-cyan, inset 0 0 30px rgba(0, 255, 255, 0.3) !important;
+  }
+}
+
+// Optimizar balas/láser
+.bullet {
+  @include mobile {
+    height: 2px !important;
+    box-shadow: 0 0 8px #ff0000, 0 0 16px #ff0000 !important;
+  }
+}
+
+// Optimizar explosiones
+.explosion {
+  @include mobile {
+    width: 60px !important;
+    height: 60px !important;
+  }
+}
+
+// Optimizar partículas
+.particle {
+  @include mobile {
+    width: 3px !important;
+    height: 3px !important;
+  }
+} 
+
+// HUD móvil: columna, mucho más pequeño, sin audio
+.mobile-hud {
+  .mobile-panel {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 2px !important;
+    padding: 2px 4px !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+  .mobile-score, .mobile-lives {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+  .mobile-label {
+    font-size: 7px !important;
+    margin-bottom: 0 !important;
+    letter-spacing: 0.2px !important;
+    line-height: 1.1;
+  }
+  .mobile-value {
+    font-size: 10px !important;
+    letter-spacing: 0.2px !important;
+    line-height: 1.1;
+    padding: 0 !important;
+  }
+  .mobile-lives-ships {
+    gap: 1px !important;
+    .mobile-life-ship {
+      .mobile-mini-ship {
+        width: 10px !important;
+        height: 10px !important;
+      }
+    }
+  }
+  .compact-mute-toggle {
+    display: none !important;
+  }
+} 

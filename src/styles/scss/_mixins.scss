@@ -1,0 +1,197 @@
+// =============================================================================
+// MIXINS
+// =============================================================================
+
+// Importar variables necesarias
+@use 'variables' as *;
+
+// =============================================================================
+// Layout y posicionamiento
+// =============================================================================
+
+@mixin flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+@mixin flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@mixin absolute-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@mixin hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+@mixin visible {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+// =============================================================================
+// Efectos visuales
+// =============================================================================
+
+@mixin neon-glow($color, $size: 10px) {
+    box-shadow: 0 0 $size $color;
+}
+
+@mixin text-glow($color, $size: 5px) {
+    text-shadow: 0 0 $size $color;
+}
+
+@mixin glow($color, $size: 20px) {
+    box-shadow: 0 0 $size $color;
+}
+
+@mixin backdrop-blur($amount: 10px) {
+    backdrop-filter: blur($amount);
+    -webkit-backdrop-filter: blur($amount);
+}
+
+@mixin gradient-bg($color1, $color2) {
+    background: linear-gradient(135deg, $color1 0%, $color2 100%);
+}
+
+// =============================================================================
+// Componentes UI
+// =============================================================================
+
+@mixin panel($color, $radius: 15px, $opacity: 0.9) {
+    background: rgba(0, 0, 0, $opacity);
+    border: 2px solid $color;
+    border-radius: $radius;
+    box-shadow: 0 0 20px rgba($color, 0.6), inset 0 0 15px rgba($color, 0.1);
+    @include backdrop-blur(10px);
+}
+
+@mixin btn($bg-color, $border-color) {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid $border-color;
+    border-radius: 10px;
+    color: $bg-color;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    font-family: $font-main;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    &:hover {
+        background: rgba($bg-color, 0.2);
+        box-shadow: 0 0 20px $bg-color;
+        transform: scale(1.05);
+    }
+    
+    &:active {
+        transform: scale(0.95);
+    }
+}
+
+@mixin retro-text($color: $text-primary, $size: $font-size-base) {
+    font-family: $font-main;
+    font-size: $size;
+    color: $color;
+    text-shadow: 0 0 10px $color;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+// =============================================================================
+// Scrollbar personalizada
+// =============================================================================
+
+@mixin custom-scrollbar {
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+        background: $color-cyan;
+        border-radius: 4px;
+        box-shadow: 0 0 10px $color-cyan;
+        
+        &:hover {
+            background: $color-cyan-light;
+        }
+    }
+}
+
+// =============================================================================
+// Media queries
+// =============================================================================
+
+@mixin mobile {
+    @media (max-width: $breakpoint-mobile) {
+        @content;
+    }
+}
+
+@mixin tablet {
+    @media (min-width: #{$breakpoint-mobile + 1px}) and (max-width: $breakpoint-tablet) {
+        @content;
+    }
+}
+
+@mixin desktop {
+    @media (min-width: #{$breakpoint-tablet + 1px}) {
+        @content;
+    }
+}
+
+// =============================================================================
+// Animaciones
+// =============================================================================
+
+@mixin keyframe-animation($name, $duration: 1s, $timing: ease-in-out, $iteration: infinite) {
+    animation: $name $duration $timing $iteration;
+}
+
+@mixin pulse-animation($color, $size: 10px) {
+    animation: pulse 2s ease-in-out infinite;
+    
+    @keyframes pulse {
+        0%, 100% {
+            box-shadow: 0 0 $size $color;
+        }
+        50% {
+            box-shadow: 0 0 #{$size * 2} $color;
+        }
+    }
+}
+
+// =============================================================================
+// Utilidades adicionales
+// =============================================================================
+
+@mixin text-uppercase {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+@mixin border-gradient($color1, $color2) {
+    border: 2px solid;
+    border-image: linear-gradient(45deg, $color1, $color2) 1;
+}
+
+@mixin glass-effect($opacity: 0.1) {
+    background: rgba(255, 255, 255, $opacity);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+} 

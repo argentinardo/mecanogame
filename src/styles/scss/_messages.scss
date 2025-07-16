@@ -1,0 +1,172 @@
+// =============================================================================
+// MESSAGES & OVERLAYS STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// =============================================================================
+// INSTRUCCIONES Y GAME OVER
+// =============================================================================
+
+.instructions, .game-over {
+  @include absolute-center;
+  @include panel($color-cyan, $radius-main, $opacity-overlay);
+  padding: $spacing-xxl;
+  text-align: center;
+  z-index: $z-overlay;
+  @include glow($color-cyan, 30px);
+  animation: instructionsGlow 2s ease-in-out infinite alternate;
+  
+  h2 { 
+    color: $color-cyan; 
+    margin-bottom: $spacing-lg; 
+    font-size: $font-size-xl; 
+  }
+  
+  p { 
+    color: #fff; 
+    margin-bottom: $spacing-md; 
+    line-height: 1.5; 
+  }
+}
+
+.game-over {
+  border-color: $color-red;
+  @include glow($color-red, 30px);
+  
+  h2 { 
+    color: $color-red; 
+    font-size: 28px; 
+    @include text-glow($color-red, 20px); 
+  }
+  
+  p span { 
+    color: $color-cyan; 
+    font-weight: bold; 
+  }
+}
+
+// =============================================================================
+// MENSAJES FLOTANTES
+// =============================================================================
+
+.floating-combo-message, .floating-order-message {
+  @include absolute-center;
+  @include panel($color-cyan, 15px, $opacity-light);
+  padding: $spacing-lg;
+  text-align: center;
+  z-index: 12;
+  @include glow($color-cyan, 20px);
+  animation: floatingMessageGlow 2s ease-in-out infinite alternate;
+  
+  .floating-combo-content, .floating-order-content {
+    color: #fff;
+    font-size: $font-size-medium;
+    line-height: 1.4;
+    font-family: $font-main;
+  }
+}
+
+// =============================================================================
+// MENSAJES CENTRALES Y COMBO
+// =============================================================================
+
+.central-message, .combo-message {
+  @include absolute-center;
+  background: rgba(0, 0, 0, $opacity-overlay);
+  border: 3px solid $color-cyan;
+  border-radius: $radius-main;
+  padding: $spacing-xl;
+  text-align: center;
+  z-index: 15;
+  @include glow($color-cyan, 30px);
+  animation: centralMessageGlow 2s ease-in-out infinite alternate;
+  
+  .central-message-content, .combo-message-content {
+    color: #fff;
+    font-size: $font-size-large;
+    line-height: 1.5;
+    margin-bottom: $spacing-lg;
+    font-family: $font-main;
+  }
+  
+  // Estilos específicos para el countdown
+  .countdown {
+    .countdown-number {
+      font-size: 48px;
+      color: $color-cyan;
+      @include text-glow($color-cyan, 20px);
+      margin-bottom: $spacing-sm;
+      font-family: $font-main;
+    }
+    
+    .countdown-text {
+      font-size: $font-size-medium;
+      color: #fff;
+      font-family: $font-main;
+    }
+  }
+  
+  // Estilos para mensajes de estado
+  .status-message {
+    .message-line {
+      margin-bottom: $spacing-sm;
+    }
+    
+    .key-highlight {
+      color: $color-cyan;
+      font-weight: bold;
+      @include text-glow($color-cyan, 8px);
+    }
+  }
+}
+
+// =============================================================================
+// INTERACCIONES
+// =============================================================================
+
+.instructions {
+  transition: $transition-main;
+  cursor: pointer;
+  
+  &:hover {
+    transform: translate(-50%, -50%) scale(1.02);
+    box-shadow: 0 0 40px rgba($color-cyan, 0.6);
+    border-color: $color-cyan-light;
+  }
+}
+
+// =============================================================================
+// MESSAGES ANIMATIONS
+// =============================================================================
+
+@keyframes instructionsGlow {
+  0% { 
+    box-shadow: 0 0 30px $color-cyan; 
+  }
+  100% { 
+    box-shadow: 0 0 50px $color-cyan; 
+  }
+}
+
+@keyframes floatingMessageGlow {
+  0% { 
+    box-shadow: 0 0 20px $color-cyan; 
+  }
+  100% { 
+    box-shadow: 0 0 30px $color-cyan; 
+  }
+}
+
+@keyframes centralMessageGlow {
+  0% { 
+    box-shadow: 0 0 30px $color-cyan; 
+    border-color: $color-cyan; 
+  }
+  100% { 
+    box-shadow: 0 0 50px $color-cyan; 
+    border-color: $color-cyan-light; 
+  }
+} 

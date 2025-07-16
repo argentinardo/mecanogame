@@ -1,0 +1,151 @@
+// =============================================================================
+// BASE STYLES
+// =============================================================================
+
+// Importar variables y mixins necesarios
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// =============================================================================
+// Reset y estilos base
+// =============================================================================
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: $font-family-primary;
+    background: linear-gradient(135deg, #000000 0%, #001a33 50%, #000000 100%);
+    color: $text-primary;
+    @include neon-glow($primary-color, 5px);
+    position: relative;
+}
+
+// =============================================================================
+// Contenedor principal del juego
+// =============================================================================
+
+.game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(135deg, #000000 0%, #001a33 50%, #000000 100%);
+    
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.15) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: $z-index-background;
+    }
+}
+
+// =============================================================================
+// Fondo con grid
+// =============================================================================
+
+.bg-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.6) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.6) 2px, transparent 2px);
+    background-size: 80px 80px;
+    animation: gridMove 20s linear infinite;
+    z-index: $z-index-background;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+        pointer-events: none;
+    }
+}
+
+@keyframes gridMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(50px); }
+}
+
+@keyframes gridPulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+}
+
+// =============================================================================
+// Área de juego
+// =============================================================================
+
+.game-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    @include flex-center;
+}
+
+// =============================================================================
+// Utilidades globales
+// =============================================================================
+
+.hidden {
+    @include hidden;
+}
+
+.visible {
+    @include visible;
+}
+
+// =============================================================================
+// Scrollbar personalizada global
+// =============================================================================
+
+* {
+    @include custom-scrollbar;
+}
+
+// =============================================================================
+// Media queries base
+// =============================================================================
+
+@include mobile {
+    body {
+        font-size: $font-size-sm;
+    }
+    
+    .game-container {
+        min-height: 100vh;
+    }
+}
+
+@include tablet {
+    .game-container {
+        max-width: 100vw;
+    }
+}
+
+@include desktop {
+    .game-container {
+        max-width: 100vw;
+    }
+} 

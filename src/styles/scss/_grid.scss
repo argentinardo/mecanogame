@@ -1,0 +1,193 @@
+// =============================================================================
+// GRID & BACKGROUND STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// =============================================================================
+// CONTENEDOR PRINCIPAL DEL JUEGO
+// =============================================================================
+
+.game-container {
+  @include panel($color-cyan, $radius-panel);
+  max-width: 1600px;
+  width: 95%;
+  height: 100vh;
+  margin: 0 auto;
+  position: relative;
+  z-index: $z-base;
+  overflow: hidden;
+  background: linear-gradient(135deg, #000000 0%, #001a33 50%, #000000 100%);
+  box-shadow: 
+    0 0 50px rgba(0, 255, 255, 0.3),
+    inset 0 0 100px rgba(0, 255, 255, 0.1);
+
+  // =============================================================================
+  // GRID DE FONDO
+  // =============================================================================
+  
+  .bg-grid {
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.6) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.6) 2px, transparent 2px),
+      linear-gradient(rgba(0, 128, 255, 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 128, 255, 0.3) 1px, transparent 1px);
+    background-size: 80px 80px, 80px 80px, 20px 20px, 20px 20px;
+    background-position: 0 0, 0 0, 0 0, 0 0;
+    transform-origin: center 60%;
+    transform: perspective(1200px) rotateX(70deg) translateZ(-100px) scale(2);
+    animation: gridMove 3s linear infinite, gridPulse 8s ease-in-out infinite alternate, gridFade 12s ease-in-out infinite alternate;
+    z-index: 1;
+    opacity: 0.6;
+    box-shadow: 
+      inset 0 0 100px rgba(0, 255, 255, 0.1),
+      0 0 50px rgba(0, 255, 255, 0.2);
+    
+    // Máscara para desvanecimiento hacia el horizonte
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        linear-gradient(
+          to bottom,
+          transparent 0%,
+          transparent 25%,
+          rgba(0, 0, 0, 0.1) 45%,
+          rgba(0, 0, 0, 0.3) 65%,
+          rgba(0, 0, 0, 0.6) 80%,
+          rgba(0, 0, 0, 0.9) 100%
+        ),
+        radial-gradient(
+          ellipse at center 30%,
+          transparent 0%,
+          transparent 40%,
+          rgba(0, 0, 0, 0.2) 60%,
+          rgba(0, 0, 0, 0.5) 80%,
+          rgba(0, 0, 0, 0.8) 100%
+        );
+      pointer-events: none;
+      z-index: 2;
+    }
+  }
+}
+
+// =============================================================================
+// ÁREA DE JUEGO
+// =============================================================================
+
+.game-area {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: $z-game;
+}
+
+// =============================================================================
+// PANELES INTEGRADOS
+// =============================================================================
+
+.integrated-control-panel {
+  position: absolute;
+  bottom: $spacing-lg;
+  left: $spacing-lg;
+  right: $spacing-lg;
+  @include flex-between;
+  align-items: flex-end;
+  z-index: $z-ui;
+  gap: $spacing-lg;
+}
+
+// =============================================================================
+// MEDIA QUERIES
+// =============================================================================
+
+@media (max-width: 768px) {
+  .game-area { 
+    width: 100%; 
+  }
+  
+  body { 
+    font-size: 14px; 
+    overflow-x: hidden; 
+  }
+}
+
+// =============================================================================
+// GRID ANIMATIONS
+// =============================================================================
+
+@keyframes gridMove {
+  0% { 
+    transform: perspective(1200px) rotateX(70deg) translateZ(-100px) scale(2) translateY(0); 
+  }
+  100% { 
+    transform: perspective(1200px) rotateX(70deg) translateZ(-100px) scale(2) translateY(80px); 
+  }
+}
+
+@keyframes gridPulse {
+  0% { 
+    opacity: 0.4; 
+    filter: hue-rotate(0deg);
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.6) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.6) 2px, transparent 2px),
+      linear-gradient(rgba(0, 128, 255, 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 128, 255, 0.3) 1px, transparent 1px);
+  }
+  50% { 
+    opacity: 0.8; 
+    filter: hue-rotate(10deg);
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.8) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.8) 2px, transparent 2px),
+      linear-gradient(rgba(0, 128, 255, 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 128, 255, 0.5) 1px, transparent 1px);
+  }
+  100% { 
+    opacity: 0.6; 
+    filter: hue-rotate(20deg);
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.7) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.7) 2px, transparent 2px),
+      linear-gradient(rgba(0, 128, 255, 0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 128, 255, 0.4) 1px, transparent 1px);
+  }
+}
+
+@keyframes gridFade {
+  0% {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 20%,
+      rgba(255, 255, 255, 0.1) 40%,
+      rgba(255, 255, 255, 0.3) 60%,
+      rgba(255, 255, 255, 0.6) 80%,
+      rgba(255, 255, 255, 0.9) 100%
+    );
+  }
+  100% {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 15%,
+      rgba(255, 255, 255, 0.2) 35%,
+      rgba(255, 255, 255, 0.4) 55%,
+      rgba(255, 255, 255, 0.7) 75%,
+      rgba(255, 255, 255, 1) 95%
+    );
+  }
+} 

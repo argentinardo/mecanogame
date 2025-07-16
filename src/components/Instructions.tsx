@@ -15,8 +15,8 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                     event.preventDefault();
                     onContinue();
                 }
-            } else {
-                // Cualquier otra tecla inicia el juego
+            } else if (event.key === 'Enter') {
+                // Solo ENTER inicia el juego
                 event.preventDefault();
                 onStart();
             }
@@ -65,7 +65,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                     </>
                 )}
                 <p className="start-instruction">
-                    Presiona <strong>cualquier tecla</strong> o <strong>haz click</strong> para {showContinue ? 'nuevo juego' : 'comenzar'}
+                    Presiona <strong>ENTER</strong> o <strong>haz click</strong> para {showContinue ? 'nuevo juego' : 'comenzar'}
                 </p>
             </div>
         </div>

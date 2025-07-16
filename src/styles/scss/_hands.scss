@@ -1,0 +1,113 @@
+// =============================================================================
+// HAND MAPS STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// =============================================================================
+// CONTENEDOR DE MAPAS DE MANOS
+// =============================================================================
+
+.hand-maps-container {
+  position: absolute;
+  top: $spacing-lg; 
+  left: $spacing-lg; 
+  right: $spacing-lg;
+  @include flex-between;
+  gap: $spacing-lg;
+  z-index: 8;
+  pointer-events: none;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: $spacing-sm;
+  }
+}
+
+// =============================================================================
+// MAPA DE MANO
+// =============================================================================
+
+.hand-map {
+  background: rgba(0, 0, 0, $opacity-light);
+  border: 2px solid $color-cyan;
+  border-radius: 15px;
+  padding: $spacing-md;
+  @include glow($color-cyan, 20px);
+  animation: handMapGlow 2s ease-in-out infinite alternate;
+  
+  &-left { 
+    align-self: flex-start; 
+  }
+  
+  &-right { 
+    align-self: flex-end; 
+  }
+}
+
+// =============================================================================
+// VISUALIZACIÓN DE MANO
+// =============================================================================
+
+.hand-visual {
+  @include flex-center;
+  position: relative;
+  width: 120px;
+  height: 200px;
+  margin-bottom: $spacing-sm;
+}
+
+// =============================================================================
+// ELEMENTOS PIXELADOS DE LA MANO
+// =============================================================================
+
+.pixel-palm {
+  background: rgba($color-cyan, 0.2);
+  border: 2px solid $color-cyan;
+  transition: $transition-main;
+}
+
+.pixel-finger {
+  background: rgba($color-cyan, 0.3);
+  border: 1.5px solid $color-cyan;
+  transition: $transition-main;
+}
+
+// =============================================================================
+// ESTADOS HIGHLIGHTED
+// =============================================================================
+
+.pixel-palm.highlighted,
+.pixel-finger.highlighted {
+  background: rgba($color-cyan, 0.7);
+  border-color: $color-cyan;
+  border-width: 3px;
+  filter: drop-shadow(0 0 10px $color-cyan);
+  animation: fingerPulse 0.6s ease-in-out infinite alternate;
+}
+
+// =============================================================================
+// HANDS ANIMATIONS
+// =============================================================================
+
+@keyframes handMapGlow {
+  0% { 
+    box-shadow: 0 0 20px $color-cyan; 
+  }
+  100% { 
+    box-shadow: 0 0 30px $color-cyan; 
+  }
+}
+
+@keyframes fingerPulse {
+  0% { 
+    fill: rgba(0, 255, 255, 0.7); 
+    stroke: $color-cyan; 
+  }
+  100% { 
+    fill: rgba(0, 255, 255, 0.9); 
+    stroke: #40ffff; 
+  }
+} 

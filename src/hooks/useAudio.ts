@@ -202,6 +202,23 @@ export const useAudio = () => {
         });
     }, [createComplexSound]);
 
+    // Sonido de detector de proximidad (beep como coche)
+    const playProximityBeep = useCallback(() => {
+        if (isMuted) return; // No reproducir si está silenciado
+        
+        createComplexSound({
+            frequencies: [800, 1000, 1200],
+            durations: [0.1, 0.1, 0.1],
+            types: ['sine', 'sine', 'sine'],
+            volumes: [0.25, 0.3, 0.35],
+            delays: [0, 50, 100],
+            effects: {
+                filter: { frequency: 2000, type: 'highpass' },
+                distortion: false
+            }
+        });
+    }, [createComplexSound, isMuted]);
+
     // Sonido de cuenta regresiva - diferentes tonos para cada número
     const playCountdownSound = useCallback((number: number) => {
         // Frecuencias diferentes para cada número: 2, 1, 0 (final)
@@ -339,6 +356,7 @@ export const useAudio = () => {
         playLevelUpSound,
         playComboSuccessSound,
         playMeteoriteSound,
+        playProximityBeep,
         startBackgroundMusic,
         stopBackgroundMusic,
         lowerBackgroundVolume,

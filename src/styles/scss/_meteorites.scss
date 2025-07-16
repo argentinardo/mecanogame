@@ -1,0 +1,78 @@
+// =============================================================================
+// METEORITES STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// =============================================================================
+// METEORITO PRINCIPAL
+// =============================================================================
+
+.meteorite {
+  position: absolute;
+  border-radius: 50%;
+  z-index: 4;
+  animation: meteoriteGlow 1s ease-in-out infinite alternate;
+  
+  > div:first-child {
+    width: 100%; 
+    height: 100%;
+    background: radial-gradient(circle, #ff4500 0%, #8b0000 50%, #2f1b14 100%);
+    border: 2px solid #ff6600;
+    border-radius: 50%;
+    box-shadow: 0 0 15px #ff4500;
+  }
+}
+
+// =============================================================================
+// CAMPOS DE FUERZA
+// =============================================================================
+
+.force-field {
+  position: absolute;
+  border-radius: 50%;
+  animation: forceFieldGrow 0.5s ease-out, forceFieldPulse 2s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 5;
+}
+
+// =============================================================================
+// METEORITES ANIMATIONS
+// =============================================================================
+
+@keyframes meteoriteGlow {
+  0% { 
+    box-shadow: 0 0 15px #ff4500; 
+  }
+  100% { 
+    box-shadow: 0 0 25px #ff4500; 
+  }
+}
+
+@keyframes forceFieldGrow {
+  0% { 
+    transform: translate(-50%, -50%) scale(0); 
+    opacity: 0; 
+  }
+  100% { 
+    transform: translate(-50%, -50%) scale(1); 
+    opacity: 1; 
+  }
+}
+
+@keyframes forceFieldPulse {
+  0% { 
+    transform: translate(-50%, -50%) scale(1); 
+    border-color: $color-cyan; 
+    box-shadow: 0 0 50px $color-cyan; 
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, rgba(0, 128, 255, 0.1) 50%, transparent 100%); 
+  }
+  100% { 
+    transform: translate(-50%, -50%) scale(1.05); 
+    border-color: $color-blue; 
+    box-shadow: 0 0 80px $color-blue; 
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.3) 0%, rgba(0, 128, 255, 0.2) 50%, transparent 100%); 
+  }
+} 

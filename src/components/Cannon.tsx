@@ -32,12 +32,18 @@ export const Cannon: React.FC<CannonProps> = ({ isReloading, angle = 0 }) => {
         <div 
             className={`cannon ${isReloading ? 'reloading' : ''}`} 
             style={{ 
-                transform: `translateX(-50%) translateY(${floatingOffset - 40}px) rotate(${angle}deg)`,
+                transform: `translate(-50%, -50%) translateY(${floatingOffset}px)`,
                 animation: 'none' // Desactivar la animación CSS para permitir rotación
             }}
         >
-            <div className="cannon-base" style={{ transform: 'scale(0.5)' }}></div>
-            <div className="cannon-barrel" style={{ transform: 'translateX(-50%)' }}></div>
+            <div 
+                className="cannon-base"
+                style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
+            ></div>
+            <div 
+                className="cannon-barrel"
+                style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
+            ></div>
         </div>
     );
 }; 

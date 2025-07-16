@@ -1,0 +1,24 @@
+// =============================================================================
+// MECANOGAME - MAIN SCSS FILE
+// =============================================================================
+
+// Re-exportar variables y mixins para que estén disponibles globalmente
+@forward 'variables';
+@forward 'mixins';
+
+// Importar archivos base usando @use (moderno)
+// Los mixins y variables se importan con namespace para evitar conflictos
+@use 'variables' as vars;
+@use 'mixins' as mix;
+@use 'base';
+
+// Importar componentes modulares
+@use 'ship';
+@use 'letters';
+@use 'sector';
+@use 'hud';
+@use 'hands';
+@use 'meteorites';
+@use 'messages';
+@use 'grid';
+@use 'mobile'; 

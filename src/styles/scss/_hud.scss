@@ -1,0 +1,273 @@
+// =============================================================================
+// HUD PRINCIPAL STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// =============================================================================
+// HUD PRINCIPAL
+// =============================================================================
+
+.hud {
+  @include panel($color-cyan, $radius-hud);
+  position: absolute;
+  bottom: $spacing-lg; 
+  left: $spacing-lg; 
+  right: $spacing-lg;
+  @include flex-center;
+  z-index: $z-ui;
+  @include backdrop-blur();
+
+  .instrument-panel {
+    @include flex-between;
+    width: 100%;
+    max-width: 700px;
+    gap: $spacing-xl;
+
+    .score-display, .lives-display {
+      @include panel($color-cyan, $radius-main);
+      min-width: 250px;
+      text-align: center;
+      
+      .instrument-label {
+        font-size: $font-size-small;
+        color: $color-cyan;
+        @include text-glow($color-cyan, 8px);
+        margin-bottom: $spacing-sm;
+        font-family: $font-main;
+        letter-spacing: 2px;
+      }
+    }
+    
+    .score-value {
+      font-size: 28px;
+      color: $color-cyan;
+      @include text-glow($color-cyan, 20px);
+      font-family: $font-main;
+      font-weight: normal;
+      letter-spacing: 3px;
+      animation: scoreAnimation 0.5s ease-out;
+    }
+  }
+}
+
+// =============================================================================
+// TOGGLE DE MUTE
+// =============================================================================
+
+.mute-toggle {
+  @include panel($color-cyan, 15px);
+  text-align: center;
+  cursor: pointer;
+  transition: $transition-main;
+  
+  .instrument-label {
+    font-size: $font-size-small;
+    color: $color-cyan;
+    @include text-glow($color-cyan, 5px);
+    margin-bottom: $spacing-sm;
+    font-family: $font-main;
+    letter-spacing: 2px;
+  }
+  
+  .mute-icon {
+    width: 20px; 
+    height: 20px; 
+    color: $color-cyan;
+  }
+  
+  &.unmuted {
+    border-color: $color-green;
+    box-shadow: 0 0 20px rgba($color-green, $opacity-medium);
+    svg { 
+      color: $color-green; 
+    }
+  }
+  
+  &.muted {
+    border-color: $color-red;
+    box-shadow: 0 0 20px rgba($color-red, $opacity-medium);
+    svg { 
+      color: $color-red; 
+    }
+  }
+  
+  &:hover { 
+    transform: scale(1.05); 
+    box-shadow: 0 0 25px $color-cyan; 
+  }
+  
+  &:active { 
+    transform: scale(0.95); 
+  }
+}
+
+// =============================================================================
+// HUD COMPACTO
+// =============================================================================
+
+.integrated-control-panel {
+  position: absolute;
+  bottom: $spacing-lg;
+  left: $spacing-lg;
+  right: $spacing-lg;
+  @include flex-between;
+  align-items: flex-end;
+  z-index: $z-ui;
+  gap: $spacing-lg;
+}
+
+.compact-hud {
+  @include gradient-bg(rgba(0, 8, 20, 0.95), rgba(0, 25, 50, 0.95));
+  border: 2px solid $color-cyan;
+  border-radius: 15px;
+  padding: 12px $spacing-lg;
+  box-shadow: 0 0 20px rgba($color-cyan, 0.6), inset 0 0 15px rgba($color-cyan, 0.15), 0 0 40px rgba($color-cyan, 0.3);
+  @include backdrop-blur(15px);
+  animation: compactHudGlow 3s ease-in-out infinite alternate;
+}
+
+.compact-instrument-panel {
+  @include flex-center;
+  gap: 25px;
+}
+
+.compact-score-display {
+  background: rgba(0, 0, 0, $opacity-light);
+  border: 2px solid $color-cyan;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-compact;
+  text-align: center;
+  min-width: 180px;
+  box-shadow: $shadow-compact;
+}
+
+.compact-instrument-label {
+  font-size: $font-size-small;
+  color: $color-cyan;
+  @include text-glow($color-cyan, 8px);
+  margin-bottom: $spacing-xs;
+  font-family: $font-main;
+  letter-spacing: 1px;
+}
+
+.compact-score-value {
+  font-size: $font-size-large;
+  color: $color-cyan;
+  @include text-glow($color-cyan, 15px);
+  font-family: $font-main;
+  font-weight: normal;
+  letter-spacing: 2px;
+  animation: compactScoreGlow 0.5s ease-out;
+}
+
+.compact-lives-display {
+  background: rgba(0, 0, 0, $opacity-light);
+  border: 2px solid $color-cyan;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-compact;
+  text-align: center;
+  box-shadow: 0 0 15px rgba($color-cyan, 0.3), inset 0 0 10px rgba($color-cyan, 0.1);
+}
+
+.compact-mute-toggle {
+  background: rgba(0, 0, 0, $opacity-light);
+  border: 2px solid $color-cyan;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-compact;
+  text-align: center;
+  cursor: pointer;
+  transition: $transition-main;
+  box-shadow: 0 0 15px rgba($color-cyan, 0.3), inset 0 0 10px rgba($color-cyan, 0.1);
+  min-width: 80px;
+}
+
+.compact-mute-icon {
+  @include flex-center;
+}
+
+.compact-mute-toggle.unmuted {
+  color: $color-cyan;
+  border-color: $color-cyan;
+  svg { 
+    filter: drop-shadow(0 0 5px $color-cyan); 
+  }
+}
+
+.compact-mute-toggle.muted {
+  color: #ff0066;
+  border-color: #ff0066;
+  box-shadow: 0 0 15px rgba(255, 0, 102, 0.3);
+  svg { 
+    filter: drop-shadow(0 0 5px #ff0066); 
+  }
+}
+
+.compact-mute-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba($color-cyan, 0.6);
+}
+
+.compact-mute-toggle:active {
+  transform: scale(0.95);
+}
+
+// =============================================================================
+// BOTONES
+// =============================================================================
+
+.start-btn {
+  @include btn($color-cyan, $color-cyan-dark);
+  padding: $spacing-md $spacing-xl;
+}
+
+.continue-btn {
+  @include btn($color-green, #008000);
+  padding: $spacing-sm $spacing-lg;
+  font-size: $font-size-medium;
+  border-radius: $radius-small;
+}
+
+// =============================================================================
+// HUD ANIMATIONS
+// =============================================================================
+
+@keyframes scoreAnimation {
+  0% { 
+    transform: scale(1); 
+  }
+  50% { 
+    transform: scale(1.1); 
+  }
+  100% { 
+    transform: scale(1); 
+  }
+}
+
+@keyframes compactHudGlow {
+  0% { 
+    box-shadow: 0 0 20px rgba($color-cyan, 0.6), inset 0 0 15px rgba($color-cyan, 0.15); 
+  }
+  100% { 
+    box-shadow: 0 0 30px rgba($color-cyan, 0.8), inset 0 0 20px rgba($color-cyan, 0.25); 
+  }
+}
+
+@keyframes compactScoreGlow {
+  0% { 
+    transform: scale(1.05); 
+    color: #ffff00; 
+    @include text-glow(#ffff00, 20px); 
+  }
+  50% { 
+    color: #00ff00; 
+    @include text-glow(#00ff00, 15px); 
+  }
+  100% { 
+    transform: scale(1); 
+    color: $color-cyan; 
+    @include text-glow($color-cyan, 15px); 
+  }
+} 

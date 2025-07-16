@@ -1,0 +1,168 @@
+// =============================================================================
+// FALLING LETTERS STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// Letras que caen del juego
+.falling-letter {
+  position: absolute;
+  width: 72px; 
+  height: 72px;
+  @include flex-center;
+  z-index: 4;
+  animation: letterFall linear infinite;
+  font-size: 38px;
+  font-weight: bold;
+  font-family: $font-main;
+  @include text-glow(currentColor, 15px);
+  animation: letterFall linear infinite, letterColorShift 1.5s ease-in-out infinite;
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border: 3px solid currentColor;
+  border-radius: $radius-small;
+  box-shadow: 0 0 20px currentColor, inset 0 2px 0 rgba(255,255,255,0.1), inset 0 -2px 0 rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.5);
+  
+  // Forma de trapecio invertido (base más pequeña que la parte superior)
+  clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 2px; 
+    left: 2px; 
+    right: 2px; 
+    bottom: 2px;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 60%);
+    border-radius: $radius-small;
+    animation: letterInnerGlow 1s ease-in-out infinite alternate;
+    pointer-events: none;
+    // Ajustar clip-path para el pseudo-elemento interno
+    clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: -1px; 
+    left: -1px; 
+    right: -1px; 
+    bottom: -1px;
+    border: 1px solid currentColor;
+    border-radius: 13px;
+    animation: letterBorderPulse 0.8s ease-in-out infinite alternate;
+    pointer-events: none;
+    // Ajustar clip-path para el borde exterior
+    clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+  }
+  
+  &.highlighted {
+    font-size: 40px !important;
+    font-weight: 900 !important;
+    @include text-glow(currentColor, 20px);
+    @include text-glow(currentColor, 40px);
+    animation: letterFall linear infinite, letterColorShift 0.8s ease-in-out infinite, highlightedImagePulse 0.3s ease-in-out infinite alternate;
+    &::before { 
+      animation: letterInnerGlow 0.5s ease-in-out infinite alternate; 
+    }
+    &::after { 
+      animation: letterBorderPulse 0.4s ease-in-out infinite alternate; 
+    }
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px currentColor, inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.4), 0 6px 12px rgba(0,0,0,0.6);
+  }
+}
+
+// =============================================================================
+// LETTER ANIMATIONS
+// =============================================================================
+
+@keyframes letterFall {
+  0% { 
+    transform: translateY(-100px); 
+  }
+  100% { 
+    transform: translateY(100vh); 
+  }
+}
+
+@keyframes letterColorShift {
+  0% { 
+    color: #ff0080; 
+    @include text-glow(#ff0080, 15px); 
+    border-color: #ff0080; 
+    transform: scale(1); 
+  }
+  16.66% { 
+    color: #ff8000; 
+    @include text-glow(#ff8000, 15px); 
+    border-color: #ff8000; 
+    transform: scale(1.02); 
+  }
+  33.33% { 
+    color: #ffff00; 
+    @include text-glow(#ffff00, 15px); 
+    border-color: #ffff00; 
+    transform: scale(1.05); 
+  }
+  50% { 
+    color: #00ff00; 
+    @include text-glow(#00ff00, 15px); 
+    border-color: #00ff00; 
+    transform: scale(1.02); 
+  }
+  66.66% { 
+    color: #0080ff; 
+    @include text-glow(#0080ff, 15px); 
+    border-color: #0080ff; 
+    transform: scale(1); 
+  }
+  83.33% { 
+    color: #8000ff; 
+    @include text-glow(#8000ff, 15px); 
+    border-color: #8000ff; 
+    transform: scale(1.02); 
+  }
+  100% { 
+    color: #ff0080; 
+    @include text-glow(#ff0080, 15px); 
+    border-color: #ff0080; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes letterInnerGlow {
+  0% { 
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+    transform: scale(0.95);
+  }
+  100% { 
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 80%);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes letterBorderPulse {
+  0% { 
+    border-color: #ff0080;
+    box-shadow: 0 0 10px #ff0080;
+    transform: scale(1);
+  }
+  100% { 
+    border-color: #ff66b3;
+    box-shadow: 0 0 20px #ff0080;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes highlightedImagePulse {
+  0% { 
+    filter: drop-shadow(0 0 20px $color-cyan); 
+    transform: scale(1.1); 
+  }
+  100% { 
+    filter: drop-shadow(0 0 30px $color-cyan); 
+    transform: scale(1.2); 
+  }
+} 

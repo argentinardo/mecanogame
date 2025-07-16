@@ -1,0 +1,156 @@
+// =============================================================================
+// SHIP/CANNON STYLES
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+// Cañón principal del juego
+.cannon {
+  @include absolute-center;
+  z-index: 4;
+  animation: shipFloating 3s ease-in-out infinite;
+  
+  .cannon-base {
+    width: 80px;
+    height: 80px;
+    background-image: url(../assets/images/nave.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    @include absolute-center;
+    transform-origin: center center;
+    z-index: 5;
+    
+    &::before {
+      content: '';
+      @include absolute-center;
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle, $color-cyan 0%, transparent 70%);
+      border-radius: 50%;
+      opacity: 0.3;
+      animation: cannonGlow 2s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+  }
+  
+  .cannon-barrel {
+    @include absolute-center;
+    width: 8px; 
+    height: 60px;
+    background: linear-gradient(90deg, #444 0%, #666 50%, #444 100%);
+    border: 2px solid $color-cyan;
+    border-radius: 4px;
+    box-shadow: 0 0 15px $color-cyan;
+    transform-origin: center center;
+    z-index: 3;
+    transform: translate(-50%, -50%) translateY(-8px);
+  }
+  
+  &.reloading .cannon-barrel {
+    animation: reloadPulse 0.5s ease-in-out infinite alternate;
+  }
+}
+
+// Mini-naves del HUD (vidas)
+.lives-ships {
+  @include flex-center;
+  gap: $spacing-sm;
+  
+  .life-ship {
+    width: 30px; 
+    height: 30px;
+    @include flex-center;
+    
+    .mini-ship {
+      width: 24px; 
+      height: 24px;
+      background-image: url(../assets/images/nave.png);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      filter: drop-shadow(0 0 8px $color-cyan);
+      animation: miniShipGlow 2s ease-in-out infinite alternate;
+    }
+  }
+}
+
+// Mini-naves compactas para HUD reducido
+.compact-lives-ships {
+  @include flex-center;
+  gap: $spacing-xs;
+  
+  .compact-mini-ship {
+    width: 20px; 
+    height: 20px;
+    background-image: url(../assets/images/nave.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: drop-shadow(0 0 6px $color-cyan);
+    animation: compactMiniShipGlow 2s ease-in-out infinite alternate;
+  }
+}
+
+// =============================================================================
+// SHIP ANIMATIONS
+// =============================================================================
+
+@keyframes shipFloating {
+  0%, 100% { 
+    transform: translate(-50%, -50%) translateY(0px) rotate(0deg); 
+  }
+  25% { 
+    transform: translate(-50%, -50%) translateY(-8px) rotate(1deg); 
+  }
+  50% { 
+    transform: translate(-50%, -50%) translateY(-4px) rotate(-0.5deg); 
+  }
+  75% { 
+    transform: translate(-50%, -50%) translateY(-12px) rotate(0.8deg); 
+  }
+}
+
+@keyframes cannonGlow {
+  0% { 
+    box-shadow: 0 0 20px $color-cyan; 
+  }
+  100% { 
+    box-shadow: 0 0 30px $color-cyan; 
+  }
+}
+
+@keyframes reloadPulse {
+  0% { 
+    box-shadow: 0 0 15px $color-red; 
+    border-color: $color-red; 
+  }
+  100% { 
+    box-shadow: 0 0 25px #ff6666; 
+    border-color: #ff9999; 
+  }
+}
+
+@keyframes miniShipGlow {
+  0% { 
+    filter: drop-shadow(0 0 8px $color-cyan); 
+    transform: scale(1); 
+  }
+  100% { 
+    filter: drop-shadow(0 0 12px $color-cyan); 
+    transform: scale(1.05); 
+  }
+}
+
+@keyframes compactMiniShipGlow {
+  0% { 
+    filter: drop-shadow(0 0 6px $color-cyan); 
+    transform: scale(1); 
+  }
+  100% { 
+    filter: drop-shadow(0 0 10px $color-cyan); 
+    transform: scale(1.05); 
+  }
+} 

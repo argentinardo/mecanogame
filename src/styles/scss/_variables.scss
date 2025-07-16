@@ -1,0 +1,165 @@
+// =============================================================================
+// VARIABLES
+// =============================================================================
+
+// Colores principales del juego - Tema Tron Neon Azul
+$primary-color: #00ffff;
+$secondary-color: #0080ff;
+$accent-color: #0040ff;
+$warning-color: #ff0080;
+$success-color: #00ff80;
+
+// Colores específicos del juego - Tema Tron
+$color-cyan: #00ffff;
+$color-cyan-dark: #0080ff;
+$color-cyan-light: #40ffff;
+$color-blue: #0080ff;
+$color-blue-dark: #0040ff;
+$color-blue-light: #40a0ff;
+$color-neon-blue: #00ffff;
+$color-deep-blue: #001a33;
+$color-dark-blue: #000d1a;
+$color-yellow: #00ffff; // Cambiado a cyan para el tema Tron
+$color-green: #00ff80; // Cambiado a verde azulado para el tema Tron
+$color-red: #ff0080; // Cambiado a magenta para el tema Tron
+
+// Colores de fondo - Tema Tron
+$bg-primary: #000000;
+$bg-secondary: rgba(0, 13, 26, 0.95);
+$bg-overlay: rgba(0, 0, 0, 0.9);
+
+// Colores de texto - Tema Tron
+$text-primary: #00ffff;
+$text-secondary: #0080ff;
+$text-accent: #40ffff;
+
+// Colores de letras - Tema Tron Neon Azul
+$letter-colors: (
+    'A': #00ffff,
+    'B': #0080ff,
+    'C': #0040ff,
+    'D': #40ffff,
+    'E': #80ffff,
+    'F': #00ff80,
+    'G': #00ff40,
+    'H': #0080ff,
+    'I': #0040ff,
+    'J': #40a0ff,
+    'K': #80a0ff,
+    'L': #00a0ff,
+    'M': #0080a0,
+    'N': #004080,
+    'O': #00ffff,
+    'P': #0080ff,
+    'Q': #0040ff,
+    'R': #40ffff,
+    'S': #80ffff,
+    'T': #00ff80,
+    'U': #00ff40,
+    'V': #0080ff,
+    'W': #0040ff,
+    'X': #40a0ff,
+    'Y': #80a0ff,
+    'Z': #00a0ff,
+    'Ñ': #0080a0
+);
+
+// Tamaños y dimensiones
+$letter-size: 72px;
+$cannon-radius: 50px;
+$force-field-radius: 200px;
+$bullet-width: 4px;
+$explosion-size: 100px;
+
+// Espaciado
+$spacing-xs: 5px;
+$spacing-sm: 10px;
+$spacing-md: 20px;
+$spacing-lg: 30px;
+$spacing-xl: 50px;
+$spacing-xxl: 80px;
+
+// Bordes y sombras
+$border-radius-sm: 5px;
+$border-radius-md: 10px;
+$border-radius-lg: 15px;
+$border-width: 2px;
+$border-width-thick: 3px;
+
+// Radios específicos
+$radius-small: 5px;
+$radius-main: 15px;
+$radius-panel: 20px;
+$radius-hud: 15px;
+$radius-compact: 10px;
+
+// Sombras
+$shadow-neon: 0 0 20px;
+$shadow-glow: 0 0 30px;
+$shadow-drop: 0 2px 5px rgba(0, 0, 0, 0.3);
+$shadow-compact: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 10px rgba(0, 255, 255, 0.1);
+
+// Tipografía
+$font-family-primary: 'Press Start 2P', monospace;
+$font-family-secondary: 'monospace';
+$font-main: 'Press Start 2P', monospace;
+$font-size-xs: 12px;
+$font-size-sm: 14px;
+$font-size-small: 12px;
+$font-size-base: 16px;
+$font-size-md: 16px;
+$font-size-medium: 16px;
+$font-size-lg: 18px;
+$font-size-large: 24px;
+$font-size-xl: 28px;
+$font-size-xxl: 32px;
+
+// Z-index layers
+$z-index-background: 1;
+$z-index-game-area: 5;
+$z-index-letters: 10;
+$z-index-bullets: 15;
+$z-index-explosions: 20;
+$z-index-ui: 25;
+$z-index-modal: 30;
+$z-index-overlay: 9999;
+
+// Z-index específicos
+$z-base: 1;
+$z-game: 5;
+$z-ui: 25;
+$z-modal: 30;
+$z-overlay: 9999;
+
+// Breakpoints
+$breakpoint-mobile: 768px;
+$breakpoint-tablet: 1024px;
+$breakpoint-desktop: 1200px;
+
+// Animaciones
+$animation-duration-fast: 0.1s;
+$animation-duration-normal: 0.3s;
+$animation-duration-slow: 0.5s;
+$animation-duration-very-slow: 1s;
+
+$animation-easing: ease-in-out;
+$animation-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+// Transiciones
+$transition-main: all 0.3s ease-in-out;
+
+// Opacidades
+$opacity-light: 0.3;
+$opacity-medium: 0.6;
+$opacity-overlay: 0.9;
+
+// Frecuencias de beep de proximidad
+$proximity-beep-frequency-1: 800;
+$proximity-beep-frequency-2: 1000;
+$proximity-beep-frequency-3: 1200;
+
+// Volúmenes de audio
+$volume-low: 0.05;
+$volume-medium: 0.15;
+$volume-high: 0.25;
+$volume-very-high: 0.35; 
