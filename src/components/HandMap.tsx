@@ -63,11 +63,11 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                 <div 
                     className={`palm palm-upper pixel-palm ${highlightedFinger === 'palm' ? 'highlighted' : ''}`}
                     style={{
-                        width: '80px',
+                        width: '74px',
                         height: '60px',
                         position: 'absolute',
-                        left: '20px',
-                        top: '80px',
+                        left: side === 'left' ? '20px' : '40px',
+                        top: '110px',
                         borderRadius: '8px'
                     }}
                 />
@@ -76,11 +76,11 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                 <div 
                     className={`palm palm-lower pixel-palm ${highlightedFinger === 'palm' ? 'highlighted' : ''}`}
                     style={{
-                        width: '60px',
+                        width: '58px',
                         height: '40px',
                         position: 'absolute',
-                        left: '30px',
-                        top: '140px',
+                        left: side === 'left' ? '28px' : '48px',
+                        top: '168px',
                         borderRadius: '6px'
                     }}
                 />
@@ -93,9 +93,9 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         width: '16px',
                         height: '50px',
                         position: 'absolute',
-                        left: side === 'left' ? '85px' : '19px',
-                        top: '100px',
-                        transform: side === 'left' ? 'rotate(30deg)' : 'rotate(-30deg)',
+                        left: side === 'left' ? '100px' : '16px',
+                        top: '110px',
+                        transform: side === 'left' ? 'rotate(10deg)' : 'rotate(-10deg)',
                         borderRadius: '8px'
                     }}
                 />
@@ -107,8 +107,8 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         width: '16px',
                         height: '70px',
                         position: 'absolute',
-                        left: side === 'left' ? '30px' : '74px',
-                        top: '30px',
+                        left: side === 'left' ? '76px' : '40px',
+                        bottom: '114px',
                         borderRadius: '8px'
                     }}
                 />
@@ -120,8 +120,8 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         width: '16px',
                         height: '80px',
                         position: 'absolute',
-                        left: '52px',
-                        top: '20px',
+                        left: side === 'left' ? '56px' : '60px',
+                        bottom: '114px',
                         borderRadius: '8px'
                     }}
                 />
@@ -133,9 +133,10 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         width: '16px',
                         height: '70px',
                         position: 'absolute',
-                        left: side === 'left' ? '70px' : '34px',
-                        top: '30px',
+                        bottom: '114px',
+                        left: side === 'left' ? '36px' : '80px',
                         borderRadius: '8px'
+                        
                     }}
                 />
                 
@@ -146,8 +147,8 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         width: '12px',
                         height: '50px',
                         position: 'absolute',
-                        left: side === 'left' ? '15px' : '85px',
-                        top: '45px',
+                        left: side === 'left' ? '20px' : '100px',
+                        bottom: '114px',
                         borderRadius: '6px'
                     }}
                 />

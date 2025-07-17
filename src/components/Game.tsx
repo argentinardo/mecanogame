@@ -111,6 +111,22 @@ export const Game: React.FC = () => {
     
     // Estado para el ángulo del cañón
     const [cannonAngle, setCannonAngle] = useState<number>(0);
+    // Ref para mantener el último ángulo aplicado y calcular el camino más corto
+    const lastAngleRef = useRef<number>(0);
+
+    // Función helper para actualizar el ángulo evitando sobre giros (elige camino corto)
+    const updateCannonAngle = useCallback((rawAngle: number) => {
+        const last = lastAngleRef.current;
+        let target = rawAngle;
+        const delta = target - last;
+        if (delta > 180) {
+            target -= 360;
+        } else if (delta < -180) {
+            target += 360;
+        }
+        lastAngleRef.current = target;
+        setCannonAngle(target);
+    }, []);
     
     // Estado para detectar si estamos en móvil
     const [isMobile, setIsMobile] = useState<boolean>(false);
@@ -260,8 +276,8 @@ export const Game: React.FC = () => {
         // El cañón necesita rotar 270 grados (90 + 180) en sentido horario para alinearse
         const adjustedAngle = angle - 270;
         
-        // Actualizar el ángulo del cañón
-        setCannonAngle(adjustedAngle);
+        // Actualizar el ángulo del cañón usando camino corto
+        updateCannonAngle(adjustedAngle);
         
         // Aplicar retroceso temporal al cañón en dirección opuesta al disparo
         const cannonElement = document.querySelector('.cannon') as HTMLElement;
@@ -332,9 +348,9 @@ export const Game: React.FC = () => {
         
         // Resetear el ángulo del cañón después de un tiempo
         setTimeout(() => {
-            setCannonAngle(0);
+            updateCannonAngle(0);
         }, 500);
-    }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound]);
+    }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound, updateCannonAngle]);
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {

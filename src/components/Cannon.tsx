@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ShipSVG } from './ShipSVG';
+// Sprite de la nave
+import spriteAvion from '../assets/images/sprite-avion-102.png';
 
 interface CannonProps {
     isReloading: boolean;
@@ -41,7 +42,14 @@ export const Cannon: React.FC<CannonProps> = ({ isReloading, angle = 0 }) => {
                 className="cannon-base"
                 style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
             >
-                <ShipSVG size={80} className="ship-svg" />
+                {/* Sprite animado de la nave */}
+                <div 
+                    className="ship-sprite" 
+                    style={{ backgroundImage: `url(${spriteAvion})` }}
+                >
+                    {/* Estela central de fuego */}
+                    <div className="central-flame" />
+                </div>
             </div>
             <div 
                 className="cannon-barrel"

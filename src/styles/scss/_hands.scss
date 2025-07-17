@@ -33,8 +33,7 @@
 .hand-map {
   background: rgba(0, 0, 0, $opacity-light);
   border: 2px solid $color-cyan;
-  border-radius: 15px;
-  padding: $spacing-md;
+  border-radius: 8px;
   @include glow($color-cyan, 20px);
   animation: handMapGlow 2s ease-in-out infinite alternate;
   
@@ -54,8 +53,8 @@
 .hand-visual {
   @include flex-center;
   position: relative;
-  width: 120px;
-  height: 200px;
+  width: 140px;
+  height: 220px;
   margin-bottom: $spacing-sm;
 }
 
@@ -67,6 +66,8 @@
   background: rgba($color-cyan, 0.2);
   border: 2px solid $color-cyan;
   transition: $transition-main;
+  // Perspectiva 3D para que la parte de abajo se vea más pequeña
+  transform: perspective(150px) rotateX(-30deg) scaleY(1);
 }
 
 .pixel-finger {
@@ -81,11 +82,22 @@
 
 .pixel-palm.highlighted,
 .pixel-finger.highlighted {
-  background: rgba($color-cyan, 0.7);
-  border-color: $color-cyan;
+  background: rgba($color-cyan, 0.95);
+  border-color: #fff;
   border-width: 3px;
-  filter: drop-shadow(0 0 10px $color-cyan);
-  animation: fingerPulse 0.6s ease-in-out infinite alternate;
+  box-shadow: 0 0 32px 12px $color-cyan, 0 0 3px 1px #fff;
+  filter: drop-shadow(0 0 24px $color-cyan) brightness(1.3) saturate(1.5);
+  animation: fingerPulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate, fingerGlowExtra 3s ease-in-out infinite alternate;
+  z-index: 10;
+}
+
+@keyframes fingerGlowExtra {
+  0% {
+    box-shadow: 0 0 32px 12px $color-cyan, 0 0 3px 1px #fff;
+  }
+  100% {
+    box-shadow: 0 0 48px 20px #fff 0 0 16px 4px #fff;
+  }
 }
 
 // =============================================================================

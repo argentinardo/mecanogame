@@ -70,13 +70,13 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
 
     return (
         <div className="instructions" onClick={handleContainerClick} style={{ cursor: isMobile ? 'default' : 'pointer' }}>
-            <h2>🎯 CAÑÓN DE LETRAS 🎯</h2>
+            <h2>MECANOSTEROID</h2>
             
             {isMobile ? (
                 <>
                     <p>¡Prepárate para la acción!</p>
                     <button className="start-btn-mobile" onClick={handleStartMobile}>
-                        🚀 INICIAR JUEGO 🚀
+                        INICIAR JUEGO
                     </button>
                 </>
             ) : (

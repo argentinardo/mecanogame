@@ -20,38 +20,79 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.1s linear; // doble de rápido
     
-    .ship-svg {
-      filter: drop-shadow(0 05color-cyan);
-      animation: shipGlow 2s ease-in-out infinite alternate;
+    // Sprite principal de la nave
+    .ship-sprite {
+      // Tamaño escalado respecto al sprite original (102px)
+      width: 80px;
+      height: 50px;
+      // La imagen se inyecta vía inline style desde el componente React
+      background-repeat: no-repeat;
+      // Ajustar el tamaño del background para escalar los 4 cuadros a 80px cada uno
+      background-size: 320px 50px; // 80px * 4 = 320px
+      animation: shipSpriteAnim 0.6s steps(4) infinite;
+      filter: drop-shadow(0 0 0px blsck);
+      position: relative;
+
+      // Estela de fuego central (doble tamaño)
+      .central-flame {
+        position: absolute;
+        left: 50%;
+        bottom: -80px; // aparece por debajo de la nave
+        transform: translateX(-50%);
+        width: 24px; // doble ancho respecto a turbinas (12px)
+        height: 80px; // doble alto respecto a turbinas (40px)
+        background: radial-gradient(ellipse at top, rgba(255,255,255,0.9) 0%, rgba(255,0,0,0.8) 30%, rgba(180,0,0,0.2) 60%, transparent 100%);
+        filter: blur(3px);
+        transform-origin: top center;
+        animation: centralFlame 0.3s infinite alternate;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      // Llamas de las turbinas (pseudo-elementos)
+      &::before, &::after {
+        content: '';
+        position: absolute;
+        bottom: -20px; // aparece debajo de la nave
+        width: 12px;
+        height: 40px;
+        background: radial-gradient(ellipse at center, rgba(255,255,255,0.9) 0%, rgba(255,200,0,0.8) 40%, rgba(255,100,0,0.5) 70%, transparent 100%);
+        filter: blur(2px);
+        transform-origin: top center;
+        animation: engineFlame 0.25s infinite alternate;
+        pointer-events: none;
+        z-index: -1; // detrás de la nave
+
+      // Usamos clip-path para mostrar solo la mitad superior de la llama
+      // IMPORTANTE: Asegúrate de que el elemento no tenga overflow visible ni efectos que sobresalgan el clip
+
+      }
+
+      // Ajustar posición de cada turbina
+      &::before { left: 14px; }
+      &::after  { right: 14px; }
     }
     
-    &::before {
-      content:  "";
-      @include absolute-center;
-      width: 40px;
-      height: 40px;
-      background: radial-gradient(circle, $color-cyan 0%, transparent 0.70);
-      border-radius: 50%;
-      opacity: 0.3;
-      animation: cannonGlow 2s ease-in-out infinite alternate;
-      pointer-events: none;
-    }
+
+
   }
   
   .cannon-barrel {
     @include absolute-center;
     width: 8px; 
-    height: 60px;
-    background: linear-gradient(90deg, #444 0%, #666 50%, #444 100%);
-    border: 2px solid $color-cyan;
-    border-radius: 4px;
+    height: 80px;
+    background: linear-gradient(90deg, white 0%, red 30%, red 70%, white 100%);
+    border: 1px solid black;
+    border-radius: 3px;
     box-shadow: 0 0 15px $color-cyan;
-    transform-origin: center center;
     z-index: 3;
-    transform: translate(-50%, -50%) translateY(-8px);
+    clip-path: inset(0 0 50% 0);
+    transition: transform 0.03s linear; // doble de rápido
+    
   }
-  
+
   &.reloading .cannon-barrel {
     animation: reloadPulse 0.5s ease-in-out infinite alternate;
   }
@@ -73,7 +114,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: miniShipGlow 2s ease-in-out infinite alternate;
     }
   }
 }
@@ -90,7 +130,6 @@
     align-items: center;
     justify-content: center;
     filter: drop-shadow(06 $color-cyan);
-    animation: compactMiniShipGlow 2s ease-in-out infinite alternate;
   }
 }
 
@@ -122,13 +161,12 @@
   }
 }
 
-@keyframes shipGlow {
-  0% { 
-    filter: drop-shadow(0 0 5px $color-cyan); 
-  }
-  10% { 
-    filter: drop-shadow(0 0 15px $color-cyan); 
-  }
+
+
+// Animación para recorrer los 4 cuadros del sprite
+@keyframes shipSpriteAnim {
+  0%   { background-position:    0 0; }
+  100% { background-position: -320px 0; }
 }
 
 @keyframes reloadPulse {
@@ -162,4 +200,18 @@
     filter: drop-shadow(0 0 10px $color-cyan); 
     transform: scale(1.05); 
   }
+} 
+
+// Animación de llama de las turbinas
+@keyframes engineFlame {
+  0%   { transform: scaleY(0.8); opacity: 0.7; }
+  50%  { transform: scaleY(1.1); opacity: 1; }
+  100% { transform: scaleY(0.9); opacity: 0.65; }
+}
+
+// Animación para la estela central (ligeramente distinta)
+@keyframes centralFlame {
+  0%   { transform: translateX(-50%) scaleY(0.9); opacity: 0.75; }
+  50%  { transform: translateX(-50%) scaleY(1.2); opacity: 1; }
+  100% { transform: translateX(-50%) scaleY(1);   opacity: 0.7; }
 } 
