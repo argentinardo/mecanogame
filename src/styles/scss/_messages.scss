@@ -24,13 +24,14 @@
   h2 { 
     color: $color-cyan; 
     margin-bottom: $spacing-lg; 
-    font-size: $font-size-xl; 
+    font-size: $font-size-xxl; // Aumentado de xl a xxl
   }
   
   p { 
     color: #fff; 
     margin-bottom: $spacing-md; 
     line-height: 1.5; 
+    font-size: $font-size-large; // Añadido para aumentar el tamaño del párrafo
   }
 }
 
@@ -40,7 +41,7 @@
   
   h2 { 
     color: $color-red; 
-    font-size: 28px; 
+    font-size: $font-size-xxl; // Aumentado de 28px a variable xxl
     @include text-glow($color-red, 20px); 
   }
   
@@ -70,7 +71,7 @@
   
   .floating-combo-content {
     color: #fff;
-    font-size: $font-size-medium;
+    font-size: $font-size-large; // Aumentado de medium a large
     line-height: 1.4;
     font-family: $font-main;
   }
@@ -92,7 +93,7 @@
   
   .floating-order-content {
     color: #fff;
-    font-size: $font-size-medium;
+    font-size: $font-size-large; // Aumentado de medium a large
     line-height: 1.4;
     font-family: $font-main;
   }
@@ -115,7 +116,7 @@
   
   .central-message-content, .combo-message-content {
     color: #fff;
-    font-size: $font-size-large;
+    font-size: $font-size-xl; // Aumentado de large a xl
     line-height: 1.5;
     margin-bottom: $spacing-lg;
     font-family: $font-main;
@@ -124,7 +125,7 @@
   // Estilos específicos para el countdown
   .countdown {
     .countdown-number {
-      font-size: 48px;
+      font-size: 64px; // Aumentado de 48px
       color: $color-cyan;
       @include text-glow($color-cyan, 20px);
       margin-bottom: $spacing-sm;
@@ -132,7 +133,7 @@
     }
     
     .countdown-text {
-      font-size: $font-size-medium;
+      font-size: $font-size-large; // Aumentado de medium a large
       color: #fff;
       font-family: $font-main;
     }

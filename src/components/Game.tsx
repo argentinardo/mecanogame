@@ -975,7 +975,12 @@ export const Game: React.FC = () => {
             meteorites: [], // Limpiar meteoritos al terminar el juego
             isPaused: false
         }));
-    }, [playGameOverSound, stopBackgroundMusic]);
+
+        // Ocultar teclado virtual en móvil al terminar
+        if (isMobile && navigator.virtualKeyboard) {
+            navigator.virtualKeyboard.hide();
+        }
+    }, [playGameOverSound, stopBackgroundMusic, isMobile]);
 
     // Función para iniciar cuenta regresiva cuando se pierde una vida
     const startLifeLostCountdown = useCallback(() => {
@@ -1648,7 +1653,12 @@ export const Game: React.FC = () => {
             firstMeteoritePause: false,
             forceFieldActivationMessage: false
         });
-    }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
+
+        // Mostrar teclado virtual en móvil
+        if (isMobile && navigator.virtualKeyboard) {
+            navigator.virtualKeyboard.show();
+        }
+    }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible, isMobile]);
 
     const continueGame = useCallback(() => {
         // Limpiar timeouts pendientes
@@ -1797,6 +1807,15 @@ export const Game: React.FC = () => {
         };
     }, [handleKeyPress]);
 
+    // Detección de móvil al montar el componente
+    useEffect(() => {
+        const checkMobile = () => {
+            const isMobileDevice = /Mobi|Android/i.test(navigator.userAgent);
+            setIsMobile(isMobileDevice);
+        };
+        checkMobile();
+    }, []);
+
     return (
         <div className="game-container">
             <Starfield />
@@ -1904,14 +1923,17 @@ export const Game: React.FC = () => {
                 />
             </div>
 
-            <div className="game-area" ref={gameAreaRef} style={{ 
-                position: 'relative',
-                width: '100%',
-                height: '100%',
-                overflow: 'hidden',
-                display: 'flex',
-                justifyContent: 'center'
-            }}>
+            <div 
+                ref={gameAreaRef} 
+                className={`game-area ${isMobile ? 'is-mobile' : ''}`} 
+                style={{ 
+                    position: 'relative', 
+                    width: '100%', 
+                    height: '100%',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    justifyContent: 'center'
+                }}>
                 <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} />
                 
                 {/* Punto de debug para el centro del cañón */}
