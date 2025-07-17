@@ -1605,34 +1605,17 @@ export const Game: React.FC = () => {
     }, [gameState.isPaused, gameState.isPlaying, gameState.showSectorInfo]);
 
     const startGame = useCallback(() => {
-        if (spawnIntervalRef.current) {
-            clearInterval(spawnIntervalRef.current);
-        }
-        if (gameLoopRef.current) {
-            cancelAnimationFrame(gameLoopRef.current);
-        }
-
-        lastSpawnTimeRef.current = 0;
-
-        // Solo inicializar contexto de audio, no iniciar música aquí
         initAudioContext();
 
-        // Resetear completamente para nuevo juego
-        setComboCount(0);
-        setLastHitTime(0);
-        setComboMultiplier(1);
-        setSequentialHits(0);
-        
-        // Limpiar mensajes
-        setCurrentComboMessage(null);
-        setIsComboMessageVisible(false);
-        setCurrentOrderMessage(null);
-        setIsOrderMessageVisible(false);
+        if (isMobile && navigator.virtualKeyboard) {
+            navigator.virtualKeyboard.show();
+        }
 
-        setGameState({
-            score: 0, // Siempre empezar desde 0 en nuevo juego
-            lives: 3,
+        setGameState(prev => ({
+            ...prev,
             isPlaying: true,
+            score: 0,
+            lives: 3,
             isPenalized: false,
             penaltyTime: 0,
             fallingLetters: [],
@@ -1652,13 +1635,13 @@ export const Game: React.FC = () => {
             sectorInfoTimeout: null,
             firstMeteoritePause: false,
             forceFieldActivationMessage: false
-        });
+        }));
 
         // Mostrar teclado virtual en móvil
         if (isMobile && navigator.virtualKeyboard) {
             navigator.virtualKeyboard.show();
         }
-    }, [initAudioContext, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible, isMobile]);
+    }, [initAudioContext, isMobile]);
 
     const continueGame = useCallback(() => {
         // Limpiar timeouts pendientes
