@@ -13,7 +13,7 @@ import { TYPING_STAGES, KEYBOARD_POSITIONS } from '../types/game';
 
 
 
-const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
+const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789'.split('');
 const MAX_LETTERS_ON_SCREEN = 10000;
 const INITIAL_LETTER_SPEED = 0.4;
 const INITIAL_GAME_SPEED = 2200;
@@ -1815,6 +1815,24 @@ export const Game: React.FC = () => {
         checkMobile();
     }, []);
 
+    // Ref para input oculto en móvil
+    const mobileInputRef = useRef<HTMLInputElement | null>(null);
+
+    // Mantener foco en el input oculto para teclado virtual móvil
+    useEffect(() => {
+        if (isMobile && mobileInputRef.current) {
+            const inputEl = mobileInputRef.current;
+            inputEl.focus();
+
+            const handleBlur = () => {
+                // Reenfocar tras perder el foco
+                inputEl.focus();
+            };
+            inputEl.addEventListener('blur', handleBlur);
+            return () => inputEl.removeEventListener('blur', handleBlur);
+        }
+    }, [isMobile]);
+
     return (
         <div className="game-container">
             <Starfield />
@@ -2135,6 +2153,28 @@ export const Game: React.FC = () => {
                 />
             )}
 
+            {/* Input oculto para activar el teclado virtual en móvil */}
+            {isMobile && (
+                <input
+                    ref={mobileInputRef}
+                    type="text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        height: 0,
+                        width: 0,
+                        zIndex: -10,
+                    }}
+                    onInput={(e) => {
+                        const target = e.target as HTMLInputElement;
+                        if (target.value) {
+                            target.value = '';
+                        }
+                    }}
+                />
+            )}
 
         </div>
     );

@@ -77,7 +77,11 @@ export const KEYBOARD_POSITIONS: Record<string, KeyboardPosition> = {
     'L': { row: 1, col: 8.3 }, 'Ñ': { row: 1, col: 9.3 },
     // Tercera fila (1-7) - más compacta, centrada
     'Z': { row: 2, col: 1.5 }, 'X': { row: 2, col: 2.5 }, 'C': { row: 2, col: 3.5 }, 'V': { row: 2, col: 4.5 },
-    'B': { row: 2, col: 5.5 }, 'N': { row: 2, col: 6.5 }, 'M': { row: 2, col: 7.5 }
+    'B': { row: 2, col: 5.5 }, 'N': { row: 2, col: 6.5 }, 'M': { row: 2, col: 7.5 },
+    // Números fila superior
+    '1': { row: -1, col: 0 }, '2': { row: -1, col: 1 }, '3': { row: -1, col: 2 }, '4': { row: -1, col: 3 },
+    '5': { row: -1, col: 4 }, '6': { row: -1, col: 5 }, '7': { row: -1, col: 6 }, '8': { row: -1, col: 7 },
+    '9': { row: -1, col: 8 }, '0': { row: -1, col: 9 },
 };
 
 // Etapas de mecanografía para teclado español
@@ -134,7 +138,7 @@ export const TYPING_STAGES: TypingStage[] = [
     },
     {
         name: "Sector 10: Todas las Letras",
-        letters: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split(''),
+        letters: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789'.split(''),
         description: "¡Demuestra tu dominio con todas las letras!"
     }
 ]; 
