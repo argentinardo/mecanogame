@@ -12,8 +12,10 @@
 
 .instructions, .game-over {
   @include absolute-center;
-  @include panel($color-cyan, $radius-main, $opacity-overlay);
-  padding: $spacing-xxl;
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px solid $color-cyan;
+  border-radius: $radius-main;
+  padding: $spacing-xl;
   text-align: center;
   z-index: $z-overlay;
   @include glow($color-cyan, 30px);
@@ -52,16 +54,43 @@
 // MENSAJES FLOTANTES
 // =============================================================================
 
-.floating-combo-message, .floating-order-message {
-  @include absolute-center;
-  @include panel($color-cyan, 15px, $opacity-light);
+.floating-combo-message {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid $color-cyan;
+  border-radius: 15px;
   padding: $spacing-lg;
   text-align: center;
   z-index: 12;
   @include glow($color-cyan, 20px);
-  animation: floatingMessageGlow 2s ease-in-out infinite alternate;
+  animation: floatingMessageGlow 2s ease-in-out infinite alternate, comboMessageSlideIn 0.6s ease-out;
   
-  .floating-combo-content, .floating-order-content {
+  .floating-combo-content {
+    color: #fff;
+    font-size: $font-size-medium;
+    line-height: 1.4;
+    font-family: $font-main;
+  }
+}
+
+.floating-order-message {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid $color-cyan;
+  border-radius: 15px;
+  padding: $spacing-lg;
+  text-align: center;
+  z-index: 12;
+  @include glow($color-cyan, 20px);
+  animation: floatingMessageGlow 2s ease-in-out infinite alternate, orderMessageSlideIn 0.6s ease-out;
+  
+  .floating-order-content {
     color: #fff;
     font-size: $font-size-medium;
     line-height: 1.4;
@@ -75,7 +104,7 @@
 
 .central-message, .combo-message {
   @include absolute-center;
-  background: rgba(0, 0, 0, $opacity-overlay);
+  background: rgba(0, 0, 0, 0.25);
   border: 3px solid $color-cyan;
   border-radius: $radius-main;
   padding: $spacing-xl;
@@ -133,7 +162,7 @@
   
   &:hover {
     transform: translate(-50%, -50%) scale(1.02);
-    box-shadow: 0 0 40px rgba($color-cyan, 0.6);
+    box-shadow: 0 0 40px rgba($color-cyan, 0.3);
     border-color: $color-cyan-light;
   }
 }
@@ -144,29 +173,63 @@
 
 @keyframes instructionsGlow {
   0% { 
-    box-shadow: 0 0 30px $color-cyan; 
+    box-shadow: 0 0 30px rgba($color-cyan, 0.3); 
   }
   100% { 
-    box-shadow: 0 0 50px $color-cyan; 
+    box-shadow: 0 0 50px rgba($color-cyan, 0.3); 
   }
 }
 
 @keyframes floatingMessageGlow {
   0% { 
-    box-shadow: 0 0 20px $color-cyan; 
+    box-shadow: 0 0 20px rgba($color-cyan, 0.3); 
   }
   100% { 
-    box-shadow: 0 0 30px $color-cyan; 
+    box-shadow: 0 0 30px rgba($color-cyan, 0.3); 
   }
 }
 
 @keyframes centralMessageGlow {
   0% { 
-    box-shadow: 0 0 30px $color-cyan; 
+    box-shadow: 0 0 30px rgba($color-cyan, 0.3); 
     border-color: $color-cyan; 
   }
   100% { 
-    box-shadow: 0 0 50px $color-cyan; 
+    box-shadow: 0 0 50px rgba($color-cyan, 0.3); 
     border-color: $color-cyan-light; 
+  }
+}
+
+// =============================================================================
+// ANIMACIONES DE APARICIÓN PARA MENSAJES FLOTANTES
+// =============================================================================
+
+@keyframes comboMessageSlideIn {
+  0% {
+    transform: translateY(-50%) translateX(100%) scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-50%) translateX(20px) scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-50%) translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes orderMessageSlideIn {
+  0% {
+    transform: translateY(-50%) translateX(-100%) scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-50%) translateX(-20px) scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-50%) translateX(0) scale(1);
+    opacity: 1;
   }
 } 

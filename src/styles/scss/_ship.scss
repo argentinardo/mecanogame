@@ -12,23 +12,26 @@
   z-index: 4;
   animation: shipFloating 3s ease-in-out infinite;
   
-  .cannon-base {
-    width: 80px;
-    height: 80px;
-    background-image: url(../assets/images/nave.png);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
+  .cannon-base{
+    height: 80;
     @include absolute-center;
     transform-origin: center center;
     z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .ship-svg {
+      filter: drop-shadow(0 05color-cyan);
+      animation: shipGlow 2s ease-in-out infinite alternate;
+    }
     
     &::before {
-      content: '';
+      content:  "";
       @include absolute-center;
       width: 40px;
       height: 40px;
-      background: radial-gradient(circle, $color-cyan 0%, transparent 70%);
+      background: radial-gradient(circle, $color-cyan 0%, transparent 0.70);
       border-radius: 50%;
       opacity: 0.3;
       animation: cannonGlow 2s ease-in-out infinite alternate;
@@ -59,19 +62,17 @@
   @include flex-center;
   gap: $spacing-sm;
   
-  .life-ship {
-    width: 30px; 
+  .life-ship{
+    width: 30x; 
     height: 30px;
     @include flex-center;
     
     .mini-ship {
       width: 24px; 
       height: 24px;
-      background-image: url(../assets/images/nave.png);
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      filter: drop-shadow(0 0 8px $color-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       animation: miniShipGlow 2s ease-in-out infinite alternate;
     }
   }
@@ -82,14 +83,13 @@
   @include flex-center;
   gap: $spacing-xs;
   
-  .compact-mini-ship {
+  .compact-mini-ship{
     width: 20px; 
     height: 20px;
-    background-image: url(../assets/images/nave.png);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    filter: drop-shadow(0 0 6px $color-cyan);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(06 $color-cyan);
     animation: compactMiniShipGlow 2s ease-in-out infinite alternate;
   }
 }
@@ -119,6 +119,15 @@
   }
   100% { 
     box-shadow: 0 0 30px $color-cyan; 
+  }
+}
+
+@keyframes shipGlow {
+  0% { 
+    filter: drop-shadow(0 0 5px $color-cyan); 
+  }
+  10% { 
+    filter: drop-shadow(0 0 15px $color-cyan); 
   }
 }
 

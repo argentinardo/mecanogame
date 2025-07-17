@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ShipSVG } from './ShipSVG';
 
 interface HUDProps {
     score: number;
@@ -32,10 +33,14 @@ export const HUD: React.FC<HUDProps> = ({
 }) => {
     const [displayScore, setDisplayScore] = useState(score);
     const [previousScore, setPreviousScore] = useState(score);
+    const [scoreKey, setScoreKey] = useState(0);
     const isMobile = useIsMobile();
 
     useEffect(() => {
         if (score !== previousScore) {
+            // Generar nueva key para forzar la animación
+            setScoreKey(prev => prev + 1);
+            
             if (score > previousScore) {
                 let currentScore = previousScore;
                 const difference = score - previousScore;
@@ -70,7 +75,7 @@ export const HUD: React.FC<HUDProps> = ({
             <div className={`compact-instrument-panel${isMobile ? ' mobile-panel' : ''}`}>
                 <div className={`compact-score-display${isMobile ? ' mobile-score' : ''}`}>
                     <div className={`compact-instrument-label${isMobile ? ' mobile-label' : ''}`}>SCORE</div>
-                    <div className={`compact-score-value${isMobile ? ' mobile-value' : ''}`} key={`${score}-${Date.now()}`}>
+                    <div className={`compact-score-value${isMobile ? ' mobile-value' : ''}`} key={scoreKey}>
                         {displayScore.toString().padStart(8, '0')}
                     </div>
                 </div>
@@ -79,7 +84,9 @@ export const HUD: React.FC<HUDProps> = ({
                     <div className={`compact-lives-ships${isMobile ? ' mobile-lives-ships' : ''}`}>
                         {Array.from({ length: lives }).map((_, index) => (
                             <div key={index} className={`compact-life-ship${isMobile ? ' mobile-life-ship' : ''}`}>
-                                <div className={`compact-mini-ship${isMobile ? ' mobile-mini-ship' : ''}`}></div>
+                                <div className={`compact-mini-ship${isMobile ? ' mobile-mini-ship' : ''}`}>
+                                    <ShipSVG size={isMobile ? 12 : 20} />
+                                </div>
                             </div>
                         ))}
                     </div>

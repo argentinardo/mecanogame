@@ -20,7 +20,7 @@
   border-radius: $radius-main;
   padding: $spacing-md $spacing-xl;
   text-align: center;
-  box-shadow: 0 0 30px rgba($color-cyan, $opacity-medium), inset 0 0 20px rgba($color-cyan, 0.1);
+  box-shadow: 0 0 30px rgba($color-cyan, 0.3), inset 0 0 20px rgba($color-cyan, 0.1);
   @include backdrop-blur(4px);
   animation: sectorGlow 3s ease-in-out infinite alternate;
 }
@@ -72,7 +72,7 @@
   border-radius: $radius-panel;
   padding: $spacing-xxl;
   text-align: center;
-  box-shadow: 0 0 50px rgba($color-cyan, 0.7), inset 0 0 30px rgba($color-cyan, 0.2);
+  box-shadow: 0 0 50px rgba($color-cyan, 0.3), inset 0 0 30px rgba($color-cyan, 0.2);
   @include backdrop-blur(10px);
   animation: sectorLargeGlow 3s ease-in-out infinite alternate;
 }
@@ -105,7 +105,7 @@
 }
 
 .sector-panel-large::after {
-  content: "Presiona cualquier tecla para continuar";
+  content: "Presiona enter para continuar";
   display: block;
   font-size: 14px;
   color: $color-cyan;
@@ -121,22 +121,22 @@
 
 @keyframes sectorGlow {
   0% { 
-    box-shadow: 0 0 30px rgba($color-cyan, $opacity-medium), inset 0 0 20px rgba($color-cyan, 0.1); 
+    box-shadow: 0 0 30px rgba($color-cyan, 0.3), inset 0 0 20px rgba($color-cyan, 0.1); 
     border-color: $color-cyan; 
   }
   100% { 
-    box-shadow: 0 0 50px rgba($color-cyan, 0.7), inset 0 0 30px rgba($color-cyan, 0.2); 
+    box-shadow: 0 0 50px rgba($color-cyan, 0.3), inset 0 0 30px rgba($color-cyan, 0.2); 
     border-color: $color-cyan-light; 
   }
 }
 
 @keyframes sectorLargeGlow {
   0% { 
-    box-shadow: 0 0 50px rgba($color-cyan, 0.7), inset 0 0 30px rgba($color-cyan, 0.2); 
+    box-shadow: 0 0 50px rgba($color-cyan, 0.3), inset 0 0 30px rgba($color-cyan, 0.2); 
     border-color: $color-cyan; 
   }
   100% { 
-    box-shadow: 0 0 80px rgba($color-cyan, 0.9), inset 0 0 50px rgba($color-cyan, 0.3); 
+    box-shadow: 0 0 80px rgba($color-cyan, 0.3), inset 0 0 50px rgba($color-cyan, 0.3); 
     border-color: $color-cyan-light; 
   }
 }

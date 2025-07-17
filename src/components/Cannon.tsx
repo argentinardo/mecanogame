@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ShipSVG } from './ShipSVG';
 
 interface CannonProps {
     isReloading: boolean;
@@ -39,7 +40,9 @@ export const Cannon: React.FC<CannonProps> = ({ isReloading, angle = 0 }) => {
             <div 
                 className="cannon-base"
                 style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
-            ></div>
+            >
+                <ShipSVG size={80} className="ship-svg" />
+            </div>
             <div 
                 className="cannon-barrel"
                 style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}

@@ -49,60 +49,6 @@ const FINGER_MAPPING = {
     }
 };
 
-// Clip-path para esquinas pixel art (adaptado para dedos)
-const createPixelCorners = (size: number) => `
-  polygon(
-    0px calc(100% - ${size * 0.4}px),
-    ${size * 0.1}px calc(100% - ${size * 0.4}px),
-    ${size * 0.1}px calc(100% - ${size * 0.3}px),
-    ${size * 0.2}px calc(100% - ${size * 0.3}px),
-    ${size * 0.2}px calc(100% - ${size * 0.2}px),
-    ${size * 0.3}px calc(100% - ${size * 0.2}px),
-    ${size * 0.3}px calc(100% - ${size * 0.1}px),
-    ${size * 0.4}px calc(100% - ${size * 0.1}px),
-    ${size * 0.4}px 100%,
-    calc(100% - ${size * 0.4}px) 100%,
-    calc(100% - ${size * 0.4}px) calc(100% - ${size * 0.1}px),
-    calc(100% - ${size * 0.3}px) calc(100% - ${size * 0.1}px),
-    calc(100% - ${size * 0.3}px) calc(100% - ${size * 0.2}px),
-    calc(100% - ${size * 0.2}px) calc(100% - ${size * 0.2}px),
-    calc(100% - ${size * 0.2}px) calc(100% - ${size * 0.3}px),
-    calc(100% - ${size * 0.1}px) calc(100% - ${size * 0.3}px),
-    calc(100% - ${size * 0.1}px) calc(100% - ${size * 0.4}px),
-    100% calc(100% - ${size * 0.4}px),
-    100% ${size * 0.4}px,
-    calc(100% - ${size * 0.1}px) ${size * 0.4}px,
-    calc(100% - ${size * 0.1}px) ${size * 0.3}px,
-    calc(100% - ${size * 0.2}px) ${size * 0.3}px,
-    calc(100% - ${size * 0.2}px) ${size * 0.2}px,
-    calc(100% - ${size * 0.3}px) ${size * 0.2}px,
-    calc(100% - ${size * 0.3}px) ${size * 0.1}px,
-    calc(100% - ${size * 0.4}px) ${size * 0.1}px,
-    calc(100% - ${size * 0.4}px) 0px,
-    ${size * 0.4}px 0px,
-    ${size * 0.4}px ${size * 0.1}px,
-    ${size * 0.3}px ${size * 0.1}px,
-    ${size * 0.3}px ${size * 0.2}px,
-    ${size * 0.2}px ${size * 0.2}px,
-    ${size * 0.2}px ${size * 0.3}px,
-    ${size * 0.1}px ${size * 0.3}px,
-    ${size * 0.1}px ${size * 0.4}px,
-    0px ${size * 0.4}px
-  )
-`;
-
-// Clip-path para triángulo truncado (palma)
-const createTruncatedTriangle = (width: number, height: number, truncation: number = 0.3) => `
-  polygon(
-    ${width * 0.5}px 0px,
-    ${width * (1 - truncation * 0.5)}px ${height * truncation}px,
-    ${width * (1 - truncation * 0.5)}px ${height * (1 - truncation)}px,
-    ${width * 0.5}px ${height}px,
-    ${width * truncation * 0.5}px ${height * (1 - truncation)}px,
-    ${width * truncation * 0.5}px ${height * truncation}px
-  )
-`;
-
 export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpacePressed = false }) => {
     const fingerMapping = FINGER_MAPPING[side];
     const highlightedFinger = highlightedKey ? fingerMapping[highlightedKey as keyof typeof fingerMapping] : null;
@@ -113,16 +59,29 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
     return (
         <div className={`hand-map hand-map-${side}`}>
             <div className="hand-visual">
-                {/* Palma pixel art - triángulo truncado */}
+                {/* Palma superior (rectángulo más grande) */}
                 <div 
-                    className={`palm pixel-palm ${highlightedFinger === 'palm' ? 'highlighted' : ''}`}
+                    className={`palm palm-upper pixel-palm ${highlightedFinger === 'palm' ? 'highlighted' : ''}`}
                     style={{
-                        width: '70px',
-                        height: '100px',
+                        width: '80px',
+                        height: '60px',
                         position: 'absolute',
-                        left: '25px',
-                        top: '100px',
-                        clipPath: createTruncatedTriangle(70, 100, 0.25)
+                        left: '20px',
+                        top: '80px',
+                        borderRadius: '8px'
+                    }}
+                />
+                
+                {/* Palma inferior (rectángulo más pequeño) */}
+                <div 
+                    className={`palm palm-lower pixel-palm ${highlightedFinger === 'palm' ? 'highlighted' : ''}`}
+                    style={{
+                        width: '60px',
+                        height: '40px',
+                        position: 'absolute',
+                        left: '30px',
+                        top: '140px',
+                        borderRadius: '6px'
                     }}
                 />
                 
@@ -137,7 +96,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         left: side === 'left' ? '85px' : '19px',
                         top: '100px',
                         transform: side === 'left' ? 'rotate(30deg)' : 'rotate(-30deg)',
-                        clipPath: createPixelCorners(8)
+                        borderRadius: '8px'
                     }}
                 />
                 
@@ -150,7 +109,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         position: 'absolute',
                         left: side === 'left' ? '30px' : '74px',
                         top: '30px',
-                        clipPath: createPixelCorners(8)
+                        borderRadius: '8px'
                     }}
                 />
                 
@@ -163,7 +122,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         position: 'absolute',
                         left: '52px',
                         top: '20px',
-                        clipPath: createPixelCorners(8)
+                        borderRadius: '8px'
                     }}
                 />
                 
@@ -176,7 +135,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         position: 'absolute',
                         left: side === 'left' ? '70px' : '34px',
                         top: '30px',
-                        clipPath: createPixelCorners(8)
+                        borderRadius: '8px'
                     }}
                 />
                 
@@ -189,7 +148,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                         position: 'absolute',
                         left: side === 'left' ? '15px' : '85px',
                         top: '45px',
-                        clipPath: createPixelCorners(6)
+                        borderRadius: '6px'
                     }}
                 />
             </div>

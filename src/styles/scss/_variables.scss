@@ -10,8 +10,8 @@ $warning-color: #ff0080;
 $success-color: #00ff80;
 
 // Colores específicos del juego - Tema Tron
-$color-cyan: #00ffff;
-$color-cyan-dark: #0080ff;
+$color-cyan: #8ac5ff;
+$color-cyan-dark: #0011ff;
 $color-cyan-light: #40ffff;
 $color-blue: #0080ff;
 $color-blue-dark: #0040ff;
@@ -65,54 +65,54 @@ $letter-colors: (
 );
 
 // Tamaños y dimensiones
-$letter-size: 72px;
-$cannon-radius: 50px;
-$force-field-radius: 200px;
-$bullet-width: 4px;
-$explosion-size: 100px;
+$letter-size: 48px; // Reducido de 72px
+$cannon-radius: 35px; // Reducido de 50px
+$force-field-radius: 150px; // Reducido de 200px
+$bullet-width: 3px; // Reducido de 4px
+$explosion-size: 80px; // Reducido de 100px
 
 // Espaciado
-$spacing-xs: 5px;
-$spacing-sm: 10px;
-$spacing-md: 20px;
-$spacing-lg: 30px;
-$spacing-xl: 50px;
-$spacing-xxl: 80px;
+$spacing-xs: 3px; // Reducido de 5px
+$spacing-sm: 6px; // Reducido de 10px
+$spacing-md: 12px; // Reducido de 20px
+$spacing-lg: 18px; // Reducido de 30px
+$spacing-xl: 30px; // Reducido de 50px
+$spacing-xxl: 50px; // Reducido de 80px
 
 // Bordes y sombras
-$border-radius-sm: 5px;
-$border-radius-md: 10px;
-$border-radius-lg: 15px;
-$border-width: 2px;
-$border-width-thick: 3px;
+$border-radius-sm: 3px; // Reducido de 5px
+$border-radius-md: 6px; // Reducido de 10px
+$border-radius-lg: 10px; // Reducido de 15px
+$border-width: 1px; // Reducido de 2px
+$border-width-thick: 2px; // Reducido de 3px
 
 // Radios específicos
-$radius-small: 5px;
-$radius-main: 15px;
-$radius-panel: 20px;
-$radius-hud: 15px;
-$radius-compact: 10px;
+$radius-small: 3px; // Reducido de 5px
+$radius-main: 10px; // Reducido de 15px
+$radius-panel: 12px; // Reducido de 20px
+$radius-hud: 10px; // Reducido de 15px
+$radius-compact: 6px; // Reducido de 10px
 
 // Sombras
-$shadow-neon: 0 0 20px;
-$shadow-glow: 0 0 30px;
-$shadow-drop: 0 2px 5px rgba(0, 0, 0, 0.3);
-$shadow-compact: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 10px rgba(0, 255, 255, 0.1);
+$shadow-neon: 0 0 15px; // Reducido de 20px
+$shadow-glow: 0 0 20px; // Reducido de 30px
+$shadow-drop: 0 1px 3px rgba(0, 0, 0, 0.3); // Reducido
+$shadow-compact: 0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 6px rgba(0, 255, 255, 0.1); // Reducido
 
 // Tipografía
 $font-family-primary: 'Press Start 2P', monospace;
 $font-family-secondary: 'monospace';
 $font-main: 'Press Start 2P', monospace;
-$font-size-xs: 12px;
-$font-size-sm: 14px;
-$font-size-small: 12px;
-$font-size-base: 16px;
-$font-size-md: 16px;
-$font-size-medium: 16px;
-$font-size-lg: 18px;
-$font-size-large: 24px;
-$font-size-xl: 28px;
-$font-size-xxl: 32px;
+$font-size-xs: 8px; // Reducido de 12px
+$font-size-sm: 10px; // Reducido de 14px
+$font-size-small: 8px; // Reducido de 12px
+$font-size-base: 12px; // Reducido de 16px
+$font-size-md: 12px; // Reducido de 16px
+$font-size-medium: 12px; // Reducido de 16px
+$font-size-lg: 14px; // Reducido de 18px
+$font-size-large: 18px; // Reducido de 24px
+$font-size-xl: 20px; // Reducido de 28px
+$font-size-xxl: 24px; // Reducido de 32px
 
 // Z-index layers
 $z-index-background: 1;
@@ -150,7 +150,7 @@ $transition-main: all 0.3s ease-in-out;
 
 // Opacidades
 $opacity-light: 0.3;
-$opacity-medium: 0.6;
+$opacity-medium: 0.3;
 $opacity-overlay: 0.9;
 
 // Frecuencias de beep de proximidad

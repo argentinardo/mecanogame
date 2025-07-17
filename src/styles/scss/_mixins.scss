@@ -73,7 +73,7 @@
     background: rgba(0, 0, 0, $opacity);
     border: 2px solid $color;
     border-radius: $radius;
-    box-shadow: 0 0 20px rgba($color, 0.6), inset 0 0 15px rgba($color, 0.1);
+    box-shadow: 0 0 20px rgba($color, 0.3), inset 0 0 15px rgba($color, 0.1);
     @include backdrop-blur(10px);
 }
 
