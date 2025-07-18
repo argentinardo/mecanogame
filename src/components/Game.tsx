@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Cannon } from './Cannon';
 import { HUD } from './HUD';
 import { Instructions } from './Instructions';
@@ -1838,6 +1838,13 @@ export const Game: React.FC = () => {
         }
     }, [isMobile]);
 
+    // Lista de letras actualmente visibles (para iluminación sutil en los dedos)
+    const subtleKeys = useMemo(() => {
+        const unique = new Set<string>();
+        gameState.fallingLetters.forEach(l => unique.add(l.letter));
+        return Array.from(unique);
+    }, [gameState.fallingLetters]);
+
     return (
         <div className="game-container">
             <Starfield />
@@ -1890,6 +1897,7 @@ export const Game: React.FC = () => {
                             side="left" 
                             highlightedKey={gameState.pressedKey || undefined} 
                             isSpacePressed={isSpacePressed}
+                            subtleKeys={subtleKeys}
                         />
                     </div>
 
@@ -1909,6 +1917,7 @@ export const Game: React.FC = () => {
                             side="right" 
                             highlightedKey={gameState.pressedKey || undefined} 
                             isSpacePressed={isSpacePressed}
+                            subtleKeys={subtleKeys}
                         />
                     </div>
                 </div>
@@ -1920,11 +1929,13 @@ export const Game: React.FC = () => {
                     side="left" 
                     highlightedKey={gameState.pressedKey || undefined} 
                     isSpacePressed={isSpacePressed}
+                    subtleKeys={subtleKeys}
                 />
                 <HandMap 
                     side="right" 
                     highlightedKey={gameState.pressedKey || undefined} 
                     isSpacePressed={isSpacePressed}
+                    subtleKeys={subtleKeys}
                 />
             </div>
             

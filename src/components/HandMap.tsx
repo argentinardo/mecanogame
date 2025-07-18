@@ -2,7 +2,8 @@ import React from 'react';
 
 interface HandMapProps {
     side: 'left' | 'right';
-    highlightedKey?: string;
+    highlightedKey?: string;      // Tecla actualmente presionada
+    subtleKeys?: string[];        // Conjunto de letras en pantalla (iluminación leve)
     isSpacePressed?: boolean;
 }
 
@@ -49,10 +50,15 @@ const FINGER_MAPPING = {
     }
 };
 
-export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpacePressed = false }) => {
+export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, subtleKeys, isSpacePressed = false }) => {
     const fingerMapping = FINGER_MAPPING[side];
     const highlightedFinger = highlightedKey ? fingerMapping[highlightedKey as keyof typeof fingerMapping] : null;
-    
+
+    const isFingerSubtle = (finger: FingerType) => {
+        if (!subtleKeys || subtleKeys.length === 0) return false;
+        return subtleKeys.some(k => fingerMapping[k as keyof typeof fingerMapping] === finger);
+    };
+
     // El pulgar se ilumina si está destacado por una tecla específica O si se presiona la barra espaciadora
     const isThumbHighlighted = highlightedFinger === 'thumb' || isSpacePressed;
 
@@ -102,7 +108,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                 
                 {/* Índice */}
                 <div 
-                    className={`finger index pixel-finger ${highlightedFinger === 'index' ? 'highlighted' : ''}`}
+                    className={`finger index pixel-finger ${highlightedFinger === 'index' ? 'highlighted' : isFingerSubtle('index') ? 'subtle-highlight' : ''}`}
                     style={{
                         width: '16px',
                         height: '70px',
@@ -115,7 +121,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                 
                 {/* Medio */}
                 <div 
-                    className={`finger middle pixel-finger ${highlightedFinger === 'middle' ? 'highlighted' : ''}`}
+                    className={`finger middle pixel-finger ${highlightedFinger === 'middle' ? 'highlighted' : isFingerSubtle('middle') ? 'subtle-highlight' : ''}`}
                     style={{
                         width: '16px',
                         height: '80px',
@@ -128,7 +134,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                 
                 {/* Anular */}
                 <div 
-                    className={`finger ring pixel-finger ${highlightedFinger === 'ring' ? 'highlighted' : ''}`}
+                    className={`finger ring pixel-finger ${highlightedFinger === 'ring' ? 'highlighted' : isFingerSubtle('ring') ? 'subtle-highlight' : ''}`}
                     style={{
                         width: '16px',
                         height: '70px',
@@ -142,7 +148,7 @@ export const HandMap: React.FC<HandMapProps> = ({ side, highlightedKey, isSpaceP
                 
                 {/* Meñique */}
                 <div 
-                    className={`finger pinky pixel-finger ${highlightedFinger === 'pinky' ? 'highlighted' : ''}`}
+                    className={`finger pinky pixel-finger ${highlightedFinger === 'pinky' ? 'highlighted' : isFingerSubtle('pinky') ? 'subtle-highlight' : ''}`}
                     style={{
                         width: '12px',
                         height: '50px',

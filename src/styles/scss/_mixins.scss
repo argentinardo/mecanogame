@@ -44,7 +44,7 @@
 // Efectos visuales
 // =============================================================================
 
-@mixin neon-glow($color, $size: 10px) {
+@mixin neon-glow($color, $size: 40px) {
     box-shadow: 0 0 $size $color;
 }
 

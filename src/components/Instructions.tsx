@@ -71,7 +71,17 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
 
     return (
         <div className="instructions" onClick={handleContainerClick} style={{ cursor: isMobile ? 'default' : 'pointer' }}>
-            <h2>MECANOSTEROID</h2>
+            <h2 className="neon-title">
+                {Array.from('MECANOSTEROID').map((char, idx) => (
+                    <span
+                        key={`char-${idx}`}
+                        className="neon-letter"
+                        style={{ animationDelay: `${idx * 0.15}s` }}
+                    >
+                        {char}
+                    </span>
+                ))}
+            </h2>
             
             {isMobile ? (
                 <>

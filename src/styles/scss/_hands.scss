@@ -91,6 +91,18 @@
   z-index: 10;
 }
 
+// -----------------------------------------------------------------------------
+// ILUMINACIÓN SUTIL (para letras que acaban de aparecer)
+// -----------------------------------------------------------------------------
+
+.pixel-palm.subtle-highlight,
+.pixel-finger.subtle-highlight {
+  background: rgba($color-cyan, 0.25);
+  border-color: $color-cyan;
+  box-shadow: 0 0 10px 4px rgba($color-cyan, 0.4);
+  filter: brightness(1.15);
+}
+
 @keyframes fingerGlowExtra {
   0% {
     box-shadow: 0 0 32px 12px $color-cyan, 0 0 3px 1px #fff;
