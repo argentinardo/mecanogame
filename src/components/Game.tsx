@@ -8,7 +8,7 @@ import { CentralMessage } from './CentralMessage';
 import { MissileLetterComponent } from './MissileLetterComponent';
 import { Starfield } from './Starfield';
 import { useAudio } from '../hooks/useAudio';
-import type { GameState, FallingLetter } from '../types/game';
+import type { GameState, FallingLetter, Bullet } from '../types/game';
 import { TYPING_STAGES, KEYBOARD_POSITIONS } from '../types/game';
 import asteroid1 from '../assets/images/asteroid-01_40px.png';
 import asteroid2 from '../assets/images/asteroid-02-40px.png';
@@ -20,6 +20,9 @@ const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789'.split('');
 const MAX_LETTERS_ON_SCREEN = 10000;
 const INITIAL_LETTER_SPEED = 0.4;
 const INITIAL_GAME_SPEED = 2200;
+
+// Velocidad de los misiles teledirigidos
+const MISSILE_SPEED = 10;
 
 // Constantes para la progresión de dificultad
 const SPEED_INCREMENT = 0.05; // Incremento más pequeño de velocidad
@@ -259,103 +262,53 @@ export const Game: React.FC = () => {
         // Reproducir sonido de disparo
         playShootSound();
 
-        const laser = document.createElement('div');
-        laser.className = 'bullet';
-        
-        // Obtener las coordenadas del centro de la nave (pivote)
+        // Obtener coordenadas del cañón
         const { x: cannonX, y: cannonY } = getCannonCenterCoordinates();
-        const gameArea = gameAreaRef.current?.getBoundingClientRect();
-        if (!gameArea) return;
 
-        // Posición objetivo (centro de la letra)
-        const targetX = targetLetterObj.x + (LETTER_SIZE / 2);
-        const targetY = targetLetterObj.y + (LETTER_SIZE / 2);
-        
-        // Calcular la longitud y ángulo del rayo usando coordenadas relativas
-        const deltaX = targetX - cannonX;
-        const deltaY = targetY - cannonY;
-        const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        
-        // Ajustar el ángulo para que el cañón apunte correctamente
-        // El cañón necesita rotar 270 grados (90 + 180) en sentido horario para alinearse
-        const adjustedAngle = angle - 270;
-        
-        // Actualizar el ángulo del cañón usando camino corto
+        // Calcular ángulo inicial hacia la letra
+        const deltaX = (targetLetterObj.x + LETTER_SIZE / 2) - cannonX;
+        const deltaY = (targetLetterObj.y + LETTER_SIZE / 2) - cannonY;
+        const angleDeg = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+        const adjustedAngle = angleDeg - 270;
+
+        // Girar cañón hacia el objetivo usando camino corto
         updateCannonAngle(adjustedAngle);
-        
-        // Aplicar retroceso temporal al cañón en dirección opuesta al disparo
+
+        // Retroceso visual breve
         const cannonElement = document.querySelector('.cannon') as HTMLElement;
         if (cannonElement) {
-            // Calcular el retroceso en dirección opuesta al láser
-            const recoilIntensity = 8; // Intensidad del retroceso
-            const recoilAngle = Math.atan2(deltaY, deltaX) + Math.PI; // Dirección opuesta
+            const recoilIntensity = 8;
+            const recoilAngle = Math.atan2(deltaY, deltaX) + Math.PI;
             const recoilX = Math.cos(recoilAngle) * recoilIntensity;
             const recoilY = Math.sin(recoilAngle) * recoilIntensity;
-            
             cannonElement.style.transform = `translateX(calc(-50% + ${recoilX}px)) translateY(${recoilY}px)`;
             cannonElement.style.transition = 'transform 0.05s ease-out';
-            
-            // Restaurar posición normal después del retroceso
             setTimeout(() => {
                 cannonElement.style.transform = `translateX(-50%) translateY(0px)`;
                 cannonElement.style.transition = 'transform 0.15s ease-in-out';
             }, 80);
         }
-        
-        // Restablecer el ángulo del cañón después del disparo con animación rápida
 
-        
-        // Establecer el estilo del rayo
-        laser.style.position = 'absolute'; // Cambiar a absolute para posicionamiento relativo al game-area
-        laser.style.left = `${cannonX}px`; // Usar coordenadas relativas al game-area
-        laser.style.top = `${cannonY - 2}px`; // Ajustar para centrar verticalmente
-        laser.style.width = `${length}px`;
-        laser.style.height = '4px';
-        laser.style.background = '#ff0000';
-        laser.style.boxShadow = '0 0 15px #ff0000, 0 0 30px #ff0000';
-        laser.style.transformOrigin = '0 2px'; // Centrar verticalmente el láser
-        laser.style.transform = `rotate(${angle}deg)`;
-        laser.style.opacity = '0.9';
-        
-        gameAreaRef.current?.appendChild(laser);
-        
-        // Crear efecto de parpadeo y cambio de color
-        let opacity = 0.9;
-        let colorPhase = 0;
-        const fadeInterval = setInterval(() => {
-            opacity = opacity === 0.9 ? 0.6 : 0.9;
-            colorPhase = (colorPhase + 1) % 3;
-            
-            // Cambiar el color según la fase
-            switch(colorPhase) {
-                case 0:
-                    laser.style.background = 'yellow';
-                    break;
-                case 1:
-                    laser.style.background = 'white';
-                    break;
-                case 2:
-                    laser.style.background = 'red';
-                    break;
-            }
-            
-            laser.style.opacity = opacity.toString();
-        }, 33);
-        
-        // Eliminar el rayo después de un breve momento
-        setTimeout(() => {
-            clearInterval(fadeInterval);
-            laser.remove();
-            // Ejecutar hitLetter de forma asíncrona para evitar problemas de dependencia
-            setTimeout(() => hitLetter(targetLetterObj), 0);
-        }, 100);
-        
-        // Resetear el ángulo del cañón después de un tiempo
+        // Crear el misil teledirigido
+        const missile: Bullet = {
+            id: Date.now() + Math.random(),
+            x: cannonX,
+            y: cannonY,
+            targetId: targetLetterObj.id,
+            speed: MISSILE_SPEED,
+            rotation: angleDeg
+        };
+
+        setGameState(prev => ({
+            ...prev,
+            bullets: [...prev.bullets, missile]
+        }));
+
+        // Recentrar el cañón pasado un tiempo
         setTimeout(() => {
             updateCannonAngle(0);
         }, 500);
-    }, [gameState.isPenalized, gameState.forceField, gameState.fallingLetters, playShootSound, updateCannonAngle]);
+    }, [gameState.isPenalized, gameState.forceField, gameState.isPaused, gameState.fallingLetters, playShootSound, updateCannonAngle]);
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {
@@ -1302,6 +1255,45 @@ export const Game: React.FC = () => {
                     y: letter.y + letter.speed
                 }));
 
+                // Actualizar misiles teledirigidos
+                const updatedBullets: Bullet[] = [];
+
+                prev.bullets.forEach(missile => {
+                    const target = updatedLetters.find(l => l.id === missile.targetId);
+                    if (!target) {
+                        // El objetivo ya no existe, descartar misil
+                        return;
+                    }
+
+                    const targetCenterX = target.x + LETTER_SIZE / 2;
+                    const targetCenterY = target.y + LETTER_SIZE / 2;
+                    const dX = targetCenterX - missile.x;
+                    const dY = targetCenterY - missile.y;
+                    const distance = Math.sqrt(dX * dX + dY * dY);
+
+                    // Calcular nuevo ángulo y paso
+                    const angle = Math.atan2(dY, dX);
+                    const stepX = Math.cos(angle) * missile.speed;
+                    const stepY = Math.sin(angle) * missile.speed;
+                    const newX = missile.x + stepX;
+                    const newY = missile.y + stepY;
+
+                    // Verificar colisión con la letra
+                    if (distance < missile.speed + LETTER_SIZE / 2) {
+                        // Destruir letra
+                        setTimeout(() => hitLetter(target), 0);
+                        return; // No guardar el misil para la siguiente iteración
+                    }
+
+                    // Mantener el misil activo
+                    updatedBullets.push({
+                        ...missile,
+                        x: newX,
+                        y: newY,
+                        rotation: angle * (180 / Math.PI)
+                    });
+                });
+
                 // Actualizar meteoritos
                 const updatedMeteoritos = prev.meteorites.map(meteorite => ({
                     ...meteorite,
@@ -1348,7 +1340,8 @@ export const Game: React.FC = () => {
                 return {
                     ...prev,
                     fallingLetters: updatedLetters,
-                    meteorites: meteoritosEnPantalla
+                    meteorites: meteoritosEnPantalla,
+                    bullets: updatedBullets
                 };
             });
             
@@ -2029,6 +2022,27 @@ export const Game: React.FC = () => {
                         />
                     );
                 })}
+
+                {/* Misiles teledirigidos */}
+                {gameState.bullets.map(missile => (
+                    <div
+                        key={missile.id}
+                        className="missile"
+                        style={{
+                            position: 'absolute',
+                            left: missile.x + 'px',
+                            top: missile.y + 'px',
+                            width: '14px',
+                            height: '4px',
+                            background: '#ffffff',
+                            borderRadius: '2px',
+                            transform: `translate(-50%, -50%) rotate(${missile.rotation}deg)`,
+                            boxShadow: '0 0 6px #fff, 0 0 12px #0ff',
+                            pointerEvents: 'none',
+                            zIndex: 6
+                        }}
+                    />
+                ))}
             </div>
 
             {!gameState.isPlaying && gameState.lives > 0 && (

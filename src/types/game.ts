@@ -32,10 +32,12 @@ export interface FallingLetter {
 }
 
 export interface Bullet {
+    id: number;
     x: number;
     y: number;
-    targetX: number;
-    targetY: number;
+    targetId: number; // id de la letra a la que apunta
+    speed: number;
+    rotation: number; // ángulo en grados para renderizar el misil
 }
 
 export interface Meteorite {
