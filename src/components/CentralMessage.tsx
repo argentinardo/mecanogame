@@ -9,13 +9,14 @@ interface CentralMessageProps {
 export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdown, show }) => {
     if (!show) return null;
 
+    const wrapperClass = countdown !== null ? 'central-message countdown-only' : 'central-message';
+
     return (
-        <div className="central-message">
+        <div className={wrapperClass}>
             <div className="central-message-content">
                 {countdown !== null ? (
                     <div className="countdown">
-                        <div className="countdown-number">{countdown}</div>
-                        <div className="countdown-text">Preparándose...</div>
+                        <div key={countdown} className="countdown-number horizon-anim">{countdown}</div>
                     </div>
                 ) : (
                     <div className="status-message">

@@ -1,0 +1,28 @@
+// =============================================================================
+// HORIZON LINE STYLES
+// =============================================================================
+
+@use 'mixins' as *;
+@use 'variables' as *;
+
+.horizon-line {
+  position: absolute;
+  left: 0;
+  top: 37%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 4px;
+  background: #4400ff;
+  box-shadow: 0px -15px 50px 0px rgba(#110072, 0.9), 0 0 40px 8px rgba(#110072, 01);
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@include mobile {
+  .horizon-line {
+    bottom: 100px;
+    height: 3px;
+    box-shadow: 0 0 12px 4px rgba(#ffffff, 0.9), 0 0 50px 10px rgba(#ffffff, 0.8);
+  }
+} 

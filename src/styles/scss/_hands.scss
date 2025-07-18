@@ -32,9 +32,9 @@
 
 .hand-map {
   background: rgba(0, 0, 0, $opacity-light);
-  border: 2px solid $color-cyan;
+  border: 2px solid #ff8000; // naranja neón
   border-radius: 8px;
-  @include glow($color-cyan, 20px);
+  @include glow(#ff8000, 20px);
   animation: handMapGlow 2s ease-in-out infinite alternate;
   
   &-left { 
@@ -63,16 +63,16 @@
 // =============================================================================
 
 .pixel-palm {
-  background: rgba($color-cyan, 0.2);
-  border: 2px solid $color-cyan;
+  background: rgba(#ff8000, 0.2);
+  border: 2px solid #ff8000;
   transition: $transition-main;
   // Perspectiva 3D para que la parte de abajo se vea más pequeña
   transform: perspective(150px) rotateX(-30deg) scaleY(1);
 }
 
 .pixel-finger {
-  background: rgba($color-cyan, 0.3);
-  border: 1.5px solid $color-cyan;
+  background: rgba(#ff8000, 0.3);
+  border: 1.5px solid #ff8000;
   transition: $transition-main;
 }
 
@@ -106,10 +106,10 @@
 
 @keyframes handMapGlow {
   0% { 
-    box-shadow: 0 0 20px $color-cyan; 
+    box-shadow: 0 0 20px #ff8000; 
   }
   100% { 
-    box-shadow: 0 0 30px $color-cyan; 
+    box-shadow: 0 0 30px #ff8000; 
   }
 }
 

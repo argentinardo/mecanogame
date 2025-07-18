@@ -9,6 +9,7 @@ interface InstructionsProps {
 
 export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue, showContinue = false }) => {
     const [isMobile, setIsMobile] = useState(false);
+    const [showDetails, setShowDetails] = useState<boolean>(false);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -81,13 +82,28 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                 </>
             ) : (
                 <>
-                    <p>• Las letras caerán desde arriba</p>
-                    <p>• Presiona la tecla correcta para disparar</p>
-                    <p>• Si te equivocas, tendrás 3 segundos de penalización</p>
-                    <p>• Presiona <strong>BACKSPACE</strong> durante la penalización para saltearla</p>
-                    <p>• Usa <strong>ESPACIO</strong> para activar el escudo</p>
-                    <p>• Presiona <strong>ESC</strong> para pausar</p>
-                    <p>• ¡Mejora tu velocidad de escritura!</p>
+                    {/* Botón para desplegar */}
+                    <button
+                        className="toggle-instructions-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDetails(prev => !prev);
+                        }}
+                    >
+                        {showDetails ? 'Ocultar instrucciones ▲' : 'Mostrar instrucciones ▼'}
+                    </button>
+
+                    {showDetails && (
+                        <div className="instruction-details">
+                            <p>• Las letras caerán desde arriba</p>
+                            <p>• Presiona la tecla correcta para disparar</p>
+                            <p>• Si te equivocas, tendrás 3 segundos de penalización</p>
+                            <p>• Presiona <strong>BACKSPACE</strong> durante la penalización para saltearla</p>
+                            <p>• Usa <strong>ESPACIO</strong> para activar el escudo</p>
+                            <p>• Presiona <strong>ESC</strong> para pausar</p>
+                            <p>• ¡Mejora tu velocidad de escritura!</p>
+                        </div>
+                    )}
                     <div className="start-section">
                         {showContinue && onContinue && (
                             <>

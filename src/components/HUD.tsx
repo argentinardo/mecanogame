@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShipSVG } from './ShipSVG';
+import { MemoryIcon } from './MemoryIcons';
 
 interface HUDProps {
     score: number;
@@ -85,7 +85,7 @@ export const HUD: React.FC<HUDProps> = ({
                         {Array.from({ length: lives }).map((_, index) => (
                             <div key={index} className={`compact-life-ship${isMobile ? ' mobile-life-ship' : ''}`}>
                                 <div className={`compact-mini-ship${isMobile ? ' mobile-mini-ship' : ''}`}>
-                                    <ShipSVG size={isMobile ? 12 : 20} />
+                                    <MemoryIcon name="heart" size={isMobile ? 14 : 22} className="life-heart" />
                                 </div>
                             </div>
                         ))}

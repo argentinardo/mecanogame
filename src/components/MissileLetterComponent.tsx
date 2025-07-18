@@ -32,39 +32,36 @@ export const MissileLetterComponent: React.FC<MissileLetterProps> = ({
     // Interpolación lineal entre minScale y maxScale
     const scale = minScale + (maxScale - minScale) * progress;
 
+    // Colores neón posibles
+    const neonColors = ['#ff0080', '#ff8000', '#ffff00', '#00ff00', '#00ffff', '#0080ff', '#8000ff'];
+    const color = neonColors[letter.charCodeAt(0) % neonColors.length];
+
+    const cubeStyle: React.CSSProperties = {
+        left: x + 'px',
+        top: y + 'px',
+        position: 'absolute',
+        width: '100px',
+        height: '100px',
+        zIndex: 4,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+        color: color,
+    };
+    (cubeStyle as any)['--cube-color'] = color;
+
     return (
         <div
-            className={`falling-letter ${isHighlighted ? 'highlighted' : ''}`}
-            style={{
-                left: x + 'px',
-                top: y + 'px',
-                position: 'absolute',
-                width: '72px',
-                height: '72px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 4,
-                transform: `scale(${scale})`,
-                transformOrigin: 'center center',
-            }}
+            className={`falling-letter cube-wrapper ${isHighlighted ? 'highlighted' : ''}`}
+            style={cubeStyle}
         >
-            {/* Letra con animación de color brillante */}
-            <span style={{ 
-                position: 'relative', 
-                zIndex: 2,
-                fontSize: isHighlighted ? '40px' : '38px',
-                fontWeight: 'bold',
-                fontFamily: '"Press Start 2P", monospace',
-                lineHeight: '1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                height: '100%'
-            }}>
-                {letter}
-            </span>
+            <div className="cube" style={{ width: '100%', height: '100%' }}>
+                <div className="face front">{letter}</div>
+                <div className="face back">{letter}</div>
+                <div className="face right">{letter}</div>
+                <div className="face left">{letter}</div>
+                <div className="face top">{letter}</div>
+                <div className="face bottom">{letter}</div>
+            </div>
         </div>
     );
-}; 
+};

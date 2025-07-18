@@ -10,20 +10,13 @@
 // METEORITO PRINCIPAL
 // =============================================================================
 
+// Estilos mínimos para la imagen del asteroide PNG
 .meteorite {
-  position: absolute;
-  border-radius: 50%;
-  z-index: 4;
-  animation: meteoriteGlow 1s ease-in-out infinite alternate;
-  
-  > div:first-child {
-    width: 100%; 
-    height: 100%;
-    background: radial-gradient(circle, #ff4500 0%, #8b0000 50%, #2f1b14 100%);
-    border: 2px solid #ff6600;
-    border-radius: 50%;
-    box-shadow: 0 0 15px #ff4500;
-  }
+  display: block;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px #ff6600);
+  user-select: none;
+  background-image: url("../../assets/images/asteroid-01_40px.png");
 }
 
 // =============================================================================

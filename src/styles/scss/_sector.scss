@@ -16,19 +16,19 @@
 }
 
 .sector-panel {
-  border: 3px solid $color-cyan;
+  border: 3px solid #00ff80; // verde neón
   border-radius: $radius-main;
   padding: $spacing-md $spacing-xl;
   text-align: center;
-  box-shadow: 0 0 30px rgba($color-cyan, 0.3), inset 0 0 20px rgba($color-cyan, 0.1);
+  box-shadow: 0 0 30px rgba(0, 255, 128, 0.4), inset 0 0 20px rgba(0, 255, 128, 0.25);
   @include backdrop-blur(4px);
   animation: sectorGlow 3s ease-in-out infinite alternate;
 }
 
 .sector-label {
   font-size: $font-size-small;
-  color: $color-cyan;
-  @include text-glow($color-cyan, 5px);
+  color: #00ff80;
+  @include text-glow(#00ff80, 5px);
   margin-bottom: $spacing-sm;
   font-family: $font-main;
   letter-spacing: 2px;
@@ -37,8 +37,8 @@
 .sector-name {
   font-size: $font-size-large;
   margin-bottom: $spacing-sm;
-  color: $color-cyan;
-  @include text-glow($color-cyan, 15px);
+  color: #00ff80;
+  @include text-glow(#00ff80, 15px);
   font-family: $font-main;
   font-weight: normal;
 }
@@ -68,19 +68,19 @@
 
 .sector-panel-large {
   @include gradient-bg(rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
-  border: 5px solid $color-cyan;
+  border: 5px solid #00ff80;
   border-radius: $radius-panel;
   padding: $spacing-xxl;
   text-align: center;
-  box-shadow: 0 0 50px rgba($color-cyan, 0.3), inset 0 0 30px rgba($color-cyan, 0.2);
+  box-shadow: 0 0 50px rgba(0, 255, 128, 0.4), inset 0 0 30px rgba(0, 255, 128, 0.25);
   @include backdrop-blur(10px);
   animation: sectorLargeGlow 3s ease-in-out infinite alternate;
 }
 
 .sector-label-large {
   font-size: 16px;
-  color: $color-cyan;
-  @include text-glow($color-cyan, 10px);
+  color: #00ff80;
+  @include text-glow(#00ff80, 10px);
   margin-bottom: $spacing-lg;
   font-family: $font-main;
   letter-spacing: 3px;
@@ -89,8 +89,8 @@
 .sector-name-large {
   font-size: $font-size-xxl;
   margin-bottom: $spacing-lg;
-  color: $color-cyan;
-  @include text-glow($color-cyan, 25px);
+  color: #00ff80;
+  @include text-glow(#00ff80, 25px);
   font-family: $font-main;
   font-weight: normal;
 }

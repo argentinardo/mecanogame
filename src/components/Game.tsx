@@ -10,6 +10,9 @@ import { Starfield } from './Starfield';
 import { useAudio } from '../hooks/useAudio';
 import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES, KEYBOARD_POSITIONS } from '../types/game';
+import asteroid1 from '../assets/images/asteroid-01_40px.png';
+import asteroid2 from '../assets/images/asteroid-02-40px.png';
+import asteroid3 from '../assets/images/asteroid-03_40px.png';
 
 
 
@@ -26,16 +29,16 @@ const MIN_GAME_SPEED = 800; // Velocidad mínima entre letras
 // Umbrales de puntuación para cada nivel
 const SCORE_THRESHOLDS = [
     75,    // Sector 1
-    175,   // Sector 2
+    200,   // Sector 2
     500,   // Sector 3
-    1500,   // Sector 4
-    3000,   // Sector 5
-    5000,  // Sector 6
-    7000,  // Sector 7
-    9500,  // Sector 8
-    20000,  // Sector 9
-    30000, // Sector 10
-    40000  // Juego completado
+    1000,   // Sector 4
+    2000,   // Sector 5
+    3000,  // Sector 6
+    4000,  // Sector 7
+    5500,  // Sector 8
+    7000,  // Sector 9
+    8500, // Sector 10
+    10000  // Juego completado
 ];
 
 // Constantes de tamaños para colisiones precisas
@@ -67,6 +70,8 @@ export const Game: React.FC = () => {
         isMuted,
         playCountdownSound
     } = useAudio();
+
+    const asteroidImgs = [asteroid1, asteroid2, asteroid3];
 
     const [gameState, setGameState] = useState<GameState>({
         score: 0,
@@ -1951,6 +1956,8 @@ export const Game: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'center'
                 }}>
+                {/* Línea de horizonte */}
+                <div className="horizon-line" />
                 <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} />
                 
                 {/* Punto de debug para el centro del cañón */}
@@ -1988,138 +1995,25 @@ export const Game: React.FC = () => {
                     />
                 )}
                 
-                {/* Meteoritos */}
-                {gameState.meteorites.map(meteorite => {
-                    // Calcular el ángulo de la cola de fuego (opuesta a la dirección del movimiento)
-                    const fireAngle = Math.atan2(-meteorite.speedY, -meteorite.speedX) * (180 / Math.PI);
-                    
-                    // Calcular la posición del meteorito en el extremo delantero de la cola
-                    const meteoriteOffsetDistance = 40; // Distancia desde el centro hacia el frente
-                    const meteoriteOffsetX = Math.cos((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
-                    const meteoriteOffsetY = Math.sin((fireAngle + 180) * Math.PI / 180) * meteoriteOffsetDistance;
-                    
-                    return (
-                        <div key={meteorite.id}>
-                            {/* Cola de fuego principal - estilo Tron */}
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    left: (meteorite.x + meteorite.size / 2) + 'px',
-                                    top: (meteorite.y + meteorite.size / 2) + 'px',
-                                    width: '100px',
-                                    height: '18px',
-                                    background: 'linear-gradient(90deg, transparent 0%, #00ffff 20%, #0080ff 40%, #0040ff 60%, #002080 80%, transparent 100%)',
-                                    borderRadius: '9px',
-                                    transform: `translate(-50%, -50%) rotate(${fireAngle}deg)`,
-                                    transformOrigin: '50% 50%',
-                                    boxShadow: '0 0 20px #00ffff',
-                                    opacity: '0.9',
-                                    zIndex: 3,
-                                    pointerEvents: 'none'
-                                }}
-                            />
-                            
-                            {/* Cola de fuego secundaria - estilo Tron */}
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    left: (meteorite.x + meteorite.size / 2) + 'px',
-                                    top: (meteorite.y + meteorite.size / 2) + 'px',
-                                    width: '130px',
-                                    height: '28px',
-                                    background: 'linear-gradient(90deg, transparent 0%, rgba(0, 255, 255, 0.3) 30%, rgba(0, 128, 255, 0.4) 60%, transparent 100%)',
-                                    borderRadius: '14px',
-                                    transform: `translate(-50%, -50%) rotate(${fireAngle}deg)`,
-                                    transformOrigin: '50% 50%',
-                                    boxShadow: '0 0 25px rgba(0, 255, 255, 0.4)',
-                                    opacity: '0.6',
-                                    zIndex: 2,
-                                    pointerEvents: 'none'
-                                }}
-                            />
-                            
-                            {/* Partículas de la cola - reducidas */}
-                            {Array.from({ length: 5 }).map((_, i) => { // Reducido de 8 a 5
-                                const distance = 25 + i * 12; // Ajustado
-                                const offsetX = Math.cos((fireAngle * Math.PI) / 180) * distance;
-                                const offsetY = Math.sin((fireAngle * Math.PI) / 180) * distance;
-                                const size = 6 - i * 0.8; // Reducido
-                                
-                                return (
-                                    <div
-                                        key={`particle-${i}`}
-                                        style={{
-                                            position: 'absolute',
-                                            left: (meteorite.x + meteorite.size / 2 + offsetX) + 'px',
-                                            top: (meteorite.y + meteorite.size / 2 + offsetY) + 'px',
-                                            width: size + 'px',
-                                            height: size + 'px',
-                                            background: i < 2 ? '#00ffff' : i < 3 ? '#0080ff' : '#0040ff',
-                                            borderRadius: '50%',
-                                            transform: 'translate(-50%, -50%)',
-                                            opacity: (1 - i * 0.15),
-                                            boxShadow: `0 0 ${4 - i}px ${i < 2 ? '#00ffff' : i < 3 ? '#0080ff' : '#0040ff'}`,
-                                            zIndex: 1,
-                                            pointerEvents: 'none'
-                                        }}
-                                    />
-                                );
-                            })}
-                            
-                            {/* Meteorito principal - estilo Tron */}
-                            <div
-                                className="meteorite"
-                                style={{
-                                    left: (meteorite.x + meteoriteOffsetX) + 'px',
-                                    top: (meteorite.y + meteoriteOffsetY) + 'px',
-                                    position: 'absolute',
-                                    width: meteorite.size + 'px',
-                                    height: meteorite.size + 'px',
-                                    background: 'radial-gradient(circle, #00ffff 0%, #0080ff 50%, #0040ff 100%)',
-                                    borderRadius: '50%',
-                                    border: '2px solid #00ffff',
-                                    boxShadow: '0 0 25px #00ffff',
-                                    transform: `rotate(${meteorite.rotation}deg)`,
-                                    zIndex: 5,
-                                    pointerEvents: 'none'
-                                }}
-                            >
-                                {/* Punto central para debug de colisiones */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    width: '4px',
-                                    height: '4px',
-                                    background: '#00ffff',
-                                    borderRadius: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    zIndex: 10
-                                }} />
-                                
-                                {/* Detalles del meteorito - estilo Tron */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '25%',
-                                    left: '35%',
-                                    width: '12%',
-                                    height: '12%',
-                                    background: '#0040ff',
-                                    borderRadius: '50%'
-                                }} />
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '65%',
-                                    left: '65%',
-                                    width: '8%',
-                                    height: '8%',
-                                    background: '#002080',
-                                    borderRadius: '50%'
-                                }} />
-                            </div>
-                        </div>
-                    );
-                })}
+                {/* Meteoritos simples: imagen giratoria */}
+                {gameState.meteorites.map(meteorite => (
+                    <img
+                        key={meteorite.id}
+                        src={asteroidImgs[Math.floor(meteorite.id) % asteroidImgs.length]}
+                        className="meteorite"
+                        style={{
+                            position: 'absolute',
+                            left: meteorite.x + 'px',
+                            top: meteorite.y + 'px',
+                            width: meteorite.size + 'px',
+                            height: meteorite.size + 'px',
+                            transform: `translate(-50%, -50%) rotate(${meteorite.rotation}deg)`,
+                            pointerEvents: 'none',
+                            zIndex: 4
+                        }}
+                        alt="yo"
+                    />
+                ))}
                 
                 {/* Letras que caen como misiles con estelas de fuego */}
                 {gameState.fallingLetters.map(letter => {
