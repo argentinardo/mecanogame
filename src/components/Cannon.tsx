@@ -5,9 +5,11 @@ import spriteAvion from '../assets/images/sprite-avion-102.png';
 interface CannonProps {
     isReloading: boolean;
     angle?: number;
+    isExploding?: boolean;
+    isSpawning?: boolean;
 }
 
-export const Cannon: React.FC<CannonProps> = ({ isReloading, angle = 0 }) => {
+export const Cannon: React.FC<CannonProps> = ({ isReloading, angle = 0, isExploding = false, isSpawning = false }) => {
     const [floatingOffset, setFloatingOffset] = useState(0);
 
     useEffect(() => {
@@ -30,13 +32,15 @@ export const Cannon: React.FC<CannonProps> = ({ isReloading, angle = 0 }) => {
         };
     }, []);
 
+    // Estilo condicional: evitar sobrescribir transform cuando hay animaciones
+    const wrapperStyle: React.CSSProperties = (isExploding || isSpawning)
+        ? { animation: 'none' }
+        : { transform: `translate(-50%, -50%) translateY(${floatingOffset}px)` };
+
     return (
         <div 
-            className={`cannon ${isReloading ? 'reloading' : ''}`} 
-            style={{ 
-                transform: `translate(-50%, -50%) translateY(${floatingOffset}px)`,
-                animation: 'none' // Desactivar la animación CSS para permitir rotación
-            }}
+            className={`cannon ${isReloading ? 'reloading' : ''} ${isExploding ? 'exploding' : ''} ${isSpawning ? 'spawning' : ''}`} 
+            style={wrapperStyle}
         >
             <div 
                 className="cannon-base"

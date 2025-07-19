@@ -11,7 +11,7 @@
   position: absolute;
   width: 100px; 
   height: 100px;
-  z-index: 4;
+  z-index: 2;
   animation: letterFall linear infinite;
   perspective: 400px;
 
@@ -49,18 +49,7 @@
   
   // Forma de trapecio invertido (base más pequeña que la parte superior)
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: 2px; 
-    left: 2px; 
-    right: 2px; 
-    bottom: 2px;
-    animation: letterInnerGlow 1s ease-in-out infinite alternate;
-    pointer-events: none;
-    // Ajustar clip-path para el pseudo-elemento interno
-  }
-  
+
  
   
   &.highlighted {
@@ -180,7 +169,7 @@
 } 
 
 @keyframes swayCube {
-  0%   { transform: rotateX(-10deg) rotateY(-20deg) rotateZ(0deg); }
-  50%  { transform: rotateX(10deg)  rotateY(20deg)  rotateZ(0deg); }
-  100% { transform: rotateX(-10deg) rotateY(-20deg) rotateZ(0deg); }
-} 
+  0%   { transform: rotateX(-5deg) rotateY(-45deg) rotateZ(-5deg); }
+  50%  { transform: rotateX(5deg)  rotateY(45deg)  rotateZ(5deg); }
+  100% { transform: rotateX(-5deg) rotateY(-45deg) rotateZ(-5deg); }
+}

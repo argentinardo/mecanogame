@@ -108,9 +108,9 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                             <p>• Las letras caerán desde arriba</p>
                             <p>• Presiona la tecla correcta para disparar</p>
                             <p>• Si te equivocas, tendrás 3 segundos de penalización</p>
-                            <p>• Presiona <strong>BACKSPACE</strong> durante la penalización para saltearla</p>
-                            <p>• Usa <strong>ESPACIO</strong> para activar el escudo</p>
-                            <p>• Presiona <strong>ESC</strong> para pausar</p>
+                            <p>• Presiona <span className="key-label">BACKSPACE</span> durante la penalización para saltearla</p>
+                            <p>• Usa <span className="key-label">ESPACIO</span> para activar el escudo</p>
+                            <p>• Presiona <span className="key-label">ESC</span> para pausar</p>
                             <p>• ¡Mejora tu velocidad de escritura!</p>
                         </div>
                     )}
@@ -118,7 +118,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                         {showContinue && onContinue && (
                             <>
                                 <p className="start-instruction">
-                                    Presiona <strong>C</strong> para continuar donde te quedaste
+                                    Presiona <span className="key-label">C</span> para continuar donde te quedaste
                                 </p>
                                 <button className="continue-btn" onClick={onContinue}>
                                     <MemoryIcon name="play" size={16} className="btn-icon" />
@@ -129,7 +129,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                             </>
                         )}
                         <p className="start-instruction">
-                            Presiona <strong>ENTER</strong> o <strong>haz click</strong> para {showContinue ? 'nuevo juego' : 'comenzar'}
+                            Presiona <span className="key-label">ENTER</span> o <strong>haz click</strong> para {showContinue ? 'nuevo juego' : 'comenzar'}
                         </p>
                     </div>
                 </>

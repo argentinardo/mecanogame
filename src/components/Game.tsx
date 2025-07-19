@@ -18,27 +18,26 @@ import asteroid3 from '../assets/images/asteroid-03_40px.png';
 
 const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789'.split('');
 const MAX_LETTERS_ON_SCREEN = 10000;
-const INITIAL_LETTER_SPEED = 0.4;
-const INITIAL_GAME_SPEED = 2200;
+const INITIAL_LETTER_SPEED = 0.9; // Igual que sector 1
+const INITIAL_GAME_SPEED = 2100; // Igual que sector 1
 
 // Constantes para la progresión de dificultad
 const SPEED_INCREMENT = 0.05; // Incremento más pequeño de velocidad
 const GAME_SPEED_DECREMENT = 50; // Reducción más gradual del tiempo entre letras
 const MIN_GAME_SPEED = 800; // Velocidad mínima entre letras
 
-// Umbrales de puntuación para cada nivel
-const SCORE_THRESHOLDS = [
-    75,    // Sector 1
-    200,   // Sector 2
-    500,   // Sector 3
-    1000,   // Sector 4
-    2000,   // Sector 5
-    3000,  // Sector 6
-    4000,  // Sector 7
-    5500,  // Sector 8
-    7000,  // Sector 9
-    8500, // Sector 10
-    10000  // Juego completado
+// Umbrales de letras destruidas para cada nivel
+const LETTERS_DESTROYED_THRESHOLDS = [
+    50,    // Sector 1
+    150,   // Sector 2
+    300,   // Sector 3
+    500,   // Sector 4
+    750,   // Sector 5
+    1000,  // Sector 6
+    1300,  // Sector 7
+    1600,  // Sector 8
+    2000,  // Sector 9
+    2500   // Sector 10
 ];
 
 // Constantes de tamaños para colisiones precisas
@@ -135,6 +134,10 @@ export const Game: React.FC = () => {
     
     // Estado para detectar si estamos en móvil
     const [isMobile, setIsMobile] = useState<boolean>(false);
+    
+    // Estado para animar explosión/caída de la nave
+    const [isCannonExploding, setIsCannonExploding] = useState<boolean>(false);
+    const [isCannonSpawning, setIsCannonSpawning] = useState<boolean>(true);
     
     // Referencia para controlar el beep de proximidad
     const lastProximityBeepRef = useRef<number>(0);
@@ -567,8 +570,9 @@ export const Game: React.FC = () => {
             }
             
             const newScore = prev.score + totalScore;
-            const currentThreshold = SCORE_THRESHOLDS[prev.currentStage] || SCORE_THRESHOLDS[SCORE_THRESHOLDS.length - 1];
-            const shouldIncreaseDifficulty = newScore >= currentThreshold;
+            const newLettersDestroyed = prev.lettersDestroyed + 1;
+            const currentThreshold = LETTERS_DESTROYED_THRESHOLDS[prev.currentStage] || LETTERS_DESTROYED_THRESHOLDS[LETTERS_DESTROYED_THRESHOLDS.length - 1];
+            const shouldIncreaseDifficulty = newLettersDestroyed >= currentThreshold;
             const newGameSpeed = shouldIncreaseDifficulty 
                 ? Math.max(MIN_GAME_SPEED, prev.gameSpeed - GAME_SPEED_DECREMENT)
                 : prev.gameSpeed;
@@ -579,21 +583,22 @@ export const Game: React.FC = () => {
             return {
                 ...prev,
                 score: newScore,
+                lettersDestroyed: newLettersDestroyed,
                 gameSpeed: newGameSpeed,
                 letterSpeed: newLetterSpeed,
                 fallingLetters: prev.fallingLetters.filter(l => l.id !== letterObj.id)
             };
         });
 
-        // Llamar advanceStage solo si realmente necesitamos avanzar
-        const currentScore = gameState.score + totalScore;
-        const currentThreshold = SCORE_THRESHOLDS[gameState.currentStage] || SCORE_THRESHOLDS[SCORE_THRESHOLDS.length - 1];
-        if (currentScore >= currentThreshold && 
+        // Llamar advanceStage basado en letras destruidas
+        const currentLetters = gameState.lettersDestroyed + 1;
+        const currentThreshold2 = LETTERS_DESTROYED_THRESHOLDS[gameState.currentStage] || LETTERS_DESTROYED_THRESHOLDS[LETTERS_DESTROYED_THRESHOLDS.length - 1];
+        if (currentLetters >= currentThreshold2 && 
             gameState.currentStage + 1 < TYPING_STAGES.length) {
             // Usar setTimeout para evitar problemas de estado
             setTimeout(() => advanceStage(), 0);
         }
-    }, [playExplosionSound, createVisualExplosion, gameState.isPaused, gameState.fallingLetters, lastHitTime, sequentialHits, playComboSuccessSound, playMeteoriteSound, gameState.score, gameState.currentStage, advanceStage]);
+    }, [playExplosionSound, createVisualExplosion, gameState.isPaused, gameState.fallingLetters, lastHitTime, sequentialHits, playComboSuccessSound, playMeteoriteSound, gameState.lettersDestroyed, gameState.currentStage, advanceStage]);
 
     // Función para mostrar mensaje central temporalmente
     const showCentralMessage = useCallback((message: string, duration: number = 2000) => {
@@ -960,11 +965,18 @@ export const Game: React.FC = () => {
         
         const gameAreaRect = gameArea.getBoundingClientRect();
         
-        // El cañón está centrado horizontal y verticalmente en el game-area
-        // (según CSS: top: 50%, left: 50%, transform: translate(-50%, -50%))
+        // Intentar obtener la posición exacta del centro del elemento .cannon en pantalla
+        const cannonEl = document.querySelector('.cannon') as HTMLElement | null;
+        if (cannonEl) {
+            const cannonRect = cannonEl.getBoundingClientRect();
+            const centerX = cannonRect.left - gameAreaRect.left + cannonRect.width / 2;
+            const centerY = cannonRect.top - gameAreaRect.top + cannonRect.height / 2;
+            return { x: centerX, y: centerY };
+        }
+
+        // Fallback: usar proporción aproximada
         const cannonX = gameAreaRect.width / 2;
-        const cannonY = gameAreaRect.height / 2; // Centro exacto de la pantalla
-        
+        const cannonY = gameAreaRect.height * 0.7; // coincide con top 70%
         return { x: cannonX, y: cannonY };
     }, []);
 
@@ -1039,6 +1051,10 @@ export const Game: React.FC = () => {
                 showCentralMessage('¡Continúa!', 1000);
             }
         }, 1000);
+
+        // Activar animación de explosión de la nave
+        setIsCannonExploding(true);
+        setTimeout(() => setIsCannonExploding(false), 1200);
     }, [showCentralMessage, playLifeLostSound, playCountdownSound]);
 
     // Función para generar meteoritos
@@ -1076,8 +1092,8 @@ export const Game: React.FC = () => {
         const speedY = (deltaY / distance) * speed;
 
         // Tamaño más pequeño para coincidir con la cola
-        const minSize = 25; // Reducido de 40 a 25
-        const maxSize = 35; // Reducido de 60 a 35
+        const minSize = 50; // Tamaño mínimo ampliado
+        const maxSize = 70; // Tamaño máximo ampliado
         const size = minSize + Math.random() * (maxSize - minSize);
 
         const meteorite = {
@@ -1662,6 +1678,9 @@ export const Game: React.FC = () => {
         if (isMobile && navigator.virtualKeyboard) {
             navigator.virtualKeyboard.show();
         }
+
+        setIsCannonSpawning(true);
+        setTimeout(() => setIsCannonSpawning(false), 1000);
     }, [initAudioContext, isMobile]);
 
     const continueGame = useCallback(() => {
@@ -1720,6 +1739,9 @@ export const Game: React.FC = () => {
             letterSpeed: INITIAL_LETTER_SPEED + (prev.currentStage * 0.5)
             // Mantener score solamente
         }));
+
+        setIsCannonSpawning(true);
+        setTimeout(() => setIsCannonSpawning(false), 1000);
     }, [initAudioContext]);
 
     const newGame = useCallback(() => {
@@ -1784,6 +1806,9 @@ export const Game: React.FC = () => {
             firstMeteoritePause: false,
             forceFieldActivationMessage: false
         });
+
+        setIsCannonSpawning(true);
+        setTimeout(() => setIsCannonSpawning(false), 1000);
     }, [initAudioContext, stopBackgroundMusic, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
 
     // Agregar manejador de teclas para cerrar el cartel
@@ -1844,6 +1869,34 @@ export const Game: React.FC = () => {
         gameState.fallingLetters.forEach(l => unique.add(l.letter));
         return Array.from(unique);
     }, [gameState.fallingLetters]);
+
+    // Mantener el teclado virtual visible en móvil reforzando el foco periódicamente
+    useEffect(() => {
+        if (isMobile && gameState.isPlaying) {
+            const interval = setInterval(() => {
+                mobileInputRef.current?.focus();
+            }, 1500);
+            return () => clearInterval(interval);
+        }
+    }, [isMobile, gameState.isPlaying]);
+
+    // Escuchar toques/clics para garantizar que el teclado aparezca si el usuario interactúa
+    useEffect(() => {
+        if (!isMobile) return;
+
+        const forceFocus = () => {
+            if (gameState.isPlaying) {
+                mobileInputRef.current?.focus();
+            }
+        };
+
+        document.addEventListener('touchstart', forceFocus);
+        document.addEventListener('click', forceFocus);
+        return () => {
+            document.removeEventListener('touchstart', forceFocus);
+            document.removeEventListener('click', forceFocus);
+        };
+    }, [isMobile, gameState.isPlaying]);
 
     return (
         <div className="game-container">
@@ -1960,7 +2013,7 @@ export const Game: React.FC = () => {
                 ref={gameAreaRef} 
                 className={`game-area ${isMobile ? 'is-mobile' : ''}`} 
                 style={{ 
-                    position: 'relative', 
+                    position: 'absolute', 
                     width: '100%', 
                     height: '100%',
                     overflow: 'hidden',
@@ -1969,21 +2022,9 @@ export const Game: React.FC = () => {
                 }}>
                 {/* Línea de horizonte */}
                 <div className="horizon-line" />
-                <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} />
+                <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} isExploding={isCannonExploding} isSpawning={isCannonSpawning} />
                 
-                {/* Punto de debug para el centro del cañón */}
-                <div style={{
-                    position: 'absolute',
-                    left: '50%',
-                    bottom: '150px', // Coincide con el CSS del cañón
-                    width: '8px',
-                    height: '8px',
-                    background: '#00ffff',
-                    borderRadius: '50%',
-                    transform: 'translate(-50%, 50%)',
-                    zIndex: 15,
-                    pointerEvents: 'none'
-                }} />
+
                 
                 {/* Campo de fuerza */}
                 {gameState.forceField?.isActive && (
@@ -1997,9 +2038,9 @@ export const Game: React.FC = () => {
                             width: `${FORCE_FIELD_RADIUS * 2}px`,
                             height: `${FORCE_FIELD_RADIUS * 2}px`,
                             borderRadius: '50%',
-                            border: '4px solid #00ffff',
-                            background: 'radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, rgba(0, 128, 255, 0.1) 50%, transparent 100%)',
-                            boxShadow: '0 0 80px #00ffff, inset 0 0 60px rgba(0, 255, 255, 0.3)',
+                            border: '4px solid #ff0040',
+                            background: 'radial-gradient(circle, rgba(255, 0, 64, 0.25) 0%, rgba(128, 0, 32, 0.15) 50%, transparent 100%)',
+                            boxShadow: '0 0 80px #ff0040, inset 0 0 60px rgba(255, 0, 64, 0.35)',
                             pointerEvents: 'none',
                             zIndex: 5
                         }}

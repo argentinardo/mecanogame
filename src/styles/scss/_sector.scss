@@ -16,17 +16,13 @@
 }
 
 .sector-panel {
-  border: 3px solid #00ff80; // verde neón
-  border-radius: $radius-main;
   padding: $spacing-md $spacing-xl;
   text-align: center;
-  box-shadow: 0 0 30px rgba(0, 255, 128, 0.4), inset 0 0 20px rgba(0, 255, 128, 0.25);
-  @include backdrop-blur(4px);
-  animation: sectorGlow 3s ease-in-out infinite alternate;
+  background: transparent;
 }
 
 .sector-label {
-  font-size: $font-size-small;
+  font-size: $font-size-medium;
   color: #00ff80;
   @include text-glow(#00ff80, 5px);
   margin-bottom: $spacing-sm;

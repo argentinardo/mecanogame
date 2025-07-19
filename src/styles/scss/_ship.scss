@@ -8,10 +8,23 @@
 
 // Cañón principal del juego
 .cannon {
-  @include absolute-center;
+  @include absolute-center-x;
   z-index: 4;
+  top: 70%;
+  transform: scale(1.5) translateY(-70%);
   animation: shipFloating 3s ease-in-out infinite;
+
+  &.exploding {
+    animation: cannonFall 1.2s ease-in forwards;
+    animation-fill-mode: forwards;
+    // Desactivar flotación
+    animation-name: cannonFall;
+  }
   
+  &.spawning {
+    animation: cannonSpawn 1s ease-out forwards;
+  }
+
   .cannon-base{
     height: 80;
     @include absolute-center;
@@ -139,16 +152,16 @@
 
 @keyframes shipFloating {
   0%, 100% { 
-    transform: translate(-50%, -50%) translateY(0px) rotate(0deg); 
+    transform: scale(1.5)  translateY(0px) rotate(0deg); 
   }
   25% { 
-    transform: translate(-50%, -50%) translateY(-8px) rotate(1deg); 
+    transform: scale(1.5)  translateY(-8px) rotate(1deg); 
   }
   50% { 
-    transform: translate(-50%, -50%) translateY(-4px) rotate(-0.5deg); 
+    transform: scale(1.5)  translateY(-4px) rotate(-0.5deg); 
   }
   75% { 
-    transform: translate(-50%, -50%) translateY(-12px) rotate(0.8deg); 
+    transform: scale(1.5) translateY(-12px) rotate(0.8deg); 
   }
 }
 
@@ -214,4 +227,16 @@
   0%   { transform: translateX(-50%) scaleY(0.9); opacity: 0.75; }
   50%  { transform: translateX(-50%) scaleY(1.2); opacity: 1; }
   100% { transform: translateX(-50%) scaleY(1);   opacity: 0.7; }
+} 
+
+// Caída/explosión de la nave al perder vida
+@keyframes cannonFall {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  50% { transform: translate(-40%, 80%) rotate(180deg); }
+  100% { transform: translate(-30%, 350%) rotate(360deg); }
+} 
+
+@keyframes cannonSpawn {
+  0% { transform: translate(-50%, 300%) scale(0.7); opacity:0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity:1; }
 } 
