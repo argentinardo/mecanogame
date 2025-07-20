@@ -1592,6 +1592,8 @@ export const Game: React.FC = () => {
                     const key = input.toUpperCase();
                     setGameState(prev => ({ ...prev, pressedKey: key }));
                     shootBullet(key);
+                    // Limpiar pressedKey rápidamente para permitir siguiente tecla
+                    setTimeout(() => setGameState(prev => ({ ...prev, pressedKey: null })), 50);
                 }
             };
             
@@ -2041,7 +2043,7 @@ export const Game: React.FC = () => {
                 style={{
                     position: 'absolute',
                     width: '100%',
-                    height: '100%',
+                    height: isMobile ? '50%' : '100%',
                     overflow: 'hidden',
                     display: 'flex',
                     justifyContent: 'center'
