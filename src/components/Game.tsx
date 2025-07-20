@@ -138,6 +138,8 @@ export const Game: React.FC = () => {
     // Estado para animar explosión/caída de la nave
     const [isCannonExploding, setIsCannonExploding] = useState<boolean>(false);
     const [isCannonSpawning, setIsCannonSpawning] = useState<boolean>(true);
+    const [showKeyboardPrompt, setShowKeyboardPrompt] = useState<boolean>(false);
+    const keyboardPromptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     
     // Referencia para controlar el beep de proximidad
     const lastProximityBeepRef = useRef<number>(0);
@@ -1681,6 +1683,12 @@ export const Game: React.FC = () => {
 
         setIsCannonSpawning(true);
         setTimeout(() => setIsCannonSpawning(false), 1000);
+
+        // Programar prompt de teclado si es móvil
+        if (isMobile) {
+            if (keyboardPromptTimeoutRef.current) window.clearTimeout(keyboardPromptTimeoutRef.current);
+            keyboardPromptTimeoutRef.current = window.setTimeout(() => setShowKeyboardPrompt(true), 2000) as unknown as number;
+        }
     }, [initAudioContext, isMobile]);
 
     const continueGame = useCallback(() => {
@@ -1742,7 +1750,13 @@ export const Game: React.FC = () => {
 
         setIsCannonSpawning(true);
         setTimeout(() => setIsCannonSpawning(false), 1000);
-    }, [initAudioContext]);
+
+        // Programar prompt de teclado si es móvil
+        if (isMobile) {
+            if (keyboardPromptTimeoutRef.current) window.clearTimeout(keyboardPromptTimeoutRef.current);
+            keyboardPromptTimeoutRef.current = window.setTimeout(() => setShowKeyboardPrompt(true), 2000) as unknown as number;
+        }
+    }, [initAudioContext, isMobile]);
 
     const newGame = useCallback(() => {
         // Limpiar todos los timeouts e intervalos
@@ -1809,6 +1823,12 @@ export const Game: React.FC = () => {
 
         setIsCannonSpawning(true);
         setTimeout(() => setIsCannonSpawning(false), 1000);
+
+        // Programar prompt de teclado si es móvil
+        if (isMobile) {
+            if (keyboardPromptTimeoutRef.current) window.clearTimeout(keyboardPromptTimeoutRef.current);
+            keyboardPromptTimeoutRef.current = window.setTimeout(() => setShowKeyboardPrompt(true), 2000) as unknown as number;
+        }
     }, [initAudioContext, stopBackgroundMusic, setComboCount, setLastHitTime, setComboMultiplier, setSequentialHits, setCurrentComboMessage, setIsComboMessageVisible, setCurrentOrderMessage, setIsOrderMessageVisible]);
 
     // Agregar manejador de teclas para cerrar el cartel
@@ -1897,6 +1917,12 @@ export const Game: React.FC = () => {
             document.removeEventListener('click', forceFocus);
         };
     }, [isMobile, gameState.isPlaying]);
+
+    const handleKeyboardPromptTap = () => {
+        mobileInputRef.current?.focus();
+        setShowKeyboardPrompt(false);
+        if (keyboardPromptTimeoutRef.current) window.clearTimeout(keyboardPromptTimeoutRef.current);
+    };
 
     return (
         <div className="game-container">
@@ -2012,9 +2038,9 @@ export const Game: React.FC = () => {
             <div 
                 ref={gameAreaRef} 
                 className={`game-area ${isMobile ? 'is-mobile' : ''}`} 
-                style={{ 
-                    position: 'absolute', 
-                    width: '100%', 
+                style={{
+                    position: 'absolute',
+                    width: '100%',
                     height: '100%',
                     overflow: 'hidden',
                     display: 'flex',
@@ -2022,11 +2048,15 @@ export const Game: React.FC = () => {
                 }}>
                 {/* Línea de horizonte */}
                 <div className="horizon-line" />
-                <Cannon isReloading={gameState.isPenalized} angle={cannonAngle} isExploding={isCannonExploding} isSpawning={isCannonSpawning} />
-                
 
-                
-                {/* Campo de fuerza */}
+                <Cannon 
+                    isReloading={gameState.isPenalized} 
+                    angle={cannonAngle} 
+                    isExploding={isCannonExploding} 
+                    isSpawning={isCannonSpawning} 
+                />
+
+                {/* Campo de fuerza rojo */}
                 {gameState.forceField?.isActive && (
                     <div
                         key={`force-field-${gameState.forceField.startTime}`}
@@ -2034,7 +2064,7 @@ export const Game: React.FC = () => {
                         style={{
                             position: 'absolute',
                             left: '50%',
-                            top: '50%', // Centro exacto de la pantalla
+                            top: '50%',
                             width: `${FORCE_FIELD_RADIUS * 2}px`,
                             height: `${FORCE_FIELD_RADIUS * 2}px`,
                             borderRadius: '50%',
@@ -2046,8 +2076,8 @@ export const Game: React.FC = () => {
                         }}
                     />
                 )}
-                
-                {/* Meteoritos simples: imagen giratoria */}
+
+                {/* Meteoritos */}
                 {gameState.meteorites.map(meteorite => (
                     <img
                         key={meteorite.id}
@@ -2063,14 +2093,13 @@ export const Game: React.FC = () => {
                             pointerEvents: 'none',
                             zIndex: 4
                         }}
-                        alt="yo"
+                        alt="m"
                     />
                 ))}
-                
-                {/* Letras que caen como misiles con estelas de fuego */}
+
+                {/* Letras */}
                 {gameState.fallingLetters.map(letter => {
                     const isHighlighted = gameState.pressedKey === letter.letter;
-                    
                     return (
                         <MissileLetterComponent
                             key={letter.id}
@@ -2081,8 +2110,16 @@ export const Game: React.FC = () => {
                         />
                     );
                 })}
-            </div>
+            </div> {/* cierre de game-area */}
 
+            {/* Overlay para activar teclado virtual en móvil */}
+            {showKeyboardPrompt && isMobile && gameState.isPlaying && (
+                <div className="keyboard-prompt-overlay" onClick={handleKeyboardPromptTap}>
+                    <div className="keyboard-prompt-message">Toca aquí para activar el teclado virtual</div>
+                </div>
+            )}
+
+            {/* Pantalla de instrucciones */}
             {!gameState.isPlaying && gameState.lives > 0 && (
                 <Instructions 
                     onStart={startGame} 
@@ -2091,37 +2128,39 @@ export const Game: React.FC = () => {
                 />
             )}
 
-            {!gameState.isPlaying && gameState.lives <= 0 && (
-                <GameOver 
-                    score={gameState.score} 
-                    onContinue={continueGame}
-                    onNewGame={newGame}
-                />
-            )}
-
-            {/* Input oculto para activar el teclado virtual en móvil */}
             {isMobile && (
                 <input
                     ref={mobileInputRef}
                     type="text"
                     inputMode="text"
                     autoCapitalize="characters"
+                    autoCorrect="off"
+                    autoComplete="off"
+                    spellCheck="false"
+                    placeholder="Escribe aquí..."
+                    maxLength={1}
                     style={{
                         position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
                         opacity: 0,
-                        height: 0,
-                        width: 0,
-                        zIndex: -10,
-                    }}
-                    onInput={(e) => {
-                        const target = e.target as HTMLInputElement;
-                        if (target.value) {
-                            target.value = '';
-                        }
+                        pointerEvents: 'none'
                     }}
                 />
             )}
 
+            {/* Pantalla de Game Over */}
+            {!gameState.isPlaying && gameState.lives <= 0 && (
+                <GameOver 
+                    score={gameState.score}
+                    onContinue={continueGame}
+                    onNewGame={newGame}
+                />
+            )}
         </div>
     );
-}; 
+};
+
+export default Game;
