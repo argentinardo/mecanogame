@@ -194,6 +194,12 @@
 // =============================================================================
 // Ajustes de instrucciones para móvil
 // =============================================================================
+.instructions {
+  @include mobile {
+    display: none !important;
+  }
+}
+
 
 .instructions-panel {
   @include mobile {

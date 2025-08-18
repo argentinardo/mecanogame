@@ -7,6 +7,7 @@ import { HandMap } from './HandMap';
 import { CentralMessage } from './CentralMessage';
 import { MissileLetterComponent } from './MissileLetterComponent';
 import { Starfield } from './Starfield';
+import MobileWarning from './MobileWarning';
 import { useAudio } from '../hooks/useAudio';
 import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES, KEYBOARD_POSITIONS } from '../types/game';
@@ -1932,6 +1933,7 @@ export const Game: React.FC = () => {
 
     return (
         <div className="game-container">
+            <MobileWarning />
             <Starfield />
             <div className="bg-grid"></div>
             

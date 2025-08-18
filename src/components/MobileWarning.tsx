@@ -27,7 +27,7 @@ const MobileWarning: React.FC = () => {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+      backgroundColor: 'rgba(0, 0, 0, 0.95)',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
@@ -40,58 +40,89 @@ const MobileWarning: React.FC = () => {
     }}>
       <div style={{
         backgroundColor: '#000',
-        border: '2px solid #00ff00',
-        padding: '30px',
-        borderRadius: '10px',
-        maxWidth: '400px',
-        boxShadow: '0 0 20px rgba(0, 255, 0, 0.5)'
+        border: '3px solid #00ff00',
+        padding: '40px',
+        borderRadius: '15px',
+        maxWidth: '500px',
+        boxShadow: '0 0 30px rgba(0, 255, 0, 0.6)'
       }}>
         <h2 style={{
-          margin: '0 0 20px 0',
-          fontSize: '24px',
+          margin: '0 0 25px 0',
+          fontSize: '28px',
           textTransform: 'uppercase',
-          letterSpacing: '2px'
+          letterSpacing: '3px',
+          color: '#ffff00'
         }}>
-          ⚠️ ADVERTENCIA ⚠️
+          MECANOGAME
         </h2>
         
         <p style={{
-          margin: '0 0 15px 0',
-          fontSize: '16px',
-          lineHeight: '1.5'
+          margin: '0 0 20px 0',
+          fontSize: '18px',
+          lineHeight: '1.6',
+          fontWeight: 'bold'
         }}>
-          Este juego está diseñado para <strong>aprender a usar el teclado</strong>.
+          MECANOGAME está diseñado para <strong>aprender mecanografía</strong>.
         </p>
         
         <p style={{
           margin: '0 0 20px 0',
-          fontSize: '14px',
-          lineHeight: '1.4',
+          fontSize: '16px',
+          lineHeight: '1.5',
           color: '#ffff00'
         }}>
-          No tiene sentido jugarlo en un dispositivo móvil ya que necesitas un teclado físico para practicar la mecanografía.
+          El objetivo es mejorar tu velocidad y precisión al escribir en un <strong>teclado físico</strong>.
+        </p>
+        
+        <div style={{
+          backgroundColor: '#ff0000',
+          color: '#fff',
+          padding: '15px 25px',
+          borderRadius: '8px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+          margin: '20px 0',
+          border: '2px solid #ff6666'
+        }}>
+          NO DISPONIBLE EN MÓVIL
+        </div>
+        
+        <p style={{
+          margin: '0 0 25px 0',
+          fontSize: '14px',
+          lineHeight: '1.4',
+          color: '#cccccc'
+        }}>
+          El objetivo del juego no tiene sentido con el teclado del movil.
         </p>
         
         <div style={{
           backgroundColor: '#00ff00',
-          color: '#000',
-          padding: '10px 20px',
-          borderRadius: '5px',
-          fontSize: '14px',
+          color: '#00cc00',
+          padding: '15px 30px',
+          borderRadius: '8px',
+          fontSize: '16px',
           fontWeight: 'bold',
           textTransform: 'uppercase',
-          letterSpacing: '1px'
+          letterSpacing: '2px',
+          margin: '20px 0',
+          border: '2px solid ',
+          backgroundColor: 'transparent'
         }}>
-          Usa una computadora con teclado
+        
+        Visita el sitio en una computadora
         </div>
         
         <p style={{
-          margin: '20px 0 0 0',
+          margin: '25px 0 0 0',
           fontSize: '12px',
           color: '#888',
-          fontStyle: 'italic'
+          fontStyle: 'italic',
+          lineHeight: '1.3'
         }}>
-          Si insistes en continuar, la experiencia será limitada
+          Para una experiencia completa de aprendizaje de mecanografía, necesitas un teclado físico real.
         </p>
       </div>
     </div>
