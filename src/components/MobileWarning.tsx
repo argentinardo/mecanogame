@@ -99,7 +99,6 @@ const MobileWarning: React.FC = () => {
         </p>
         
         <div style={{
-          backgroundColor: '#00ff00',
           color: '#00cc00',
           padding: '15px 30px',
           borderRadius: '8px',

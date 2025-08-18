@@ -2072,7 +2072,7 @@ export const Game: React.FC = () => {
                         style={{
                             position: 'absolute',
                             left: '50%',
-                            top: '50%',
+                            top: '70%',
                             width: `${FORCE_FIELD_RADIUS * 2}px`,
                             height: `${FORCE_FIELD_RADIUS * 2}px`,
                             borderRadius: '50%',
@@ -2080,7 +2080,8 @@ export const Game: React.FC = () => {
                             background: 'radial-gradient(circle, rgba(255, 0, 64, 0.25) 0%, rgba(128, 0, 32, 0.15) 50%, transparent 100%)',
                             boxShadow: '0 0 80px #ff0040, inset 0 0 60px rgba(255, 0, 64, 0.35)',
                             pointerEvents: 'none',
-                            zIndex: 5
+                            zIndex: 5,
+                            transform: 'translate(-50%, -50%)'
                         }}
                     />
                 )}
