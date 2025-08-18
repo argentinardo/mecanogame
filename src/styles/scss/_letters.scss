@@ -173,3 +173,23 @@
   50%  { transform: rotateX(5deg)  rotateY(45deg)  rotateZ(5deg); }
   100% { transform: rotateX(-5deg) rotateY(-45deg) rotateZ(-5deg); }
 }
+
+ @media (max-width: 600px) {
+   .falling-letter {
+     width: 56px;
+     height: 56px;
+   }
+   .falling-letter .cube {
+     transform: none !important;
+   }
+   .falling-letter .face {
+     display: none;
+   }
+   .falling-letter .front {
+     display: flex;
+     background: transparent;
+     border: none;
+     font-size: 36px;
+     box-shadow: none;
+   }
+ }

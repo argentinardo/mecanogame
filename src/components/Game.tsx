@@ -1467,7 +1467,7 @@ export const Game: React.FC = () => {
         if (gameState.isPlaying && !gameState.isPaused && !gameState.isPenalized && 
             !gameState.showCentralMessage && gameState.score === 0 && 
             gameState.fallingLetters.length === 0) {
-            showCentralMessage('¡PAOLO prepárate para disparar!', 2000);
+            showCentralMessage('¡Prepárate para disparar!', 2000);
         }
     }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.showCentralMessage, gameState.score, gameState.fallingLetters.length, showCentralMessage]);
 
@@ -1645,12 +1645,16 @@ export const Game: React.FC = () => {
         }
     }, [gameState.isPaused, gameState.isPlaying, gameState.showSectorInfo]);
 
-    const startGame = useCallback(() => {
+    const startGame = useCallback((startingLevel: number = 0) => {
         initAudioContext();
 
         if (isMobile && navigator.virtualKeyboard) {
             navigator.virtualKeyboard.show();
         }
+
+        // Calcular velocidades basadas en el nivel inicial
+        const adjustedGameSpeed = Math.max(INITIAL_GAME_SPEED - (startingLevel * 100), MIN_GAME_SPEED);
+        const adjustedLetterSpeed = INITIAL_LETTER_SPEED + (startingLevel * 0.5);
 
         setGameState(prev => ({
             ...prev,
@@ -1663,9 +1667,9 @@ export const Game: React.FC = () => {
             bullets: [],
             meteorites: [],
             forceField: null,
-            gameSpeed: INITIAL_GAME_SPEED,
-            letterSpeed: INITIAL_LETTER_SPEED,
-            currentStage: 0,
+            gameSpeed: adjustedGameSpeed,
+            letterSpeed: adjustedLetterSpeed,
+            currentStage: startingLevel,
             lettersDestroyed: 0,
             pressedKey: null,
             centralMessage: null,

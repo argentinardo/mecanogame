@@ -1,0 +1,276 @@
+// =============================================================================
+// INTERFACE COMPONENTS
+// =============================================================================
+
+@use 'variables' as vars;
+@use 'mixins' as mix;
+
+// Selector de Nivel - Componente principal
+.level-selector-container {
+    margin: 20px 0;
+    position: relative;
+    z-index: 100;
+    width: 100%;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.level-selector-btn {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 0, 128, 0.1) 100%);
+    border: 2px solid #00ffff;
+    border-radius: 8px;
+    padding: 15px 20px;
+    color: #00ffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Orbitron', monospace;
+    text-align: left;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+
+    &:hover {
+        border-color: #ff0080;
+        color: #ff0080;
+        box-shadow: 0 0 25px rgba(255, 0, 128, 0.5);
+        transform: translateY(-2px);
+    }
+
+    .selected-level-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .selected-level-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .selected-level-desc {
+            font-size: 12px;
+            color: #888;
+            font-weight: normal;
+        }
+    }
+
+    .dropdown-arrow {
+        font-size: 18px;
+        font-weight: bold;
+        transition: transform 0.3s ease;
+    }
+}
+
+// Dropdown de cards
+.level-cards-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 8px;
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid #00ffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 255, 255, 0.4);
+    animation: slideDown 0.3s ease-out;
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// Grid de cards
+.level-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 15px;
+    max-height: 70vh;
+    overflow-y: auto;
+
+    // Custom scrollbar
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #00ffff, #ff0080);
+        border-radius: 4px;
+    }
+}
+
+// Cards individuales
+.level-card {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 255, 255, 0.05) 100%);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, transparent 0%, rgba(0, 255, 255, 0.1) 50%, transparent 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    &:hover {
+        border-color: #ff0080;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(255, 0, 128, 0.3);
+
+        &::before {
+            opacity: 1;
+        }
+
+        .level-card-title {
+            color: #ff0080;
+        }
+    }
+
+    &.selected {
+        border-color: #00ff00;
+        background: linear-gradient(135deg, rgba(0, 255, 0, 0.1) 0%, rgba(0, 255, 255, 0.05) 100%);
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+
+        .level-card-title {
+            color: #00ff00;
+        }
+
+        .level-number {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.7);
+        }
+    }
+}
+
+.level-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.level-number {
+    background: linear-gradient(135deg, #00ffff, #ff0080);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: 'Orbitron', monospace;
+    padding: 4px 8px;
+    border: 1px solid rgba(0, 255, 255, 0.5);
+    border-radius: 4px;
+    background-color: rgba(0, 255, 255, 0.1);
+}
+
+.level-difficulty {
+    color: #ffff00;
+    font-size: 14px;
+    text-shadow: 0 0 5px #ffff00;
+}
+
+.level-card-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 8px;
+    font-family: 'Orbitron', monospace;
+    transition: color 0.3s ease;
+}
+
+.level-card-description {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.level-card-letters {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: 'Courier New', monospace;
+
+    .letters-preview {
+        font-size: 14px;
+        color: #00ffff;
+        font-weight: bold;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    }
+
+    .letters-count {
+        font-size: 10px;
+        color: #666;
+    }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+    .level-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 12px;
+        max-height: 60vh;
+    }
+
+    .level-card {
+        padding: 12px;
+    }
+
+    .level-card-title {
+        font-size: 14px;
+    }
+
+    .level-card-description {
+        font-size: 11px;
+    }
+
+    .level-selector-btn {
+        padding: 12px 16px;
+
+        .selected-level-info .selected-level-name {
+            font-size: 14px;
+        }
+
+        .selected-level-info .selected-level-desc {
+            font-size: 11px;
+        }
+    }
+}
+
+// Animación para las estrellitas de dificultad
+.level-difficulty {
+    animation: twinkle 2s infinite;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+} 

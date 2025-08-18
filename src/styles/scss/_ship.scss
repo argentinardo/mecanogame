@@ -88,6 +88,13 @@
       &::after  { right: 14px; }
     }
     
+    @include mobile {
+      .ship-sprite {
+        width: 60px;
+        height: 38px;
+        background-size: 240px 38px;
+      }
+    }
 
 
   }
