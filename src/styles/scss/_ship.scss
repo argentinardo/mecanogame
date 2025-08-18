@@ -47,6 +47,7 @@
       animation: shipSpriteAnim 0.6s steps(4) infinite;
       filter: drop-shadow(0 0 0px blsck);
       position: relative;
+      image-rendering: pixelated;
 
       // Estela de fuego central (doble tamaño)
       .central-flame {
