@@ -8,7 +8,7 @@ import enemyImg from '../assets/images/enemy.svg';
 export interface GameSceneCallbacks {
     onScoreChange: (score: number) => void;
     onLivesChange: (lives: number) => void;
-    onLetterHit: (letterObj: FallingLetter) => void;
+    onLetterHit: (letterObj: FallingLetter) => { points: number; totalScore: number };
     onLetterMiss: () => void;
     onLetterEscaped: () => void;
     onWrongKey: () => void;
@@ -526,11 +526,11 @@ export class GameScene extends Phaser.Scene {
                 this.shipAngle = tween.getValue() as number;
             },
             onComplete: () => {
-                // After reaching target, animate back to vertical (slower)
+                // After reaching target, animate back to vertical (much slower)
                 this.shipAngleTween = this.tweens.addCounter({
                     from: this.shipAngle,
                     to: 0, // Return to vertical (0 degrees)
-                    duration: 300, // Slower return animation (300ms)
+                    duration: 600, // Much slower return animation (600ms, was 300ms)
                     ease: 'Power1',
                     onUpdate: (returnTween) => {
                         this.shipAngle = returnTween.getValue() as number;
@@ -608,7 +608,7 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
-        // Notify React
+        // Notify React to calculate points (but don't update score yet)
         const letterObj: FallingLetter = {
             letter: target.getData('letter'),
             x: target.x,
@@ -616,7 +616,15 @@ export class GameScene extends Phaser.Scene {
             speed: target.getData('speed'),
             id: target.getData('id')
         };
-        this.callbacks.onLetterHit(letterObj);
+        
+        // Callback calculates points and combo, returns points but doesn't update score yet
+        const result = this.callbacks.onLetterHit(letterObj);
+        const pointsEarned = result?.points || 10;
+        const totalScoreToAdd = result?.totalScore || 10;
+        
+        // Store points for display and score for later update
+        target.setData('points', pointsEarned);
+        target.setData('scoreToAdd', totalScoreToAdd);
 
         // Wait 500ms, then absorb only the letter into ship
         this.time.delayedCall(500, () => {
@@ -629,6 +637,14 @@ export class GameScene extends Phaser.Scene {
                 duration: 100
             });
 
+            // Fade out letter gradually as it moves to ship (starts immediately, lasts entire movement)
+            this.tweens.add({
+                targets: letterText,
+                alpha: 0,
+                duration: 300, // Same duration as movement, starts immediately
+                ease: 'Linear' // Linear fade for smooth transparency
+            });
+
             // Animate letter container moving to ship
             this.tweens.add({
                 targets: target,
@@ -637,16 +653,51 @@ export class GameScene extends Phaser.Scene {
                 duration: 300,
                 ease: 'Power2',
                 onComplete: () => {
+                    // Create points text when letter reaches ship
+                    // Get points from target data
+                    const points = target.getData('points') || 10;
+                    const scoreToAdd = target.getData('scoreToAdd') || points;
+                    
+                    // Update score when points text appears (when letter reaches ship)
+                    const currentScore = this.gameState.score;
+                    const newScore = currentScore + scoreToAdd;
+                    this.callbacks.onScoreChange(newScore);
+                    
+                    const pointsText = this.add.text(
+                        this.ship.x,
+                        this.ship.y - 30, // Start slightly above ship
+                        `+${points}`,
+                        {
+                            fontSize: '24px',
+                            fontFamily: '"Press Start 2P", monospace',
+                            color: '#00ffff',
+                            stroke: '#000000',
+                            strokeThickness: 3,
+                            shadow: {
+                                offsetX: 0,
+                                offsetY: 0,
+                                color: '#00ffff',
+                                blur: 10,
+                                stroke: true,
+                                fill: true
+                            }
+                        }
+                    ).setOrigin(0.5).setDepth(15);
+                    
+                    // Animate points text: move up and fade out
+                    this.tweens.add({
+                        targets: pointsText,
+                        y: this.ship.y - 80, // Move up
+                        alpha: 0, // Fade out
+                        duration: 800,
+                        ease: 'Power1',
+                        onComplete: () => {
+                            pointsText.destroy();
+                        }
+                    });
+                    
                     target.destroy();
                 }
-            });
-
-            // Fade out letter as it gets closer
-            this.tweens.add({
-                targets: letterText,
-                alpha: 0,
-                duration: 300,
-                delay: 200
             });
         });
     }

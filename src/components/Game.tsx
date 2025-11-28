@@ -133,13 +133,31 @@ export const Game: React.FC = () => {
         else if (newComboCount >= 3) currentMultiplier = 2;
         else if (newComboCount >= 2) currentMultiplier = 1.5;
 
-        // Score
+        // Score calculation (but don't update score yet - will be updated when points text disappears)
         const baseScore = 10;
         const comboScore = Math.floor(baseScore * currentMultiplier);
         const totalScore = comboScore;
 
+        // Combo Messages
+        if (newComboCount >= 3) {
+            playComboSuccessSound();
+            setCurrentComboMessage(`COMBO ${newComboCount}! x${currentMultiplier}`);
+            setIsComboMessageVisible(true);
+            setTimeout(() => setIsComboMessageVisible(false), 1500);
+        }
+
+        // Return points and total score for Phaser to use
+        // Score will be updated later when points text disappears
+        return {
+            points: comboScore, // Points to display
+            totalScore: totalScore // Score to add when text disappears
+        };
+
+    }, [comboCount, lastHitTime, sequentialHits, playExplosionSound, playComboSuccessSound]);
+
+    // Handle score change when points text disappears
+    const handleScoreChange = useCallback((newScore: number) => {
         setGameState(prev => {
-            const newScore = prev.score + totalScore;
             const newLettersDestroyed = prev.lettersDestroyed + 1;
 
             // Difficulty Progression
@@ -166,16 +184,7 @@ export const Game: React.FC = () => {
                 letterSpeed: newLetterSpeed
             };
         });
-
-        // Combo Messages
-        if (newComboCount >= 3) {
-            playComboSuccessSound();
-            setCurrentComboMessage(`COMBO ${newComboCount}! x${currentMultiplier}`);
-            setIsComboMessageVisible(true);
-            setTimeout(() => setIsComboMessageVisible(false), 1500);
-        }
-
-    }, [comboCount, lastHitTime, sequentialHits, playExplosionSound, playComboSuccessSound, advanceStage]);
+    }, [advanceStage]);
 
     const handleGameOver = useCallback(() => {
         playGameOverSound();
@@ -331,7 +340,7 @@ export const Game: React.FC = () => {
                 ref={phaserRef}
                 gameState={gameState}
                 callbacks={{
-                    onScoreChange: () => { },
+                    onScoreChange: handleScoreChange,
                     onLivesChange: () => { },
                     onLetterHit: handleLetterHit,
                     onLetterMiss: handleLetterMiss,
