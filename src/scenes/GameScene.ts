@@ -51,7 +51,7 @@ export class GameScene extends Phaser.Scene {
 
         // Create particle texture programmatically (square)
         const graphics = this.make.graphics({ x: 0, y: 0 }, false);
-        graphics.fillStyle(0xffff00, 1); // Yellow
+        graphics.fillStyle(0xffff00, 1);
         graphics.fillRect(0, 0, 8, 8);
         graphics.generateTexture('particle', 8, 8);
     }
@@ -59,10 +59,58 @@ export class GameScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
-        // Create Ship (100% higher up)
+        // Create Ship
         this.ship = this.add.sprite(width / 2, height - 200, 'nave');
         this.ship.setScale(0.2);
         this.ship.setDepth(10);
+
+        // Create plasma thrusters on wings (neon style, positioned at bottom)
+        const thrusterOffsetX = 30; // Distance from center to each wing
+        const thrusterOffsetY = 20; // More to the bottom
+
+        // Left thruster
+        const leftThruster = this.add.particles(
+            this.ship.x - thrusterOffsetX,
+            this.ship.y + thrusterOffsetY,
+            'particle',
+            {
+                speed: { min: 100, max: 200 },
+                scale: { start: 1.2, end: 0 },
+                lifespan: 400,
+                blendMode: 'ADD',
+                frequency: 15,
+                tint: [0x00FFFF, 0x00FFAA, 0x66FFFF], // Bright cyan/neon plasma colors
+                angle: { min: 85, max: 95 }, // Downward direction (will rotate with ship)
+                alpha: { start: 1, end: 0 },
+                quantity: 2
+            }
+        );
+        leftThruster.setDepth(5);
+
+        // Right thruster
+        const rightThruster = this.add.particles(
+            this.ship.x + thrusterOffsetX,
+            this.ship.y + thrusterOffsetY,
+            'particle',
+            {
+                speed: { min: 100, max: 200 },
+                scale: { start: 1.2, end: 0 },
+                lifespan: 400,
+                blendMode: 'ADD',
+                frequency: 15,
+                tint: [0x00FFFF, 0x00FFAA, 0x66FFFF], // Bright cyan/neon plasma colors
+                angle: { min: 85, max: 95 }, // Downward direction (will rotate with ship)
+                alpha: { start: 1, end: 0 },
+                quantity: 2
+            }
+        );
+        rightThruster.setDepth(5);
+
+        // Store thrusters for position updates
+        (this.ship as any).leftThruster = leftThruster;
+        (this.ship as any).rightThruster = rightThruster;
+        (this.ship as any).thrusterOffsetX = thrusterOffsetX;
+        (this.ship as any).thrusterOffsetY = thrusterOffsetY;
 
         // Groups
         this.lettersGroup = this.add.group();
@@ -72,6 +120,56 @@ export class GameScene extends Phaser.Scene {
         // Safety check if init failed or not ready
         if (!this.gameState || !this.lettersGroup) return;
 
+        // Update Ship Rotation and thruster positions (ALWAYS - even when paused)
+        if (this.ship) {
+            const rotation = Phaser.Math.DegToRad(this.shipAngle);
+            this.ship.setRotation(rotation);
+
+            // Update thruster positions and rotation to follow ship
+            const thrusterOffsetX = (this.ship as any).thrusterOffsetX || 30;
+            const thrusterOffsetY = (this.ship as any).thrusterOffsetY || 20;
+            const leftThruster = (this.ship as any).leftThruster;
+            const rightThruster = (this.ship as any).rightThruster;
+
+            if (leftThruster) {
+                // Calculate rotated position for left thruster
+                const cos = Math.cos(rotation);
+                const sin = Math.sin(rotation);
+                const localX = -thrusterOffsetX;
+                const localY = thrusterOffsetY;
+                const rotatedX = localX * cos - localY * sin;
+                const rotatedY = localX * sin + localY * cos;
+
+                leftThruster.setPosition(this.ship.x + rotatedX, this.ship.y + rotatedY);
+
+                // Rotate particle emission angle
+                const baseAngle = 90; // Downward
+                const emitAngle = baseAngle + this.shipAngle;
+                leftThruster.setConfig({
+                    angle: { min: emitAngle - 5, max: emitAngle + 5 }
+                });
+            }
+            if (rightThruster) {
+                // Calculate rotated position for right thruster
+                const cos = Math.cos(rotation);
+                const sin = Math.sin(rotation);
+                const localX = thrusterOffsetX;
+                const localY = thrusterOffsetY;
+                const rotatedX = localX * cos - localY * sin;
+                const rotatedY = localX * sin + localY * cos;
+
+                rightThruster.setPosition(this.ship.x + rotatedX, this.ship.y + rotatedY);
+
+                // Rotate particle emission angle
+                const baseAngle = 90; // Downward
+                const emitAngle = baseAngle + this.shipAngle;
+                rightThruster.setConfig({
+                    angle: { min: emitAngle - 5, max: emitAngle + 5 }
+                });
+            }
+        }
+
+        // Game logic only runs when playing
         if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized) {
             return;
         }
@@ -82,9 +180,10 @@ export class GameScene extends Phaser.Scene {
             this.lastSpawnTime = time;
         }
 
-        // Update Letters
+        // Update Letters with perspective movement
         const height = this.scale.height;
         const dangerZone = height * 0.6;
+        const turnaroundPoint = height * 0.55; // Point where enemies reach "front" and start rising (55%)
         let hasDanger = false;
 
         this.lettersGroup.getChildren().forEach((child: any) => {
@@ -95,27 +194,58 @@ export class GameScene extends Phaser.Scene {
             if (letterContainer.getData('hit')) return;
 
             const speed = letterContainer.getData('speed');
+            const phase = letterContainer.getData('phase');
 
-            // Move down
-            letterContainer.y += speed * (delta / 16.66); // Normalize to 60fps
+            if (phase === 'approaching') {
+                // Phase 1: Move down (approaching from horizon) and scale up to 0.7
+                letterContainer.y += speed * (delta / 16.66);
 
-            // Check bounds
-            if (letterContainer.y > height) {
-                this.handleLetterEscaped(letterContainer);
-            }
+                // Scale from 0.1 to 0.7 as it approaches
+                const startY = height * 0.5;
+                const progress = (letterContainer.y - startY) / (turnaroundPoint - startY);
+                const currentScale = 0.1 + (progress * 0.6); // 0.1 -> 0.7
+                letterContainer.setScale(Math.min(currentScale, 0.7));
 
-            // Check danger zone
-            if (letterContainer.y > dangerZone) {
+                // Interpolate X position for perspective (from near center to target position)
+                const spawnX = letterContainer.getData('spawnX');
+                const targetX = letterContainer.getData('targetX');
+                if (spawnX !== undefined && targetX !== undefined) {
+                    const currentX = spawnX + (progress * (targetX - spawnX));
+                    letterContainer.x = currentX;
+                }
+
+                // Check if reached turnaround point
+                if (letterContainer.y >= turnaroundPoint) {
+                    letterContainer.setData('phase', 'rising');
+                    letterContainer.setData('risingStartY', letterContainer.y);
+                }
+
+                // Check danger zone during approach
+                if (letterContainer.y > dangerZone) {
+                    hasDanger = true;
+                }
+            } else if (phase === 'rising') {
+                // Phase 2: Move up (rising toward player) and scale up to 1.0
+                letterContainer.y -= speed * (delta / 16.66);
+
+                // Scale from 0.7 to 1.0 as it rises
+                const risingStartY = letterContainer.getData('risingStartY') || turnaroundPoint;
+                const risingDistance = risingStartY - 0;
+                const risingProgress = (risingStartY - letterContainer.y) / risingDistance;
+                const currentScale = 0.7 + (risingProgress * 0.3); // 0.7 -> 1.0
+                letterContainer.setScale(Math.min(currentScale, 1.0));
+
+                // Letter escapes when it goes off the TOP of screen
+                if (letterContainer.y < 0) {
+                    this.handleLetterEscaped(letterContainer);
+                }
+
+                // Danger zone is more critical when rising
                 hasDanger = true;
             }
         });
 
         this.callbacks.onProximityWarning(hasDanger);
-
-        // Update Ship Rotation
-        if (this.ship) {
-            this.ship.setRotation(Phaser.Math.DegToRad(this.shipAngle));
-        }
     }
 
     private spawnLetter(time: number) {
@@ -125,9 +255,9 @@ export class GameScene extends Phaser.Scene {
         // Filter out last spawned if possible (simple random for now)
         const letterChar = stage.letters[Math.floor(Math.random() * stage.letters.length)];
 
-        // Calculate Position
+        // Calculate target horizontal position (where letter will end up)
         const position = KEYBOARD_POSITIONS[letterChar];
-        let x = Math.random() * (this.scale.width - 60);
+        let targetX = Math.random() * (this.scale.width - 60);
 
         if (position) {
             const gameAreaWidth = this.scale.width;
@@ -135,12 +265,19 @@ export class GameScene extends Phaser.Scene {
             const availableWidth = gameAreaWidth - (keyboardMargin * 2);
             const maxColumns = 10;
             const columnWidth = availableWidth / maxColumns;
-            x = keyboardMargin + (position.col * columnWidth);
-            x = Math.max(30, Math.min(x, gameAreaWidth - 30));
+            targetX = keyboardMargin + (position.col * columnWidth);
+            targetX = Math.max(30, Math.min(targetX, gameAreaWidth - 30));
         }
 
-        // Create Container
-        const container = this.add.container(x, -50);
+        // Calculate spawn X position (near center for perspective)
+        const centerX = this.scale.width / 2;
+        const displacementFromCenter = targetX - centerX;
+        const spawnX = centerX + (displacementFromCenter * 0.05); // Start at 5% of displacement from center
+
+        // Start from middle of screen (50% Y) with scale 0.1 (tiny but visible)
+        const startY = this.scale.height * 0.5; // 50% from top
+        const container = this.add.container(spawnX, startY);
+        container.setScale(0.1); // Start tiny but visible
 
         // Add Enemy Image with random neon color
         const enemyColors = [0xFF10F0, 0x39FF14, 0x00FFFF, 0xFFFF00, 0xFF6600, 0xBF00FF];
@@ -180,6 +317,9 @@ export class GameScene extends Phaser.Scene {
         container.setData('speed', this.gameState.letterSpeed);
         container.setData('id', time + Math.random());
         container.setData('color', enemyColor);
+        container.setData('phase', 'approaching'); // Track movement phase
+        container.setData('targetX', targetX); // Store target X for perspective movement
+        container.setData('spawnX', spawnX); // Store spawn X
 
         this.lettersGroup.add(container);
     }
@@ -245,7 +385,7 @@ export class GameScene extends Phaser.Scene {
         this.createExplosion(target.x, target.y, enemyColor);
 
         // Create enemy disintegration effect (pixelated squares from circle area)
-        const enemyRadius = 50; // Half of enemy size (60/2)
+        const enemyRadius = 50;
         const circle = new Phaser.Geom.Circle(0, 0, enemyRadius);
         const pixelParticles = this.add.particles(target.x, target.y, 'particle', {
             speed: { min: 0, max: 0 },
@@ -320,7 +460,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private createExplosion(x: number, y: number, color: number) {
-        // Colored particle explosion - fewer, faster, spread farther
+        // Colored particle explosion
         const particles = this.add.particles(x, y, 'particle', {
             speed: { min: 100, max: 300 },
             scale: { start: 1.2, end: 0 },
