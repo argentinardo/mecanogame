@@ -25,6 +25,7 @@ export class GameScene extends Phaser.Scene {
     private gameState!: GameState;
     private ship!: Phaser.GameObjects.Sprite;
     private shipAngle: number = 0;
+    private shipAngleTween: Phaser.Tweens.Tween | null = null; // Tween para animar la inclinación
 
     // Groups
     private lettersGroup!: Phaser.GameObjects.Group;
@@ -65,43 +66,59 @@ export class GameScene extends Phaser.Scene {
         this.ship.setDepth(10);
 
         // Create plasma thrusters on wings (neon style, positioned at bottom)
-        const thrusterOffsetX = 30; // Distance from center to each wing
-        const thrusterOffsetY = 20; // More to the bottom
+        const thrusterOffsetX = 13; // Distance from center to each wing
+        const thrusterOffsetY = 40; // More to the bottom
 
-        // Left thruster
+        // Left thruster - with realistic physics and inertia
         const leftThruster = this.add.particles(
             this.ship.x - thrusterOffsetX,
             this.ship.y + thrusterOffsetY,
             'particle',
             {
-                speed: { min: 100, max: 200 },
-                scale: { start: 1.2, end: 0 },
-                lifespan: 400,
+                speed: { min: 150, max: 250 },
+                scale: { start: 1.5, end: 0.3 },
+                lifespan: { min: 300, max: 500 }, // Variable lifespan for more realism
                 blendMode: 'ADD',
-                frequency: 15,
-                tint: [0x00FFFF, 0x00FFAA, 0x66FFFF], // Bright cyan/neon plasma colors
+                frequency: 20, // Slightly more frequent for smoother effect
+                tint: [0x00FFFF, 0x00FFAA, 0x66FFFF, 0x88FFFF], // Bright cyan/neon plasma colors with variation
                 angle: { min: 85, max: 95 }, // Downward direction (will rotate with ship)
                 alpha: { start: 1, end: 0 },
-                quantity: 2
+                quantity: 2,
+                // Physics for realistic inertia
+                gravityY: 50, // Gravity pulls particles down (realistic effect)
+                bounce: 0, // No bouncing
+                // Friction/acceleration for more realistic movement
+                accelerationY: 0, // Will be set dynamically
+                // Add some randomness for natural variation
+                rotate: { min: 0, max: 360 },
+                // Particles maintain their initial velocity (inertia is automatic in Phaser)
             }
         );
         leftThruster.setDepth(5);
 
-        // Right thruster
+        // Right thruster - with realistic physics and inertia
         const rightThruster = this.add.particles(
             this.ship.x + thrusterOffsetX,
             this.ship.y + thrusterOffsetY,
             'particle',
             {
-                speed: { min: 100, max: 200 },
-                scale: { start: 1.2, end: 0 },
-                lifespan: 400,
+                speed: { min: 150, max: 250 },
+                scale: { start: 1.5, end: 0.3 },
+                lifespan: { min: 300, max: 500 }, // Variable lifespan for more realism
                 blendMode: 'ADD',
-                frequency: 15,
-                tint: [0x00FFFF, 0x00FFAA, 0x66FFFF], // Bright cyan/neon plasma colors
+                frequency: 20, // Slightly more frequent for smoother effect
+                tint: [0x00FFFF, 0x00FFAA, 0x66FFFF, 0x88FFFF], // Bright cyan/neon plasma colors with variation
                 angle: { min: 85, max: 95 }, // Downward direction (will rotate with ship)
                 alpha: { start: 1, end: 0 },
-                quantity: 2
+                quantity: 2,
+                // Physics for realistic inertia
+                gravityY: 50, // Gravity pulls particles down (realistic effect)
+                bounce: 0, // No bouncing
+                // Friction/acceleration for more realistic movement
+                accelerationY: 0, // Will be set dynamically
+                // Add some randomness for natural variation
+                rotate: { min: 0, max: 360 },
+                // Particles maintain their initial velocity (inertia is automatic in Phaser)
             }
         );
         rightThruster.setDepth(5);
@@ -142,12 +159,84 @@ export class GameScene extends Phaser.Scene {
 
                 leftThruster.setPosition(this.ship.x + rotatedX, this.ship.y + rotatedY);
 
-                // Rotate particle emission angle
-                const baseAngle = 90; // Downward
-                const emitAngle = baseAngle + this.shipAngle;
-                leftThruster.setConfig({
-                    angle: { min: emitAngle - 5, max: emitAngle + 5 }
-                });
+                // Update particle physics based on ship angle
+                // Thrusters emit opposite to ship direction (180° offset)
+                // In Phaser: angles are in degrees, 0° = right, 90° = down, 180° = left, 270° = up
+                // Calculate emit angle: opposite direction to ship
+                let emitAngle = this.shipAngle + 180;
+                // Normalize to 0-360 range
+                while (emitAngle < 0) emitAngle += 360;
+                while (emitAngle >= 360) emitAngle -= 360;
+                
+                // Debug: Log angle to verify it's changing
+                // console.log('Ship angle:', this.shipAngle, 'Emit angle:', emitAngle);
+                
+                // Update emitter physics - access the emitter manager's emitters
+                // this.add.particles() returns a ParticleEmitterManager, which contains emitters
+                const emitterManager = leftThruster as any;
+                if (emitterManager && emitterManager.emitters) {
+                    // Get the first (and only) emitter from the manager
+                    const emitterList = emitterManager.emitters.list;
+                    if (emitterList && emitterList.length > 0) {
+                        const particleEmitter = emitterList[0];
+                        
+                        // Calculate speed adjustment based on ship angle for more realistic physics
+                        const angleRad = Phaser.Math.DegToRad(this.shipAngle);
+                        const verticalComponent = Math.abs(Math.sin(angleRad));
+                        const baseSpeed = 200;
+                        const speedVariation = 50;
+                        const adjustedSpeed = baseSpeed + (speedVariation * verticalComponent);
+                        
+                        // Calculate gravity component based on ship angle for realistic inertia
+                        const gravityX = Math.sin(angleRad) * 30;
+                        const gravityY = Math.cos(angleRad) * 50 + 50;
+                        
+                        // CRITICAL: Update angle - particles must emit opposite to ship direction
+                        // Try multiple methods to ensure the angle updates
+                        try {
+                            // Method 1: Direct setAngle call (preferred)
+                            if (particleEmitter.setAngle) {
+                                particleEmitter.setAngle({ min: emitAngle - 8, max: emitAngle + 8 });
+                            }
+                            // Method 2: Update config object directly
+                            if (particleEmitter.config) {
+                                particleEmitter.config.angle = { min: emitAngle - 8, max: emitAngle + 8 };
+                            }
+                            // Method 3: Use setConfig as fallback
+                            if (particleEmitter.setConfig) {
+                                particleEmitter.setConfig({ angle: { min: emitAngle - 8, max: emitAngle + 8 } });
+                            }
+                        } catch (e) {
+                            console.warn('Error updating particle angle:', e, 'emitAngle:', emitAngle, 'shipAngle:', this.shipAngle);
+                        }
+                        
+                        // Update speed
+                        try {
+                            if (particleEmitter.setSpeed) {
+                                particleEmitter.setSpeed(adjustedSpeed - 50, adjustedSpeed + 50);
+                            } else if (particleEmitter.speed) {
+                                particleEmitter.speed = { min: adjustedSpeed - 50, max: adjustedSpeed + 50 };
+                            }
+                        } catch (e) {
+                            console.warn('Error updating particle speed:', e);
+                        }
+                        
+                        // Update gravity
+                        try {
+                            if (particleEmitter.setGravity) {
+                                particleEmitter.setGravity(gravityX, gravityY);
+                            } else if (particleEmitter.setGravityX && particleEmitter.setGravityY) {
+                                particleEmitter.setGravityX(gravityX);
+                                particleEmitter.setGravityY(gravityY);
+                            } else if (particleEmitter.gravityX !== undefined) {
+                                particleEmitter.gravityX = gravityX;
+                                particleEmitter.gravityY = gravityY;
+                            }
+                        } catch (e) {
+                            console.warn('Error updating particle gravity:', e);
+                        }
+                    }
+                }
             }
             if (rightThruster) {
                 // Calculate rotated position for right thruster
@@ -160,12 +249,78 @@ export class GameScene extends Phaser.Scene {
 
                 rightThruster.setPosition(this.ship.x + rotatedX, this.ship.y + rotatedY);
 
-                // Rotate particle emission angle
-                const baseAngle = 90; // Downward
-                const emitAngle = baseAngle + this.shipAngle;
-                rightThruster.setConfig({
-                    angle: { min: emitAngle - 5, max: emitAngle + 5 }
-                });
+                // Update particle physics based on ship angle
+                // Thrusters emit opposite to ship direction (180° offset)
+                let emitAngle = this.shipAngle + 180;
+                // Normalize to 0-360 range
+                while (emitAngle < 0) emitAngle += 360;
+                while (emitAngle >= 360) emitAngle -= 360;
+                
+                // Update emitter physics - access the emitter manager's emitters
+                const emitterManager = rightThruster as any;
+                if (emitterManager && emitterManager.emitters) {
+                    // Get the first (and only) emitter from the manager
+                    const emitterList = emitterManager.emitters.list;
+                    if (emitterList && emitterList.length > 0) {
+                        const particleEmitter = emitterList[0];
+                        
+                        // Calculate speed adjustment based on ship angle for more realistic physics
+                        const angleRad = Phaser.Math.DegToRad(this.shipAngle);
+                        const verticalComponent = Math.abs(Math.sin(angleRad));
+                        const baseSpeed = 200;
+                        const speedVariation = 50;
+                        const adjustedSpeed = baseSpeed + (speedVariation * verticalComponent);
+                        
+                        // Calculate gravity component based on ship angle for realistic inertia
+                        const gravityX = Math.sin(angleRad) * 30;
+                        const gravityY = Math.cos(angleRad) * 50 + 50;
+                        
+                        // CRITICAL: Update angle - particles must emit opposite to ship direction
+                        // Try multiple methods to ensure the angle updates
+                        try {
+                            // Method 1: Direct setAngle call (preferred)
+                            if (particleEmitter.setAngle) {
+                                particleEmitter.setAngle({ min: emitAngle - 8, max: emitAngle + 8 });
+                            }
+                            // Method 2: Update config object directly
+                            if (particleEmitter.config) {
+                                particleEmitter.config.angle = { min: emitAngle - 8, max: emitAngle + 8 };
+                            }
+                            // Method 3: Use setConfig as fallback
+                            if (particleEmitter.setConfig) {
+                                particleEmitter.setConfig({ angle: { min: emitAngle - 8, max: emitAngle + 8 } });
+                            }
+                        } catch (e) {
+                            console.warn('Error updating particle angle:', e, 'emitAngle:', emitAngle, 'shipAngle:', this.shipAngle);
+                        }
+                        
+                        // Update speed
+                        try {
+                            if (particleEmitter.setSpeed) {
+                                particleEmitter.setSpeed(adjustedSpeed - 50, adjustedSpeed + 50);
+                            } else if (particleEmitter.speed) {
+                                particleEmitter.speed = { min: adjustedSpeed - 50, max: adjustedSpeed + 50 };
+                            }
+                        } catch (e) {
+                            console.warn('Error updating particle speed:', e);
+                        }
+                        
+                        // Update gravity
+                        try {
+                            if (particleEmitter.setGravity) {
+                                particleEmitter.setGravity(gravityX, gravityY);
+                            } else if (particleEmitter.setGravityX && particleEmitter.setGravityY) {
+                                particleEmitter.setGravityX(gravityX);
+                                particleEmitter.setGravityY(gravityY);
+                            } else if (particleEmitter.gravityX !== undefined) {
+                                particleEmitter.gravityX = gravityX;
+                                particleEmitter.gravityY = gravityY;
+                            }
+                        } catch (e) {
+                            console.warn('Error updating particle gravity:', e);
+                        }
+                    }
+                }
             }
         }
 
@@ -316,6 +471,7 @@ export class GameScene extends Phaser.Scene {
         container.setData('letter', letterChar);
         container.setData('speed', this.gameState.letterSpeed);
         container.setData('id', time + Math.random());
+        container.setData('spawnTime', time); // Guardar tiempo de creación para seleccionar la más antigua
         container.setData('color', enemyColor);
         container.setData('phase', 'approaching'); // Track movement phase
         container.setData('targetX', targetX); // Store target X for perspective movement
@@ -342,13 +498,49 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Target the lowest one (highest Y)
-        targets.sort((a, b) => b.y - a.y);
+        // Target the oldest one (lowest spawnTime = created first)
+        targets.sort((a, b) => {
+            const timeA = a.getData('spawnTime') || 0;
+            const timeB = b.getData('spawnTime') || 0;
+            return timeA - timeB; // Menor tiempo = más antigua
+        });
         const target = targets[0];
 
         // Calculate angle for ship rotation
         const angle = Phaser.Math.Angle.Between(this.ship.x, this.ship.y, target.x, target.y);
-        this.shipAngle = Phaser.Math.RadToDeg(angle) + 90;
+        const targetAngle = Phaser.Math.RadToDeg(angle) + 90;
+        
+        // Cancel any existing tween
+        if (this.shipAngleTween) {
+            this.shipAngleTween.stop();
+            this.shipAngleTween = null;
+        }
+        
+        // Animate ship angle quickly to target (fast tilt when shooting)
+        this.shipAngleTween = this.tweens.addCounter({
+            from: this.shipAngle,
+            to: targetAngle,
+            duration: 100, // Fast animation when shooting (100ms)
+            ease: 'Power2',
+            onUpdate: (tween) => {
+                this.shipAngle = tween.getValue() as number;
+            },
+            onComplete: () => {
+                // After reaching target, animate back to vertical (slower)
+                this.shipAngleTween = this.tweens.addCounter({
+                    from: this.shipAngle,
+                    to: 0, // Return to vertical (0 degrees)
+                    duration: 300, // Slower return animation (300ms)
+                    ease: 'Power1',
+                    onUpdate: (returnTween) => {
+                        this.shipAngle = returnTween.getValue() as number;
+                    },
+                    onComplete: () => {
+                        this.shipAngleTween = null;
+                    }
+                });
+            }
+        });
 
         // Draw Laser
         const laser = this.add.line(0, 0, this.ship.x, this.ship.y, target.x, target.y, 0xff0000);
@@ -481,6 +673,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     public setShipAngle(angle: number) {
+        // Cancel any existing tween when setting angle externally
+        if (this.shipAngleTween) {
+            this.shipAngleTween.stop();
+            this.shipAngleTween = null;
+        }
         this.shipAngle = angle;
     }
 
