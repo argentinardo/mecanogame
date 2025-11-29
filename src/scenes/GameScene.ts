@@ -14,6 +14,7 @@ export interface GameSceneCallbacks {
     onLetterHit: (letterObj: FallingLetter) => { points: number; totalScore: number };
     onLetterMiss: () => void;
     onLetterEscaped: () => void;
+    onShipDestroyed: () => void; // New callback for ship destroyed by meteorite
     onWrongKey: () => void;
     onMeteoriteHit: () => void;
     onStageAdvance: (stage: number) => void;
@@ -546,12 +547,10 @@ export class GameScene extends Phaser.Scene {
     private spawnMeteorite(time: number) {
         const { width, height } = this.scale;
         
-        // Spawn from random side of screen (NEVER from bottom - case 2 removed)
-        // Only top (0), right (1), or left (3)
-        const sides = [0, 1, 3]; // Top, Right, Left (no bottom)
-        const side = sides[Math.floor(Math.random() * sides.length)];
-        let x: number, y: number;
-        let speedX: number, speedY: number;
+        // Spawn only from top half of screen (from middle to top)
+        // Random position in top half
+        const x = Math.random() * width;
+        const y = -50 - Math.random() * (height / 2); // From -50 to -(height/2 + 50)
         
         // Random asteroid image
         const asteroidKey = `asteroid${Math.floor(Math.random() * 3) + 1}`;
@@ -563,26 +562,9 @@ export class GameScene extends Phaser.Scene {
         const targetX = this.ship.x;
         const targetY = this.ship.y;
         
-        switch (side) {
-            case 0: // Top
-                x = Math.random() * width;
-                y = -50;
-                speedX = (targetX - x) / 60; // Reach target in ~60 frames
-                speedY = (targetY - y) / 60;
-                break;
-            case 1: // Right
-                x = width + 50;
-                y = Math.random() * height;
-                speedX = (targetX - x) / 60;
-                speedY = (targetY - y) / 60;
-                break;
-            default: // Left (case 3)
-                x = -50;
-                y = Math.random() * height;
-                speedX = (targetX - x) / 60;
-                speedY = (targetY - y) / 60;
-                break;
-        }
+        // Calculate speed (half speed - divide by 120 instead of 60)
+        const speedX = (targetX - x) / 120; // Half speed
+        const speedY = (targetY - y) / 120; // Half speed
         
         const meteorite = this.add.image(x, y, asteroidKey);
         meteorite.setDisplaySize(size, size);
@@ -656,17 +638,22 @@ export class GameScene extends Phaser.Scene {
     private handleMeteoriteHit(meteorite: Phaser.GameObjects.Image, hitForceField: boolean = false) {
         if (hitForceField) {
             // Force field protects - destroy meteorite without damage
-            this.createExplosion(meteorite.x, meteorite.y, 0x00ffff); // Cyan explosion for shield
+            // More impressive explosion for shield
+            this.createForceFieldExplosion(meteorite.x, meteorite.y);
             meteorite.destroy();
             return;
         }
         
         // Meteorite hit ship - lose a life
-        this.createExplosion(meteorite.x, meteorite.y, 0xff6600);
+        // Create reduced explosion (10% of force field particles)
+        this.createShipHitExplosion(meteorite.x, meteorite.y);
         meteorite.destroy();
         
-        // Notify React to lose a life (same as letter escaped)
-        this.callbacks.onLetterEscaped();
+        // Destroy ship animation (similar to enemies)
+        this.destroyShip();
+        
+        // Notify React to lose a life with ship destroyed message
+        this.callbacks.onShipDestroyed();
     }
 
     private handleLetterEscaped(letterContainer: Phaser.GameObjects.Container) {
@@ -913,8 +900,167 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
+    private createForceFieldExplosion(x: number, y: number) {
+        // More impressive explosion for force field - multiple layers
+        const cyanColor = 0x00ffff;
+        const blueColor = 0x0088ff;
+        const whiteColor = 0xffffff;
+
+        // Layer 1: Fast outward particles (cyan)
+        const fastParticles = this.add.particles(x, y, 'particle', {
+            speed: { min: 200, max: 500 },
+            scale: { start: 2.0, end: 0 },
+            lifespan: 800,
+            blendMode: 'ADD',
+            quantity: 15,
+            tint: cyanColor,
+            angle: { min: 0, max: 360 },
+            alpha: { start: 1, end: 0 }
+        });
+
+        // Layer 2: Medium speed particles (blue)
+        const mediumParticles = this.add.particles(x, y, 'particle', {
+            speed: { min: 150, max: 350 },
+            scale: { start: 1.5, end: 0 },
+            lifespan: 1000,
+            blendMode: 'ADD',
+            quantity: 10,
+            tint: blueColor,
+            angle: { min: 0, max: 360 },
+            alpha: { start: 0.8, end: 0 }
+        });
+
+        // Layer 3: Slow bright particles (white/cyan mix)
+        const slowParticles = this.add.particles(x, y, 'particle', {
+            speed: { min: 50, max: 200 },
+            scale: { start: 1.8, end: 0 },
+            lifespan: 1200,
+            blendMode: 'ADD',
+            quantity: 8,
+            tint: [cyanColor, whiteColor],
+            angle: { min: 0, max: 360 },
+            alpha: { start: 1, end: 0 }
+        });
+
+        // Create expanding circle effect
+        const circle = this.add.circle(x, y, 0, cyanColor, 0.5);
+        circle.setStrokeStyle(3, cyanColor, 1);
+        circle.setBlendMode(Phaser.BlendModes.ADD);
+        circle.setDepth(10);
+
+        // Expand and fade circle
+        this.tweens.add({
+            targets: circle,
+            radius: 200,
+            alpha: 0,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => {
+                circle.destroy();
+            }
+        });
+
+        // Auto destroy emitters after use
+        this.time.delayedCall(1200, () => {
+            fastParticles.destroy();
+            mediumParticles.destroy();
+            slowParticles.destroy();
+        });
+    }
+
+    private createShipHitExplosion(x: number, y: number) {
+        // Reduced explosion (10% of force field particles) when meteorite hits ship
+        const orangeColor = 0xff6600;
+        const redColor = 0xff0000;
+        const yellowColor = 0xffff00;
+
+        // Layer 1: Fast outward particles (10% = 1.5 -> 2 particles)
+        const fastParticles = this.add.particles(x, y, 'particle', {
+            speed: { min: 200, max: 500 },
+            scale: { start: 2.0, end: 0 },
+            lifespan: 800,
+            blendMode: 'ADD',
+            quantity: 2, // 10% of 15
+            tint: orangeColor,
+            angle: { min: 0, max: 360 },
+            alpha: { start: 1, end: 0 }
+        });
+
+        // Layer 2: Medium speed particles (10% = 1 particle)
+        const mediumParticles = this.add.particles(x, y, 'particle', {
+            speed: { min: 150, max: 350 },
+            scale: { start: 1.5, end: 0 },
+            lifespan: 1000,
+            blendMode: 'ADD',
+            quantity: 1, // 10% of 10
+            tint: redColor,
+            angle: { min: 0, max: 360 },
+            alpha: { start: 0.8, end: 0 }
+        });
+
+        // Layer 3: Slow bright particles (10% = 1 particle)
+        const slowParticles = this.add.particles(x, y, 'particle', {
+            speed: { min: 50, max: 200 },
+            scale: { start: 1.8, end: 0 },
+            lifespan: 1200,
+            blendMode: 'ADD',
+            quantity: 1, // 10% of 8
+            tint: [orangeColor, yellowColor],
+            angle: { min: 0, max: 360 },
+            alpha: { start: 1, end: 0 }
+        });
+
+        // Auto destroy emitters after use
+        this.time.delayedCall(1200, () => {
+            fastParticles.destroy();
+            mediumParticles.destroy();
+            slowParticles.destroy();
+        });
+    }
+
+    private destroyShip() {
+        // Destroy ship animation (similar to enemies)
+        if (!this.ship || !this.ship.active) return;
+
+        // Stop thrusters
+        const leftThruster = (this.ship as any).leftThruster;
+        const rightThruster = (this.ship as any).rightThruster;
+        if (leftThruster) leftThruster.stop();
+        if (rightThruster) rightThruster.stop();
+
+        // Make ship explode and disappear (similar to enemy destruction)
+        this.tweens.add({
+            targets: this.ship,
+            scaleX: this.ship.scaleX * 2,
+            scaleY: this.ship.scaleY * 2,
+            alpha: 0,
+            rotation: this.ship.rotation + Math.PI * 2,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => {
+                // Ship will be recreated when game resumes, so we don't destroy it
+                // Just hide it temporarily
+                this.ship.setVisible(false);
+            }
+        });
+    }
+
     public updateGameState(newState: GameState) {
+        const wasLifeLostPaused = this.gameState?.isLifeLostPaused || false;
         this.gameState = newState;
+        
+        // Restore ship visibility when game resumes after destruction
+        if (this.ship && wasLifeLostPaused && !newState.isLifeLostPaused && !this.ship.visible) {
+            this.ship.setVisible(true);
+            this.ship.setAlpha(1);
+            this.ship.setScale(0.2); // Restore original scale
+            
+            // Restart thrusters
+            const leftThruster = (this.ship as any).leftThruster;
+            const rightThruster = (this.ship as any).rightThruster;
+            if (leftThruster) leftThruster.start();
+            if (rightThruster) rightThruster.start();
+        }
     }
 
     public setShipAngle(angle: number) {

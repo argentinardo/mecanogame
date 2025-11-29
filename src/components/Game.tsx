@@ -283,7 +283,7 @@ export const Game: React.FC = () => {
                 clearInterval(countdownInterval);
                 lifeLostCountdownRef.current = null;
                 setIsLifeLostCountdown(false);
-                // Resume game after countdown
+                // Resume game and restore ship visibility
                 setGameState(prev => ({
                     ...prev,
                     isLifeLostPaused: false,
@@ -291,6 +291,89 @@ export const Game: React.FC = () => {
                     centralMessage: null,
                     countdown: null
                 }));
+                // Restore ship visibility in Phaser
+                if (phaserRef.current) {
+                    const game = (phaserRef.current as any).phaserGameRef?.current;
+                    if (game) {
+                        const scene = game.scene.getScene('GameScene');
+                        if (scene && (scene as any).ship) {
+                            (scene as any).ship.setVisible(true);
+                        }
+                    }
+                }
+            }
+        }, 1000);
+
+        lifeLostCountdownRef.current = countdownInterval as unknown as NodeJS.Timeout;
+    }, [playLifeLostSound, handleGameOver, playCountdownSound]);
+
+    const handleShipDestroyed = useCallback(() => {
+        playLifeLostSound();
+        comboCountRef.current = 0;
+        sequentialHitsRef.current = 0;
+        lastHitTimeRef.current = 0;
+        setComboCount(0);
+        setSequentialHits(0);
+        setLastHitTime(0);
+
+        // Clear any existing countdown
+        if (lifeLostCountdownRef.current) {
+            clearInterval(lifeLostCountdownRef.current);
+            lifeLostCountdownRef.current = null;
+        }
+
+        setGameState(prev => {
+            const newLives = prev.lives - 1;
+            if (newLives <= 0) {
+                handleGameOver();
+                return { ...prev, lives: 0 };
+            }
+
+            // Show countdown message with "NAVE DESTRUIDA"
+            return {
+                ...prev,
+                lives: newLives,
+                isLifeLostPaused: true,
+                showCentralMessage: true,
+                centralMessage: "NAVE DESTRUIDA",
+                countdown: 3
+            };
+        });
+
+        setIsLifeLostCountdown(true);
+
+        // Countdown from 3 to 1
+        let countdown = 3;
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                setGameState(prev => ({
+                    ...prev,
+                    countdown: countdown
+                }));
+                playCountdownSound(countdown);
+            } else {
+                clearInterval(countdownInterval);
+                lifeLostCountdownRef.current = null;
+                setIsLifeLostCountdown(false);
+                // Resume game and restore ship visibility
+                setGameState(prev => ({
+                    ...prev,
+                    isLifeLostPaused: false,
+                    showCentralMessage: false,
+                    centralMessage: null,
+                    countdown: null
+                }));
+                // Restore ship visibility in Phaser
+                if (phaserRef.current) {
+                    const game = (phaserRef.current as any).phaserGameRef?.current;
+                    if (game) {
+                        const scene = game.scene.getScene('GameScene');
+                        if (scene && (scene as any).ship) {
+                            (scene as any).ship.setVisible(true);
+                        }
+                    }
+                }
             }
         }, 1000);
 
@@ -494,6 +577,7 @@ export const Game: React.FC = () => {
                     onLetterHit: handleLetterHit,
                     onLetterMiss: handleLetterMiss,
                     onLetterEscaped: handleLetterEscaped,
+                    onShipDestroyed: handleShipDestroyed,
                     onWrongKey: handleLetterMiss,
                     onMeteoriteHit: () => { },
                     onStageAdvance: () => { },
