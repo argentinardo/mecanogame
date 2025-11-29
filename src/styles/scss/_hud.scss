@@ -170,6 +170,12 @@
   border-radius: $radius-compact;
   text-align: center;
   box-shadow: 0 0 15px rgba(0, 255, 128, 0.4), inset 0 0 10px rgba(0, 255, 128, 0.25);
+  min-width: 100px; // Ancho mínimo para evitar colapso
+  min-height: 60px; // Alto mínimo para evitar colapso
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .compact-mute-toggle {
@@ -237,6 +243,11 @@
 .compact-lives-display .life-heart {
   color: #ff0066;
   filter: drop-shadow(0 0 4px #ff0066);
+}
+
+.compact-lives-display .life-ship-icon {
+  filter: drop-shadow(0 0 4px #00ffff);
+  object-fit: contain;
 }
 
 // =============================================================================

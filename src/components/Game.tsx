@@ -61,6 +61,7 @@ export const Game: React.FC = () => {
         showCentralMessage: false,
         countdown: null,
         isPaused: false,
+        isLifeLostPaused: false,
         showSectorInfo: false,
         sectorInfoTimeout: null,
         firstMeteoritePause: false,
@@ -71,14 +72,40 @@ export const Game: React.FC = () => {
     const [lastHitTime, setLastHitTime] = useState<number>(0);
     const [sequentialHits, setSequentialHits] = useState<number>(0);
 
+    // Use refs to track current values for callbacks (always up-to-date)
+    const comboCountRef = useRef<number>(0);
+    const lastHitTimeRef = useRef<number>(0);
+    const sequentialHitsRef = useRef<number>(0);
+
+    // Sync refs with state when state changes
+    useEffect(() => {
+        comboCountRef.current = comboCount;
+    }, [comboCount]);
+
+    useEffect(() => {
+        sequentialHitsRef.current = sequentialHits;
+    }, [sequentialHits]);
+
+    useEffect(() => {
+        lastHitTimeRef.current = lastHitTime;
+    }, [lastHitTime]);
+
     const [currentComboMessage, setCurrentComboMessage] = useState<string | null>(null);
     const [isComboMessageVisible, setIsComboMessageVisible] = useState<boolean>(false);
+
+    const [currentOrderMessage, setCurrentOrderMessage] = useState<string | null>(null);
+    const [isOrderMessageVisible, setIsOrderMessageVisible] = useState<boolean>(false);
+
+    const [isLifeLostPaused, setIsLifeLostPaused] = useState<boolean>(false);
 
     const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
     const [isMobile, setIsMobile] = useState<boolean>(false);
 
     const phaserRef = useRef<PhaserGameRef>(null);
     const proximityBeepIntervalRef = useRef<number | undefined>(undefined);
+    const penaltyIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const lifeLostCountdownRef = useRef<NodeJS.Timeout | null>(null);
+    const [isLifeLostCountdown, setIsLifeLostCountdown] = useState<boolean>(false);
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {
@@ -106,21 +133,27 @@ export const Game: React.FC = () => {
     const handleLetterHit = useCallback((_letterObj: FallingLetter) => {
         playExplosionSound();
 
-        // Combo Logic
+        // Combo Logic - use refs to get current values
         const currentTime = Date.now();
-        const timeSinceLastHit = currentTime - lastHitTime;
+        const timeSinceLastHit = lastHitTimeRef.current > 0 ? currentTime - lastHitTimeRef.current : Infinity;
 
-        let newComboCount = comboCount;
-        let newSequentialHits = sequentialHits;
+        let newComboCount: number;
+        let newSequentialHits: number;
 
-        if (timeSinceLastHit <= 1200 && lastHitTime > 0) {
-            newComboCount++;
-            newSequentialHits++;
+        if (timeSinceLastHit <= 1200 && lastHitTimeRef.current > 0) {
+            newComboCount = comboCountRef.current + 1;
+            newSequentialHits = sequentialHitsRef.current + 1;
         } else {
             newComboCount = 1;
             newSequentialHits = 1;
         }
 
+        // Update refs immediately
+        comboCountRef.current = newComboCount;
+        sequentialHitsRef.current = newSequentialHits;
+        lastHitTimeRef.current = currentTime;
+
+        // Update states
         setComboCount(newComboCount);
         setSequentialHits(newSequentialHits);
         setLastHitTime(currentTime);
@@ -133,7 +166,7 @@ export const Game: React.FC = () => {
         else if (newComboCount >= 3) currentMultiplier = 2;
         else if (newComboCount >= 2) currentMultiplier = 1.5;
 
-        // Score calculation (but don't update score yet - will be updated when points text disappears)
+        // Score calculation
         const baseScore = 10;
         const comboScore = Math.floor(baseScore * currentMultiplier);
         const totalScore = comboScore;
@@ -146,6 +179,15 @@ export const Game: React.FC = () => {
             setTimeout(() => setIsComboMessageVisible(false), 1500);
         }
 
+        // Order Message (for sequential hits in correct order)
+        // Show order message when sequential hits reach certain thresholds
+        if (newSequentialHits >= 5) {
+            const orderBonus = Math.floor(newSequentialHits / 5) * 5;
+            setCurrentOrderMessage(`ORDEN ${newSequentialHits}!\n+${orderBonus} BONUS`);
+            setIsOrderMessageVisible(true);
+            setTimeout(() => setIsOrderMessageVisible(false), 2000);
+        }
+
         // Return points and total score for Phaser to use
         // Score will be updated later when points text disappears
         return {
@@ -153,7 +195,7 @@ export const Game: React.FC = () => {
             totalScore: totalScore // Score to add when text disappears
         };
 
-    }, [comboCount, lastHitTime, sequentialHits, playExplosionSound, playComboSuccessSound]);
+    }, [playExplosionSound, playComboSuccessSound]);
 
     // Handle score change when points text disappears
     const handleScoreChange = useCallback((newScore: number) => {
@@ -194,7 +236,18 @@ export const Game: React.FC = () => {
 
     const handleLetterEscaped = useCallback(() => {
         playLifeLostSound();
+        comboCountRef.current = 0;
+        sequentialHitsRef.current = 0;
+        lastHitTimeRef.current = 0;
         setComboCount(0);
+        setSequentialHits(0);
+        setLastHitTime(0);
+
+        // Clear any existing countdown
+        if (lifeLostCountdownRef.current) {
+            clearInterval(lifeLostCountdownRef.current);
+            lifeLostCountdownRef.current = null;
+        }
 
         setGameState(prev => {
             const newLives = prev.lives - 1;
@@ -202,13 +255,62 @@ export const Game: React.FC = () => {
                 handleGameOver();
                 return { ...prev, lives: 0 };
             }
-            return { ...prev, lives: newLives };
+
+            // Show countdown message and pause game (separate from isPaused)
+            return {
+                ...prev,
+                lives: newLives,
+                isLifeLostPaused: true,
+                showCentralMessage: true,
+                centralMessage: "LETRA PERDIDA",
+                countdown: 3
+            };
         });
-    }, [playLifeLostSound, handleGameOver]);
+
+        setIsLifeLostCountdown(true);
+
+        // Countdown from 3 to 1
+        let countdown = 3;
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                setGameState(prev => ({
+                    ...prev,
+                    countdown: countdown
+                }));
+                playCountdownSound(countdown);
+            } else {
+                clearInterval(countdownInterval);
+                lifeLostCountdownRef.current = null;
+                setIsLifeLostCountdown(false);
+                // Resume game after countdown
+                setGameState(prev => ({
+                    ...prev,
+                    isLifeLostPaused: false,
+                    showCentralMessage: false,
+                    centralMessage: null,
+                    countdown: null
+                }));
+            }
+        }, 1000);
+
+        lifeLostCountdownRef.current = countdownInterval as unknown as NodeJS.Timeout;
+    }, [playLifeLostSound, handleGameOver, playCountdownSound]);
 
     const handleLetterMiss = useCallback(() => {
         playMissSound();
+        comboCountRef.current = 0;
+        sequentialHitsRef.current = 0;
+        lastHitTimeRef.current = 0;
         setComboCount(0);
+        setSequentialHits(0);
+        setLastHitTime(0);
+
+        // Clear any existing penalty interval
+        if (penaltyIntervalRef.current) {
+            clearInterval(penaltyIntervalRef.current);
+            penaltyIntervalRef.current = null;
+        }
 
         // Penalty
         lowerBackgroundVolume();
@@ -217,17 +319,18 @@ export const Game: React.FC = () => {
             isPenalized: true,
             penaltyTime: 3,
             showCentralMessage: true,
-            centralMessage: "Recalibrando... 3s"
+            centralMessage: "Recalibrando... 3s\nPresiona BACKSPACE para saltear"
         }));
 
         let countdown = 3;
         const interval = setInterval(() => {
             countdown--;
             if (countdown > 0) {
-                setGameState(prev => ({ ...prev, penaltyTime: countdown, centralMessage: `Recalibrando... ${countdown}s` }));
+                setGameState(prev => ({ ...prev, penaltyTime: countdown, centralMessage: `Recalibrando... ${countdown}s\nPresiona BACKSPACE para saltear` }));
                 playCountdownSound(countdown);
             } else {
                 clearInterval(interval);
+                penaltyIntervalRef.current = null;
                 restoreBackgroundVolume();
                 setGameState(prev => ({
                     ...prev,
@@ -238,7 +341,24 @@ export const Game: React.FC = () => {
                 }));
             }
         }, 1000);
+        
+        penaltyIntervalRef.current = interval;
     }, [playMissSound, lowerBackgroundVolume, restoreBackgroundVolume, playCountdownSound]);
+
+    const skipPenalty = useCallback(() => {
+        if (penaltyIntervalRef.current && gameState.isPenalized) {
+            clearInterval(penaltyIntervalRef.current);
+            penaltyIntervalRef.current = null;
+            restoreBackgroundVolume();
+            setGameState(prev => ({
+                ...prev,
+                isPenalized: false,
+                penaltyTime: 0,
+                showCentralMessage: false,
+                centralMessage: null
+            }));
+        }
+    }, [gameState.isPenalized, restoreBackgroundVolume]);
 
     const handleProximityWarning = useCallback((hasWarning: boolean) => {
         if (hasWarning) {
@@ -254,19 +374,20 @@ export const Game: React.FC = () => {
         }
     }, [isMuted, gameState.isPlaying, playProximityBeep]);
 
-    const startGame = useCallback(() => {
+    const startGame = useCallback((startingLevel: number = 0) => {
         initAudioContext();
         setGameState(prev => ({
             ...prev,
             isPlaying: true,
             score: 0,
             lives: 3,
-            currentStage: 0,
+            currentStage: startingLevel,
             gameSpeed: INITIAL_GAME_SPEED,
             letterSpeed: INITIAL_LETTER_SPEED,
             fallingLetters: [],
             meteorites: [],
             isPaused: false,
+            isLifeLostPaused: false,
             isPenalized: false
         }));
         startBackgroundMusic();
@@ -279,6 +400,7 @@ export const Game: React.FC = () => {
             isPlaying: true,
             lives: 3,
             isPaused: false,
+            isLifeLostPaused: false,
             isPenalized: false,
             fallingLetters: [],
             meteorites: []
@@ -289,7 +411,21 @@ export const Game: React.FC = () => {
     // Keyboard Input
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (!gameState.isPlaying || gameState.isPaused || gameState.isPenalized) return;
+            // Handle pause/unpause with Escape (works even when paused)
+            if (event.key === 'Escape' && gameState.isPlaying) {
+                setGameState(prev => ({ ...prev, isPaused: !prev.isPaused }));
+                return;
+            }
+
+            // Handle skip penalty with Backspace (works when penalized)
+            if (event.key === 'Backspace' && gameState.isPenalized) {
+                event.preventDefault();
+                skipPenalty();
+                return;
+            }
+
+            // Don't process other keys when paused, penalized, or life lost countdown
+            if (!gameState.isPlaying || gameState.isPaused || gameState.isPenalized || gameState.isLifeLostPaused) return;
 
             const key = event.key.toUpperCase();
             if (LETTERS.includes(key)) {
@@ -298,9 +434,10 @@ export const Game: React.FC = () => {
                 playShootSound();
             } else if (event.code === 'Space') {
                 setIsSpacePressed(true);
-                // Activate force field logic if needed
-            } else if (event.key === 'Escape') {
-                setGameState(prev => ({ ...prev, isPaused: !prev.isPaused }));
+                // Activate force field (only when playing and not paused/penalized)
+                if (gameState.isPlaying && !gameState.isPaused && !gameState.isPenalized && !gameState.isLifeLostPaused) {
+                    phaserRef.current?.activateForceField();
+                }
             }
         };
 
@@ -319,7 +456,19 @@ export const Game: React.FC = () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, playShootSound]);
+    }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, playShootSound, skipPenalty]);
+
+    // Cleanup intervals on unmount
+    useEffect(() => {
+        return () => {
+            if (penaltyIntervalRef.current) {
+                clearInterval(penaltyIntervalRef.current);
+            }
+            if (lifeLostCountdownRef.current) {
+                clearInterval(lifeLostCountdownRef.current);
+            }
+        };
+    }, []);
 
     // Mobile Detection
     useEffect(() => {
@@ -350,8 +499,18 @@ export const Game: React.FC = () => {
                     onStageAdvance: () => { },
                     onGameOver: handleGameOver,
                     onProximityWarning: handleProximityWarning,
-                    onCombo: () => { },
-                    onSequentialBonus: () => { }
+                    onCombo: (count: number, multiplier: number) => {
+                        // Combo callback - already handled in handleLetterHit
+                        setCurrentComboMessage(`COMBO ${count}! x${multiplier}`);
+                        setIsComboMessageVisible(true);
+                        setTimeout(() => setIsComboMessageVisible(false), 1500);
+                    },
+                    onSequentialBonus: (bonus: number) => {
+                        // Sequential bonus callback
+                        setCurrentOrderMessage(`ORDEN PERFECTO!\n+${bonus} BONUS`);
+                        setIsOrderMessageVisible(true);
+                        setTimeout(() => setIsOrderMessageVisible(false), 2000);
+                    }
                 }}
             />
             <div className="game-ui-container">
@@ -371,12 +530,6 @@ export const Game: React.FC = () => {
                     </div>
                 )}
 
-                {isComboMessageVisible && (
-                    <div className="floating-combo-message">
-                        <div className="floating-combo-content">{currentComboMessage}</div>
-                    </div>
-                )}
-
                 <div className="integrated-control-panel">
                     <div className="control-section left-section">
                         <HandMap side="left" highlightedKey={gameState.pressedKey || undefined} isSpacePressed={isSpacePressed} subtleKeys={[]} />
@@ -390,10 +543,26 @@ export const Game: React.FC = () => {
                 </div>
             </div>
 
-            <CentralMessage message={gameState.centralMessage} countdown={gameState.countdown} show={gameState.showCentralMessage} />
+            <CentralMessage 
+                message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)} 
+                countdown={gameState.isPaused ? null : gameState.countdown} 
+                show={gameState.showCentralMessage || gameState.isPaused} 
+            />
+
+            {isComboMessageVisible && (
+                <div className="floating-combo-message" style={{ zIndex: 20 }}>
+                    <div className="floating-combo-content">{currentComboMessage}</div>
+                </div>
+            )}
+
+            {isOrderMessageVisible && (
+                <div className="floating-order-message" style={{ zIndex: 20 }}>
+                    <div className="floating-order-content">{currentOrderMessage}</div>
+                </div>
+            )}
 
             {!gameState.isPlaying && gameState.lives > 0 && (
-                <Instructions onStart={() => startGame()} onContinue={continueGame} showContinue={gameState.score > 0} />
+                <Instructions onStart={(level) => startGame(level)} onContinue={continueGame} showContinue={gameState.score > 0} />
             )}
 
             {!gameState.isPlaying && gameState.lives <= 0 && (

@@ -17,6 +17,7 @@ export interface GameState {
     showCentralMessage: boolean;
     countdown: number | null;
     isPaused: boolean;
+    isLifeLostPaused: boolean;
     showSectorInfo: boolean;
     sectorInfoTimeout: number | null;
     firstMeteoritePause: boolean;

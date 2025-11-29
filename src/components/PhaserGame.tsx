@@ -11,6 +11,7 @@ interface PhaserGameProps {
 
 export interface PhaserGameRef {
     shootBullet: (targetLetter: string) => void;
+    activateForceField: () => void;
 }
 
 export const PhaserGame = forwardRef<PhaserGameRef, PhaserGameProps>(({
@@ -27,6 +28,14 @@ export const PhaserGame = forwardRef<PhaserGameRef, PhaserGameProps>(({
                 const scene = phaserGameRef.current.scene.getScene('GameScene') as GameScene;
                 if (scene) {
                     scene.shootBullet(targetLetter);
+                }
+            }
+        },
+        activateForceField: () => {
+            if (phaserGameRef.current) {
+                const scene = phaserGameRef.current.scene.getScene('GameScene') as GameScene;
+                if (scene) {
+                    scene.activateForceField();
                 }
             }
         }
@@ -83,8 +92,8 @@ export const PhaserGame = forwardRef<PhaserGameRef, PhaserGameProps>(({
                 // Actualizar el estado en la escena
                 scene.updateGameState(gameState);
 
-                // Pausar/reanudar según el estado
-                if (gameState.isPaused) {
+                // Pausar/reanudar según el estado (pausa tradicional o pausa por pérdida de vida)
+                if (gameState.isPaused || gameState.isLifeLostPaused) {
                     scene.setPaused(true);
                 } else {
                     scene.setPaused(false);
@@ -93,5 +102,5 @@ export const PhaserGame = forwardRef<PhaserGameRef, PhaserGameProps>(({
         }
     }, [gameState]);
 
-    return <div ref={gameRef} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0 }} />;
+    return <div ref={gameRef} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 0, pointerEvents: gameState.isPaused ? 'none' : 'auto' }} />;
 });

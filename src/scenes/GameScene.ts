@@ -4,6 +4,9 @@ import { TYPING_STAGES, KEYBOARD_POSITIONS, type GameState, type FallingLetter }
 // Import assets
 import naveImg from '../assets/images/nave.svg';
 import enemyImg from '../assets/images/enemy.svg';
+import asteroid1Img from '../assets/images/asteroid-01_40px.png';
+import asteroid2Img from '../assets/images/asteroid-02-40px.png';
+import asteroid3Img from '../assets/images/asteroid-03_40px.png';
 
 export interface GameSceneCallbacks {
     onScoreChange: (score: number) => void;
@@ -29,9 +32,18 @@ export class GameScene extends Phaser.Scene {
 
     // Groups
     private lettersGroup!: Phaser.GameObjects.Group;
+    private meteoritesGroup!: Phaser.GameObjects.Group;
+
+    // Force Field
+    private forceField!: Phaser.GameObjects.Arc | null;
+    private forceFieldActive: boolean = false;
+    private forceFieldDuration: number = 3000; // 3 seconds
+    private forceFieldStartTime: number = 0;
 
     // Spawning logic
     private lastSpawnTime: number = 0;
+    private lastMeteoriteSpawnTime: number = 0;
+    private meteoriteSpawnInterval: number = 8000; // Spawn meteorite every 8 seconds
 
     constructor() {
         super({ key: 'GameScene' });
@@ -49,6 +61,9 @@ export class GameScene extends Phaser.Scene {
     preload() {
         this.load.image('nave', naveImg);
         this.load.image('enemy', enemyImg);
+        this.load.image('asteroid1', asteroid1Img);
+        this.load.image('asteroid2', asteroid2Img);
+        this.load.image('asteroid3', asteroid3Img);
 
         // Create particle texture programmatically (square)
         const graphics = this.make.graphics({ x: 0, y: 0 }, false);
@@ -131,16 +146,35 @@ export class GameScene extends Phaser.Scene {
 
         // Groups
         this.lettersGroup = this.add.group();
+        this.meteoritesGroup = this.add.group();
+
+        // Initialize force field (hidden)
+        this.forceField = null;
+        this.forceFieldActive = false;
+
+        // Initialize force field (hidden)
+        this.forceField = null;
+        this.forceFieldActive = false;
     }
 
     update(time: number, delta: number) {
         // Safety check if init failed or not ready
-        if (!this.gameState || !this.lettersGroup) return;
+        if (!this.gameState || !this.lettersGroup || !this.meteoritesGroup) return;
 
         // Update Ship Rotation and thruster positions (ALWAYS - even when paused)
         if (this.ship) {
             const rotation = Phaser.Math.DegToRad(this.shipAngle);
             this.ship.setRotation(rotation);
+
+            // Update force field position if active
+            if (this.forceFieldActive && this.forceField) {
+                this.forceField.setPosition(this.ship.x, this.ship.y);
+                
+                // Check if duration expired
+                if (this.time.now - this.forceFieldStartTime >= this.forceFieldDuration) {
+                    this.deactivateForceField();
+                }
+            }
 
             // Update thruster positions and rotation to follow ship
             const thrusterOffsetX = (this.ship as any).thrusterOffsetX || 30;
@@ -324,24 +358,15 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // Game logic only runs when playing
-        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized) {
-            return;
-        }
-
-        // Spawning
-        if (time - this.lastSpawnTime > this.gameState.gameSpeed) {
-            this.spawnLetter(time);
-            this.lastSpawnTime = time;
-        }
-
-        // Update Letters with perspective movement
+        // Update Letters with perspective movement (ALWAYS - except when life lost countdown)
         const height = this.scale.height;
         const dangerZone = height * 0.6;
         const turnaroundPoint = height * 0.55; // Point where enemies reach "front" and start rising (55%)
         let hasDanger = false;
 
-        this.lettersGroup.getChildren().forEach((child: any) => {
+        // Don't update letters during life lost countdown
+        if (!this.gameState.isLifeLostPaused) {
+            this.lettersGroup.getChildren().forEach((child: any) => {
             const letterContainer = child as Phaser.GameObjects.Container;
             if (!letterContainer.active) return;
 
@@ -375,8 +400,8 @@ export class GameScene extends Phaser.Scene {
                     letterContainer.setData('risingStartY', letterContainer.y);
                 }
 
-                // Check danger zone during approach
-                if (letterContainer.y > dangerZone) {
+                // Check danger zone during approach (only when playing)
+                if (!this.gameState.isPaused && !this.gameState.isPenalized && letterContainer.y > dangerZone) {
                     hasDanger = true;
                 }
             } else if (phase === 'rising') {
@@ -395,12 +420,41 @@ export class GameScene extends Phaser.Scene {
                     this.handleLetterEscaped(letterContainer);
                 }
 
-                // Danger zone is more critical when rising
-                hasDanger = true;
+                // Danger zone is more critical when rising (only when playing)
+                if (!this.gameState.isPaused && !this.gameState.isPenalized) {
+                    hasDanger = true;
+                }
             }
-        });
+            });
+        }
 
-        this.callbacks.onProximityWarning(hasDanger);
+        // Update meteorites (ALWAYS - except when life lost countdown)
+        if (!this.gameState.isLifeLostPaused) {
+            this.updateMeteorites(delta);
+        }
+
+        // Only check proximity warning when playing
+        if (this.gameState.isPlaying && !this.gameState.isPaused && !this.gameState.isPenalized) {
+            this.callbacks.onProximityWarning(hasDanger);
+        }
+
+        // Game logic only runs when playing (spawning, etc.)
+        // Also pause if life lost countdown is active
+        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
+            return;
+        }
+
+        // Spawning letters
+        if (time - this.lastSpawnTime > this.gameState.gameSpeed) {
+            this.spawnLetter(time);
+            this.lastSpawnTime = time;
+        }
+
+        // Spawning meteorites (only from sector 3 onwards)
+        if (this.gameState.currentStage >= 3 && time - this.lastMeteoriteSpawnTime > this.meteoriteSpawnInterval) {
+            this.spawnMeteorite(time);
+            this.lastMeteoriteSpawnTime = time;
+        }
     }
 
     private spawnLetter(time: number) {
@@ -412,7 +466,7 @@ export class GameScene extends Phaser.Scene {
 
         // Calculate target horizontal position (where letter will end up)
         const position = KEYBOARD_POSITIONS[letterChar];
-        let targetX = Math.random() * (this.scale.width - 60);
+        let targetX = Math.random() * (this.scale.width - 75);
 
         if (position) {
             const gameAreaWidth = this.scale.width;
@@ -424,10 +478,16 @@ export class GameScene extends Phaser.Scene {
             targetX = Math.max(30, Math.min(targetX, gameAreaWidth - 30));
         }
 
-        // Calculate spawn X position (near center for perspective)
+        // Calculate spawn X position (more separated from center based on final position)
         const centerX = this.scale.width / 2;
         const displacementFromCenter = targetX - centerX;
-        const spawnX = centerX + (displacementFromCenter * 0.05); // Start at 5% of displacement from center
+        const maxDisplacement = this.scale.width / 2; // Maximum possible displacement
+        const normalizedDisplacement = Math.abs(displacementFromCenter) / maxDisplacement; // 0 to 1
+        
+        // Use a curve: letters closer to center start closer (5%), letters at edges start further (40%)
+        // This prevents extreme letters from having to travel too much horizontally
+        const spawnFactor = 0.2 + (normalizedDisplacement * 0.8); // 5% to 40% based on distance
+        const spawnX = centerX + (displacementFromCenter * spawnFactor);
 
         // Start from middle of screen (50% Y) with scale 0.1 (tiny but visible)
         const startY = this.scale.height * 0.5; // 50% from top
@@ -437,15 +497,18 @@ export class GameScene extends Phaser.Scene {
         // Add Enemy Image with random neon color
         const enemyColors = [0xFF10F0, 0x39FF14, 0x00FFFF, 0xFFFF00, 0xFF6600, 0xBF00FF];
         const enemyColor = enemyColors[Math.floor(Math.random() * enemyColors.length)];
-        const sprite = this.add.image(0, 0, 'enemy');
-        sprite.setDisplaySize(60, 60);
+        const enemySize = 100;
+        // Position enemy: 3% up, 0.5% left (relative to enemy size)
+        const offsetY = -enemySize * 0.15; // 3% up (negative Y)
+        const offsetX = -enemySize * 0.03; // 0.5% left (negative X)
+        const sprite = this.add.image(offsetX, offsetY, 'enemy');
+        sprite.setDisplaySize(enemySize, enemySize);
         sprite.setTint(enemyColor);
 
         // Add Text (30% below enemy center)
-        const enemySize = 60;
         const letterOffset = enemySize * 0.3;
         const text = this.add.text(0, letterOffset, letterChar, {
-            fontSize: '32px',
+            fontSize: '54px',
             fontFamily: '"Press Start 2P", monospace',
             color: '#ffffff',
             stroke: '#000000',
@@ -480,6 +543,132 @@ export class GameScene extends Phaser.Scene {
         this.lettersGroup.add(container);
     }
 
+    private spawnMeteorite(time: number) {
+        const { width, height } = this.scale;
+        
+        // Spawn from random side of screen (NEVER from bottom - case 2 removed)
+        // Only top (0), right (1), or left (3)
+        const sides = [0, 1, 3]; // Top, Right, Left (no bottom)
+        const side = sides[Math.floor(Math.random() * sides.length)];
+        let x: number, y: number;
+        let speedX: number, speedY: number;
+        
+        // Random asteroid image
+        const asteroidKey = `asteroid${Math.floor(Math.random() * 3) + 1}`;
+        
+        // Random size
+        const size = 30 + Math.random() * 20; // 30-50px
+        
+        // Target is ship position
+        const targetX = this.ship.x;
+        const targetY = this.ship.y;
+        
+        switch (side) {
+            case 0: // Top
+                x = Math.random() * width;
+                y = -50;
+                speedX = (targetX - x) / 60; // Reach target in ~60 frames
+                speedY = (targetY - y) / 60;
+                break;
+            case 1: // Right
+                x = width + 50;
+                y = Math.random() * height;
+                speedX = (targetX - x) / 60;
+                speedY = (targetY - y) / 60;
+                break;
+            default: // Left (case 3)
+                x = -50;
+                y = Math.random() * height;
+                speedX = (targetX - x) / 60;
+                speedY = (targetY - y) / 60;
+                break;
+        }
+        
+        const meteorite = this.add.image(x, y, asteroidKey);
+        meteorite.setDisplaySize(size, size);
+        meteorite.setTint(0xff6600); // Orange tint
+        meteorite.setDepth(8);
+        
+        // Add rotation animation
+        this.tweens.add({
+            targets: meteorite,
+            rotation: Math.PI * 2,
+            duration: 2000 + Math.random() * 1000,
+            repeat: -1,
+            ease: 'Linear'
+        });
+        
+        // Set data
+        meteorite.setData('speedX', speedX);
+        meteorite.setData('speedY', speedY);
+        meteorite.setData('id', time + Math.random());
+        
+        this.meteoritesGroup.add(meteorite);
+    }
+
+    private updateMeteorites(delta: number) {
+        const { width, height } = this.scale;
+        
+        this.meteoritesGroup.getChildren().forEach((child: any) => {
+            const meteorite = child as Phaser.GameObjects.Image;
+            if (!meteorite.active) return;
+            
+            const speedX = meteorite.getData('speedX') || 0;
+            const speedY = meteorite.getData('speedY') || 0;
+            
+            // Update position
+            meteorite.x += speedX * (delta / 16.66);
+            meteorite.y += speedY * (delta / 16.66);
+            
+            // Check collision with ship or force field
+            const distance = Phaser.Math.Distance.Between(
+                meteorite.x, meteorite.y,
+                this.ship.x, this.ship.y
+            );
+            const meteoriteRadius = meteorite.displayWidth / 2;
+            const shipRadius = this.ship.displayWidth / 2;
+            const forceFieldRadius = 150;
+            
+            if (this.forceFieldActive) {
+                // Check collision with force field
+                if (distance < forceFieldRadius) {
+                    // Meteorite hit force field - destroy it without damage
+                    this.handleMeteoriteHit(meteorite, true);
+                    return;
+                }
+            } else {
+                // Check collision with ship (only if force field is not active)
+                if (distance < meteoriteRadius + shipRadius) {
+                    // Meteorite hit ship - lose a life
+                    this.handleMeteoriteHit(meteorite, false);
+                    return;
+                }
+            }
+            
+            // Remove if off screen
+            if (meteorite.x < -100 || meteorite.x > width + 100 ||
+                meteorite.y < -100 || meteorite.y > height + 100) {
+                meteorite.destroy();
+            }
+        });
+    }
+
+    private handleMeteoriteHit(meteorite: Phaser.GameObjects.Image, hitForceField: boolean = false) {
+        if (hitForceField) {
+            // Force field protects - destroy meteorite without damage
+            this.createExplosion(meteorite.x, meteorite.y, 0x00ffff); // Cyan explosion for shield
+            meteorite.destroy();
+            return;
+        }
+        
+        // Meteorite hit ship - lose a life
+        this.createExplosion(meteorite.x, meteorite.y, 0xff6600);
+        meteorite.destroy();
+        
+        // Notify React to lose a life (same as letter escaped)
+        this.callbacks.onLetterEscaped();
+    }
+
     private handleLetterEscaped(letterContainer: Phaser.GameObjects.Container) {
         letterContainer.destroy();
         this.callbacks.onLetterEscaped();
@@ -487,6 +676,11 @@ export class GameScene extends Phaser.Scene {
 
     // Public method called from React
     public shootBullet(targetLetter: string) {
+        // Don't shoot if game is paused, penalized, or in life lost countdown
+        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
+            return;
+        }
+
         // Find target (exclude already hit letters)
         const targets = this.lettersGroup.getChildren().filter((child: any) => {
             const container = child as Phaser.GameObjects.Container;
@@ -738,5 +932,66 @@ export class GameScene extends Phaser.Scene {
         } else {
             this.scene.resume();
         }
+    }
+
+    public activateForceField() {
+        // Don't activate if game is not playing, paused, penalized, or in life lost countdown
+        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
+            return;
+        }
+
+        if (this.forceFieldActive) return; // Already active
+
+        this.forceFieldActive = true;
+        this.forceFieldStartTime = this.time.now;
+
+        // Create force field circle around ship
+        this.forceField = this.add.circle(
+            this.ship.x,
+            this.ship.y,
+            150, // radius
+            0x00ffff, // cyan color
+            0.3 // alpha
+        );
+        this.forceField.setStrokeStyle(4, 0x00ffff, 1);
+        this.forceField.setDepth(9);
+        this.forceField.setBlendMode(Phaser.BlendModes.ADD);
+
+        // Pulse animation
+        this.tweens.add({
+            targets: this.forceField,
+            scaleX: 1.2,
+            scaleY: 1.2,
+            alpha: 0.5,
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Auto deactivate after duration
+        this.time.delayedCall(this.forceFieldDuration, () => {
+            this.deactivateForceField();
+        });
+    }
+
+    private deactivateForceField() {
+        if (this.forceField) {
+            // Fade out animation
+            this.tweens.add({
+                targets: this.forceField,
+                alpha: 0,
+                scaleX: 0,
+                scaleY: 0,
+                duration: 300,
+                onComplete: () => {
+                    if (this.forceField) {
+                        this.forceField.destroy();
+                        this.forceField = null;
+                    }
+                }
+            });
+        }
+        this.forceFieldActive = false;
     }
 }

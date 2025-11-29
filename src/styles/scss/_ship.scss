@@ -147,10 +147,19 @@
   .compact-mini-ship{
     width: 20px; 
     height: 20px;
+    min-width: 20px;
+    min-height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    filter: drop-shadow(06 $color-cyan);
+    filter: drop-shadow(0 0 6px $color-cyan);
+    
+    .life-ship-icon {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 0 4px $color-cyan);
+    }
   }
 }
 

@@ -14,13 +14,9 @@ export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdo
     return (
         <div className={wrapperClass}>
             <div className="central-message-content">
-                {countdown !== null ? (
-                    <div className="countdown">
-                        <div key={countdown} className="countdown-number horizon-anim">{countdown}</div>
-                    </div>
-                ) : (
+                {message && (
                     <div className="status-message">
-                        {message?.split('\n').map((line, index) => (
+                        {message.split('\n').map((line, index) => (
                             <div key={index} className="message-line">
                                 {line.replace(/BACKSPACE|ENTER|ESC/gi, match => `||${match}||`).split('||').map((segment, i) => (
                                     segment.match(/BACKSPACE|ENTER|ESC/i) ?
@@ -29,6 +25,11 @@ export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdo
                                 ))}
                             </div>
                         ))}
+                    </div>
+                )}
+                {countdown !== null && (
+                    <div className="countdown">
+                        <div key={countdown} className="countdown-number horizon-anim">{countdown}</div>
                     </div>
                 )}
             </div>
