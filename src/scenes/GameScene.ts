@@ -4,6 +4,11 @@ import { TYPING_STAGES, KEYBOARD_POSITIONS, type GameState, type FallingLetter }
 // Import assets
 import naveImg from '../assets/images/nave.svg';
 import enemyImg from '../assets/images/enemy.svg';
+import enemyBImg from '../assets/images/enemy-b.svg';
+import enemy2Img from '../assets/images/enemy_2.svg';
+import enemy2BImg from '../assets/images/enemy_2b.svg';
+import enemy3Img from '../assets/images/enemy_3.svg';
+import enemy3BImg from '../assets/images/enemy_3b.svg';
 import asteroid1Img from '../assets/images/asteroid-01_40px.png';
 import asteroid2Img from '../assets/images/asteroid-02-40px.png';
 import asteroid3Img from '../assets/images/asteroid-03_40px.png';
@@ -34,6 +39,8 @@ export class GameScene extends Phaser.Scene {
     // Groups
     private lettersGroup!: Phaser.GameObjects.Group;
     private meteoritesGroup!: Phaser.GameObjects.Group;
+    private bossGroup!: Phaser.GameObjects.Group;
+    private bossProjectilesGroup!: Phaser.GameObjects.Group;
 
     // Force Field
     private forceField!: Phaser.GameObjects.Arc | null;
@@ -45,6 +52,20 @@ export class GameScene extends Phaser.Scene {
     private lastSpawnTime: number = 0;
     private lastMeteoriteSpawnTime: number = 0;
     private meteoriteSpawnInterval: number = 8000; // Spawn meteorite every 8 seconds
+
+    // Boss Snake
+    private bossActive: boolean = false;
+    private bossHead!: Phaser.GameObjects.Container;
+    private bossSegments: Phaser.GameObjects.Container[] = [];
+    private bossTrail: Array<{ x: number; y: number; rotation: number }> = [];
+    private bossHealth: number = 0;
+    private bossMaxHealth: number = 0;
+    private bossPhase: number = 1; // 1, 2, or 3
+    private bossAttackPattern: string = 'idle'; // 'idle', 'shooting', 'zigzag', 'dash'
+    private bossAttackTimer: number = 0;
+    private bossLastShotTime: number = 0;
+    private bossWaveTime: number = 0;
+    private previousStage: number = -1;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -62,6 +83,11 @@ export class GameScene extends Phaser.Scene {
     preload() {
         this.load.image('nave', naveImg);
         this.load.image('enemy', enemyImg);
+        this.load.image('enemy_b', enemyBImg);
+        this.load.image('enemy_2', enemy2Img);
+        this.load.image('enemy_2b', enemy2BImg);
+        this.load.image('enemy_3', enemy3Img);
+        this.load.image('enemy_3b', enemy3BImg);
         this.load.image('asteroid1', asteroid1Img);
         this.load.image('asteroid2', asteroid2Img);
         this.load.image('asteroid3', asteroid3Img);
@@ -439,20 +465,40 @@ export class GameScene extends Phaser.Scene {
             this.callbacks.onProximityWarning(hasDanger);
         }
 
+        // Check if we should spawn boss (when threshold is reached but boss not active)
+        // Boss spawns when lettersDestroyed reaches threshold for current stage
+        if (!this.bossActive && this.gameState.isPlaying && !this.gameState.isPaused && !this.gameState.isPenalized && !this.gameState.isLifeLostPaused) {
+            const currentThreshold = this.getThresholdForStage(this.gameState.currentStage);
+            if (this.gameState.lettersDestroyed >= currentThreshold && this.gameState.currentStage + 1 < TYPING_STAGES.length) {
+                // Spawn boss before advancing stage
+                this.spawnBoss();
+            }
+        }
+
+        // Check for stage change (after boss is defeated)
+        if (this.gameState.currentStage !== this.previousStage) {
+            this.previousStage = this.gameState.currentStage;
+        }
+
+        // Update boss if active (only when not paused)
+        if (this.bossActive && !this.gameState.isPaused && !this.gameState.isLifeLostPaused) {
+            this.updateBoss(time, delta);
+        }
+
         // Game logic only runs when playing (spawning, etc.)
         // Also pause if life lost countdown is active
         if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
             return;
         }
 
-        // Spawning letters
-        if (time - this.lastSpawnTime > this.gameState.gameSpeed) {
+        // Spawning letters (not during boss fight)
+        if (!this.bossActive && time - this.lastSpawnTime > this.gameState.gameSpeed) {
             this.spawnLetter(time);
             this.lastSpawnTime = time;
         }
 
-        // Spawning meteorites (only from sector 3 onwards)
-        if (this.gameState.currentStage >= 3 && time - this.lastMeteoriteSpawnTime > this.meteoriteSpawnInterval) {
+        // Spawning meteorites (only from sector 3 onwards, and not during boss)
+        if (!this.bossActive && this.gameState.currentStage >= 3 && time - this.lastMeteoriteSpawnTime > this.meteoriteSpawnInterval) {
             this.spawnMeteorite(time);
             this.lastMeteoriteSpawnTime = time;
         }
@@ -495,6 +541,23 @@ export class GameScene extends Phaser.Scene {
         const container = this.add.container(spawnX, startY);
         container.setScale(0.1); // Start tiny but visible
 
+        // Determine enemy sprite based on keyboard row
+        // row 0 = top row (QWERTYUIOP) → enemy_2
+        // row 1 = middle row (ASDFGHJKLÑ) → enemy
+        // row 2 = bottom row (ZXCVBNM) → enemy_3
+        let enemyKey = 'enemy'; // Default to middle row
+        let enemyBKey = 'enemy_b'; // Default B variant
+        if (position) {
+            if (position.row === 0) {
+                enemyKey = 'enemy_2'; // Top row
+                enemyBKey = 'enemy_2b';
+            } else if (position.row === 2) {
+                enemyKey = 'enemy_3'; // Bottom row
+                enemyBKey = 'enemy_3b';
+            }
+            // row === 1 or no position → use default 'enemy' and 'enemy_b'
+        }
+
         // Add Enemy Image with random neon color
         const enemyColors = [0xFF10F0, 0x39FF14, 0x00FFFF, 0xFFFF00, 0xFF6600, 0xBF00FF];
         const enemyColor = enemyColors[Math.floor(Math.random() * enemyColors.length)];
@@ -502,9 +565,30 @@ export class GameScene extends Phaser.Scene {
         // Position enemy: 3% up, 0.5% left (relative to enemy size)
         const offsetY = -enemySize * 0.15; // 3% up (negative Y)
         const offsetX = -enemySize * 0.03; // 0.5% left (negative X)
-        const sprite = this.add.image(offsetX, offsetY, 'enemy');
+        const sprite = this.add.image(offsetX, offsetY, enemyKey);
         sprite.setDisplaySize(enemySize, enemySize);
         sprite.setTint(enemyColor);
+
+        // Store both sprite keys for animation
+        sprite.setData('enemyKey', enemyKey);
+        sprite.setData('enemyBKey', enemyBKey);
+
+        // Create animation that alternates between normal and B variant every second
+        // Old-school sprite animation effect
+        let isNormalFrame = true;
+        const animateEnemy = () => {
+            if (!sprite.active) return; // Stop if sprite is destroyed
+            
+            const currentKey = isNormalFrame ? sprite.getData('enemyKey') : sprite.getData('enemyBKey');
+            sprite.setTexture(currentKey);
+            isNormalFrame = !isNormalFrame;
+            
+            // Schedule next frame change (1 second = 1000ms)
+            this.time.delayedCall(1000, animateEnemy);
+        };
+        
+        // Start animation after 1 second
+        this.time.delayedCall(1000, animateEnemy);
 
         // Add Text (30% below enemy center)
         const letterOffset = enemySize * 0.3;
@@ -666,6 +750,30 @@ export class GameScene extends Phaser.Scene {
         // Don't shoot if game is paused, penalized, or in life lost countdown
         if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
             return;
+        }
+
+        // First check if boss is active and has this letter
+        if (this.bossActive) {
+            if (this.hitBossSegment(targetLetter)) {
+                // Hit boss segment - create laser effect
+                const hitSegment = this.bossHead.getData('letter') === targetLetter 
+                    ? this.bossHead 
+                    : this.bossSegments.find(s => s.getData('letter') === targetLetter);
+                
+                if (hitSegment) {
+                    const laser = this.add.line(0, 0, this.ship.x, this.ship.y, hitSegment.x, hitSegment.y, 0xff0000);
+                    laser.setLineWidth(4);
+                    laser.setOrigin(0, 0);
+                    laser.setDepth(5);
+                    this.tweens.add({
+                        targets: laser,
+                        alpha: 0,
+                        duration: 150,
+                        onComplete: () => laser.destroy()
+                    });
+                }
+                return;
+            }
         }
 
         // Find target (exclude already hit letters)
@@ -969,52 +1077,26 @@ export class GameScene extends Phaser.Scene {
     }
 
     private createShipHitExplosion(x: number, y: number) {
-        // Reduced explosion (10% of force field particles) when meteorite hits ship
+        // Reduced explosion when meteorite hits ship (10x less particles, 5x less duration)
+        // Original: 4 particles total (2+1+1), now: 1 particle (4/10 = 0.4, rounded to 1 for visibility)
+        // Original duration: 800-1200ms, now: 160-240ms (5x less)
         const orangeColor = 0xff6600;
-        const redColor = 0xff0000;
-        const yellowColor = 0xffff00;
 
-        // Layer 1: Fast outward particles (10% = 1.5 -> 2 particles)
-        const fastParticles = this.add.particles(x, y, 'particle', {
+        // Single layer with minimal particles (10x less than original)
+        const particles = this.add.particles(x, y, 'particle', {
             speed: { min: 200, max: 500 },
             scale: { start: 2.0, end: 0 },
-            lifespan: 800,
+            lifespan: 160, // 800 / 5 = 160ms (5x less duration)
             blendMode: 'ADD',
-            quantity: 2, // 10% of 15
+            quantity: 1, // 4 / 10 = 0.4, but using 1 for minimal visibility
             tint: orangeColor,
             angle: { min: 0, max: 360 },
             alpha: { start: 1, end: 0 }
         });
 
-        // Layer 2: Medium speed particles (10% = 1 particle)
-        const mediumParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 150, max: 350 },
-            scale: { start: 1.5, end: 0 },
-            lifespan: 1000,
-            blendMode: 'ADD',
-            quantity: 1, // 10% of 10
-            tint: redColor,
-            angle: { min: 0, max: 360 },
-            alpha: { start: 0.8, end: 0 }
-        });
-
-        // Layer 3: Slow bright particles (10% = 1 particle)
-        const slowParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 50, max: 200 },
-            scale: { start: 1.8, end: 0 },
-            lifespan: 1200,
-            blendMode: 'ADD',
-            quantity: 1, // 10% of 8
-            tint: [orangeColor, yellowColor],
-            angle: { min: 0, max: 360 },
-            alpha: { start: 1, end: 0 }
-        });
-
-        // Auto destroy emitters after use
-        this.time.delayedCall(1200, () => {
-            fastParticles.destroy();
-            mediumParticles.destroy();
-            slowParticles.destroy();
+        // Auto destroy emitter after use (5x less duration: 1200 / 5 = 240ms)
+        this.time.delayedCall(240, () => {
+            particles.destroy();
         });
     }
 
@@ -1139,5 +1221,399 @@ export class GameScene extends Phaser.Scene {
             });
         }
         this.forceFieldActive = false;
+    }
+
+    // ========== BOSS SNAKE METHODS ==========
+
+    private spawnBoss() {
+        if (this.bossActive) return; // Boss already active
+
+        const stage = TYPING_STAGES[this.gameState.currentStage];
+        if (!stage || !stage.letters.length) return;
+
+        // Get learned letters from current and previous stages
+        const learnedLetters: string[] = [];
+        for (let i = 0; i <= this.gameState.currentStage; i++) {
+            const prevStage = TYPING_STAGES[i];
+            if (prevStage) {
+                prevStage.letters.forEach(letter => {
+                    if (!learnedLetters.includes(letter)) {
+                        learnedLetters.push(letter);
+                    }
+                });
+            }
+        }
+
+        if (learnedLetters.length === 0) return;
+
+        // Create boss snake with learned letters
+        this.bossActive = true;
+        this.bossSegments = [];
+        this.bossTrail = [];
+        this.bossMaxHealth = learnedLetters.length * 2; // 2 HP per segment
+        this.bossHealth = this.bossMaxHealth;
+        this.bossPhase = 1;
+        this.bossAttackPattern = 'idle';
+        this.bossAttackTimer = 0;
+        this.bossLastShotTime = 0;
+        this.bossWaveTime = 0;
+
+        const { width } = this.scale;
+
+        // Create head (first letter)
+        const headLetter = learnedLetters[0];
+        this.bossHead = this.createBossSegment(headLetter, width / 2, -100, true);
+        this.bossHead.setDepth(12);
+        this.bossGroup.add(this.bossHead);
+
+        // Create body segments (rest of letters)
+        for (let i = 1; i < learnedLetters.length; i++) {
+            const segment = this.createBossSegment(learnedLetters[i], width / 2, -100 - (i * 60), false);
+            segment.setDepth(11);
+            this.bossSegments.push(segment);
+            this.bossGroup.add(segment);
+        }
+
+        // Initialize trail with starting positions
+        for (let i = 0; i < 100; i++) {
+            this.bossTrail.push({
+                x: width / 2,
+                y: -100,
+                rotation: 0
+            });
+        }
+    }
+
+    private createBossSegment(letter: string, x: number, y: number, isHead: boolean): Phaser.GameObjects.Container {
+        const container = this.add.container(x, y);
+
+        // Create background circle for segment
+        const bg = this.add.circle(0, 0, isHead ? 40 : 35, 0x000000, 0.8);
+        bg.setStrokeStyle(3, isHead ? 0xff00ff : 0xff00aa, 1);
+        bg.setBlendMode(Phaser.BlendModes.ADD);
+
+        // Create letter text
+        const text = this.add.text(0, 0, letter, {
+            fontSize: isHead ? '48px' : '40px',
+            fontFamily: '"Press Start 2P", monospace',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        // Add neon glow effect
+        const glow = this.add.circle(0, 0, isHead ? 45 : 40, 0xff00ff, 0.3);
+        glow.setBlendMode(Phaser.BlendModes.ADD);
+
+        container.add([glow, bg, text]);
+
+        // Store data
+        container.setData('letter', letter);
+        container.setData('isHead', isHead);
+        container.setData('health', isHead ? 2 : 2);
+        container.setData('index', isHead ? 0 : this.bossSegments.length);
+
+        // Add pulsing animation
+        this.tweens.add({
+            targets: glow,
+            alpha: { from: 0.3, to: 0.6 },
+            scale: { from: 1, to: 1.2 },
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        return container;
+    }
+
+    private updateBoss(time: number, delta: number) {
+        if (!this.bossActive || !this.bossHead || !this.bossHead.active) {
+            this.bossActive = false;
+            return;
+        }
+
+        const { width, height } = this.scale;
+        this.bossWaveTime += delta * 0.001;
+
+        // Update boss phase based on health
+        const healthPercent = this.bossHealth / this.bossMaxHealth;
+        if (healthPercent <= 0.2 && this.bossPhase !== 3) {
+            this.bossPhase = 3;
+        } else if (healthPercent <= 0.5 && this.bossPhase === 1) {
+            this.bossPhase = 2;
+        }
+
+        // Update head position with wave movement
+        const waveSpeed = 0.002 + (this.bossPhase - 1) * 0.001; // Faster in later phases
+        const waveAmplitude = 150 + (this.bossPhase - 1) * 50; // Larger amplitude in later phases
+        const verticalWave = Math.sin(this.bossWaveTime * 0.5) * 30;
+
+        // Horizontal wave movement
+        const baseX = width / 2;
+        const waveX = baseX + Math.sin(this.bossWaveTime * waveSpeed * 100) * waveAmplitude;
+
+        // Vertical movement (approaching player)
+        const baseY = height * 0.3;
+        const approachY = baseY + verticalWave + Math.sin(this.bossWaveTime * 0.3) * 20;
+
+        // Z depth oscillation (for future 3D effect - not used yet)
+        // const bossZDepth = Math.sin(this.bossWaveTime * 0.4) * 50;
+
+        // Update head position
+        this.bossHead.x = waveX;
+        this.bossHead.y = approachY;
+
+        // Calculate rotation based on movement direction
+        const prevTrail = this.bossTrail[0];
+        if (prevTrail) {
+            const dx = waveX - prevTrail.x;
+            const dy = approachY - prevTrail.y;
+            const rotation = Math.atan2(dy, dx) + Math.PI / 2;
+            this.bossHead.setRotation(rotation);
+        }
+
+        // Add current position to trail
+        this.bossTrail.unshift({
+            x: waveX,
+            y: approachY,
+            rotation: this.bossHead.rotation
+        });
+
+        // Limit trail length
+        if (this.bossTrail.length > 100) {
+            this.bossTrail.pop();
+        }
+
+        // Update segments to follow trail
+        const segmentDelay = 10; // Frames between segments
+        this.bossSegments.forEach((segment, index) => {
+            const trailIndex = (index + 1) * segmentDelay;
+            if (trailIndex < this.bossTrail.length) {
+                const trailPos = this.bossTrail[trailIndex];
+                segment.x = trailPos.x;
+                segment.y = trailPos.y;
+                segment.setRotation(trailPos.rotation);
+            }
+        });
+
+        // Update attack patterns
+        this.bossAttackTimer += delta;
+        this.updateBossAttackPattern(time);
+
+        // Update boss projectiles
+        this.updateBossProjectiles(delta);
+
+        // Check collision with ship bullets
+        this.checkBossCollisions();
+
+        // Check if boss is defeated
+        if (this.bossHealth <= 0) {
+            this.defeatBoss();
+        }
+    }
+
+    private updateBossAttackPattern(time: number) {
+        const phaseSpeed = this.bossPhase === 3 ? 2000 : this.bossPhase === 2 ? 3000 : 4000;
+
+        if (this.bossAttackPattern === 'idle') {
+            if (this.bossAttackTimer > phaseSpeed) {
+                // Choose attack pattern
+                const rand = Math.random();
+                if (rand < 0.4) {
+                    this.bossAttackPattern = 'shooting';
+                    this.bossAttackTimer = 0;
+                } else if (rand < 0.7 && this.bossPhase >= 2) {
+                    this.bossAttackPattern = 'zigzag';
+                    this.bossAttackTimer = 0;
+                } else if (rand < 1.0 && this.bossPhase >= 3) {
+                    this.bossAttackPattern = 'dash';
+                    this.bossAttackTimer = 0;
+                }
+            }
+        } else if (this.bossAttackPattern === 'shooting') {
+            // Shoot in bursts
+            const burstInterval = 300;
+            const shotsPerBurst = 3;
+            const burstPause = 1000;
+
+            if (time - this.bossLastShotTime > burstInterval) {
+                this.bossShoot();
+                this.bossLastShotTime = time;
+
+                // Check if burst is complete
+                const shotsInBurst = Math.floor((time - (this.bossAttackTimer - burstPause)) / burstInterval);
+                if (shotsInBurst >= shotsPerBurst) {
+                    this.bossAttackPattern = 'idle';
+                    this.bossAttackTimer = 0;
+                }
+            }
+        } else if (this.bossAttackPattern === 'zigzag') {
+            // Aggressive zigzag movement
+            const zigzagDuration = 3000;
+            if (this.bossAttackTimer > zigzagDuration) {
+                this.bossAttackPattern = 'idle';
+                this.bossAttackTimer = 0;
+            }
+        } else if (this.bossAttackPattern === 'dash') {
+            // Dash towards player
+            const dashDuration = 2000;
+            if (this.bossAttackTimer > dashDuration) {
+                this.bossAttackPattern = 'idle';
+                this.bossAttackTimer = 0;
+            }
+        }
+    }
+
+    private bossShoot() {
+        if (!this.bossHead || !this.bossHead.active) return;
+
+        const angle = Phaser.Math.Angle.Between(
+            this.bossHead.x, this.bossHead.y,
+            this.ship.x, this.ship.y
+        );
+
+        const projectile = this.add.circle(this.bossHead.x, this.bossHead.y, 8, 0xff00ff, 1);
+        projectile.setStrokeStyle(2, 0xffffff, 1);
+        projectile.setBlendMode(Phaser.BlendModes.ADD);
+        projectile.setDepth(10);
+
+        const speed = 300;
+        const velocityX = Math.cos(angle) * speed;
+        const velocityY = Math.sin(angle) * speed;
+
+        projectile.setData('velocityX', velocityX);
+        projectile.setData('velocityY', velocityY);
+
+        this.bossProjectilesGroup.add(projectile);
+    }
+
+    private updateBossProjectiles(delta: number) {
+        const { width, height } = this.scale;
+
+        this.bossProjectilesGroup.getChildren().forEach((child: any) => {
+            const projectile = child as Phaser.GameObjects.Arc;
+            if (!projectile.active) return;
+
+            const velocityX = projectile.getData('velocityX') || 0;
+            const velocityY = projectile.getData('velocityY') || 0;
+
+            projectile.x += velocityX * (delta / 16.66);
+            projectile.y += velocityY * (delta / 16.66);
+
+            // Check collision with ship
+            const distance = Phaser.Math.Distance.Between(
+                projectile.x, projectile.y,
+                this.ship.x, this.ship.y
+            );
+
+            if (distance < 30) {
+                // Hit ship - lose a life
+                projectile.destroy();
+                this.callbacks.onShipDestroyed();
+                return;
+            }
+
+            // Remove if off screen
+            if (projectile.x < -50 || projectile.x > width + 50 ||
+                projectile.y < -50 || projectile.y > height + 50) {
+                projectile.destroy();
+            }
+        });
+    }
+
+    private checkBossCollisions() {
+        // Check if player bullets hit boss segments
+        // This would need to be implemented with actual bullet tracking
+        // For now, we'll handle it when player shoots at boss letters
+    }
+
+    public hitBossSegment(letter: string): boolean {
+        if (!this.bossActive) return false;
+
+        // Check head
+        if (this.bossHead && this.bossHead.getData('letter') === letter && this.bossHead.active) {
+            const health = this.bossHead.getData('health') || 2;
+            const newHealth = health - 1;
+            this.bossHead.setData('health', newHealth);
+            this.bossHealth--;
+
+            if (newHealth <= 0) {
+                // Head destroyed - boss defeated
+                this.defeatBoss();
+            } else {
+                // Create hit effect
+                this.createExplosion(this.bossHead.x, this.bossHead.y, 0xff00ff);
+            }
+            return true;
+        }
+
+        // Check segments
+        for (let i = 0; i < this.bossSegments.length; i++) {
+            const segment = this.bossSegments[i];
+            if (segment && segment.getData('letter') === letter && segment.active) {
+                const health = segment.getData('health') || 2;
+                const newHealth = health - 1;
+                segment.setData('health', newHealth);
+                this.bossHealth--;
+
+                if (newHealth <= 0) {
+                    // Remove segment
+                    this.createExplosion(segment.x, segment.y, 0xff00aa);
+                    segment.destroy();
+                    this.bossSegments.splice(i, 1);
+                    // Increase aggressiveness
+                    this.bossPhase = Math.min(3, this.bossPhase + 0.5);
+                } else {
+                    this.createExplosion(segment.x, segment.y, 0xff00aa);
+                }
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private defeatBoss() {
+        if (!this.bossActive) return;
+
+        // Create big explosion
+        if (this.bossHead) {
+            this.createExplosion(this.bossHead.x, this.bossHead.y, 0xff00ff);
+        }
+
+        // Destroy all segments
+        this.bossSegments.forEach(segment => {
+            if (segment.active) {
+                this.createExplosion(segment.x, segment.y, 0xff00aa);
+                segment.destroy();
+            }
+        });
+
+        // Destroy projectiles
+        this.bossProjectilesGroup.clear(true, true);
+
+        // Clean up
+        if (this.bossHead) {
+            this.bossHead.destroy();
+        }
+
+        this.bossActive = false;
+        this.bossSegments = [];
+        this.bossTrail = [];
+
+        // Calculate next stage (don't update gameState directly - let React handle it)
+        const nextStage = this.gameState.currentStage + 1;
+        
+        // Notify React to advance stage and show sector info
+        // The callback will update the React state with the new stage
+        if (nextStage < TYPING_STAGES.length) {
+            this.callbacks.onStageAdvance(nextStage);
+        }
+    }
+
+    private getThresholdForStage(stage: number): number {
+        const thresholds = [50, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500];
+        return thresholds[stage] || thresholds[thresholds.length - 1];
     }
 }

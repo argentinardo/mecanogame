@@ -213,10 +213,9 @@ export const Game: React.FC = () => {
                 ? prev.letterSpeed + SPEED_INCREMENT
                 : prev.letterSpeed;
 
-            // Check Stage Advance
-            if (shouldIncreaseDifficulty && prev.currentStage + 1 < TYPING_STAGES.length) {
-                setTimeout(() => advanceStage(), 0);
-            }
+            // Check Stage Advance - spawn boss first, then advance stage when boss is defeated
+            // Don't advance stage immediately, let boss appear first
+            // The boss will trigger the stage advance when defeated
 
             return {
                 ...prev,
@@ -443,6 +442,24 @@ export const Game: React.FC = () => {
         }
     }, [gameState.isPenalized, restoreBackgroundVolume]);
 
+    const handleBossDefeated = useCallback((nextStage: number) => {
+        // Boss defeated - advance stage, show sector info and pause
+        playLevelUpSound();
+        
+        // Pause for sector info
+        const timeout = setTimeout(() => {
+            setGameState(p => ({ ...p, showSectorInfo: false, isPaused: false, sectorInfoTimeout: null }));
+        }, 5000);
+
+        setGameState(prev => ({
+            ...prev,
+            currentStage: nextStage, // Advance to next stage
+            showSectorInfo: true,
+            isPaused: true,
+            sectorInfoTimeout: timeout as unknown as number
+        }));
+    }, [playLevelUpSound]);
+
     const handleProximityWarning = useCallback((hasWarning: boolean) => {
         if (hasWarning) {
             if (!proximityBeepIntervalRef.current && !isMuted && gameState.isPlaying) {
@@ -500,6 +517,22 @@ export const Game: React.FC = () => {
                 return;
             }
 
+            // Handle Enter to continue when sector info is shown
+            if (event.key === 'Enter' && gameState.isPlaying && gameState.isPaused && gameState.showSectorInfo) {
+                event.preventDefault();
+                // Clear timeout and resume game
+                if (gameState.sectorInfoTimeout) {
+                    clearTimeout(gameState.sectorInfoTimeout);
+                }
+                setGameState(prev => ({ 
+                    ...prev, 
+                    showSectorInfo: false, 
+                    isPaused: false, 
+                    sectorInfoTimeout: null 
+                }));
+                return;
+            }
+
             // Handle skip penalty with Backspace (works when penalized)
             if (event.key === 'Backspace' && gameState.isPenalized) {
                 event.preventDefault();
@@ -539,7 +572,7 @@ export const Game: React.FC = () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, playShootSound, skipPenalty]);
+    }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.isLifeLostPaused, gameState.showSectorInfo, gameState.sectorInfoTimeout, playShootSound, skipPenalty]);
 
     // Cleanup intervals on unmount
     useEffect(() => {
@@ -580,7 +613,7 @@ export const Game: React.FC = () => {
                     onShipDestroyed: handleShipDestroyed,
                     onWrongKey: handleLetterMiss,
                     onMeteoriteHit: () => { },
-                    onStageAdvance: () => { },
+                    onStageAdvance: handleBossDefeated,
                     onGameOver: handleGameOver,
                     onProximityWarning: handleProximityWarning,
                     onCombo: (count: number, multiplier: number) => {
