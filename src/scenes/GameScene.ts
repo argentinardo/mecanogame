@@ -501,7 +501,17 @@ export class GameScene extends Phaser.Scene {
 
         // Game logic only runs when playing (spawning, etc.)
         // Also pause if life lost countdown is active
-        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
+        // FIX: Allow update if isLifeLostPaused to play animations (boss exit, ship fall)
+        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized) {
+            return;
+        }
+
+        // If life lost paused, ONLY update boss (for victory exit) and tweens (automatic)
+        // Skip spawning and other logic
+        if (this.gameState.isLifeLostPaused) {
+            if (this.bossActive) {
+                this.updateBoss(time, delta);
+            }
             return;
         }
 
@@ -1138,15 +1148,13 @@ export class GameScene extends Phaser.Scene {
         if (leftThruster) leftThruster.stop();
         if (rightThruster) rightThruster.stop();
 
-        // Make ship explode and disappear (similar to enemy destruction)
+        // Make ship spin and fall off screen
         this.tweens.add({
             targets: this.ship,
-            scaleX: this.ship.scaleX * 2,
-            scaleY: this.ship.scaleY * 2,
-            alpha: 0,
-            rotation: this.ship.rotation + Math.PI * 2,
-            duration: 300,
-            ease: 'Power2',
+            y: this.scale.height + 100, // Fall off screen
+            rotation: this.ship.rotation + Math.PI * 4, // Spin 2 times
+            duration: 2000, // Slow fall
+            ease: 'Quad.easeIn', // Accelerate falling
             onComplete: () => {
                 // Ship will be recreated when game resumes, so we don't destroy it
                 // Just hide it temporarily
@@ -1164,6 +1172,17 @@ export class GameScene extends Phaser.Scene {
             this.ship.setVisible(true);
             this.ship.setAlpha(1);
             this.ship.setScale(0.2); // Restore original scale
+
+            // Respawn Animation: Rise from bottom
+            this.ship.setRotation(0); // Upright
+            this.ship.y = this.scale.height + 100; // Start off-screen bottom
+
+            this.tweens.add({
+                targets: this.ship,
+                y: this.scale.height - 100, // Target position (adjust as needed)
+                duration: 1000,
+                ease: 'Power2.easeOut'
+            });
 
             // Restart thrusters
             const leftThruster = (this.ship as any).leftThruster;
@@ -1646,7 +1665,7 @@ export class GameScene extends Phaser.Scene {
             }
         } else if (this.bossAttackPattern === 'shooting') {
             // Shoot in bursts
-            const burstInterval = 300;
+            const burstInterval = 600;
             const shotsPerBurst = 3;
             const burstPause = 1000;
 
@@ -1674,6 +1693,28 @@ export class GameScene extends Phaser.Scene {
             if (this.bossAttackTimer > dashDuration) {
                 this.bossAttackPattern = 'idle';
                 this.bossAttackTimer = 0;
+            }
+        } else if (this.bossAttackPattern === 'victory') {
+            // Figure-8 pattern upwards
+            const speed = 0.005;
+            const amplitudeX = 200;
+            const amplitudeY = 100;
+
+            // Move head
+            if (this.bossHead && this.bossHead.active) {
+                this.bossHead.y -= 2; // Move up constantly
+                this.bossHead.x = this.scale.width / 2 + Math.sin(time * speed) * amplitudeX * Math.cos(time * speed * 0.5); // Figure 8
+                this.bossHead.y += Math.sin(time * speed * 2) * amplitudeY * 0.1; // Add some vertical wave
+
+                // If off screen top, destroy
+                if (this.bossHead.y < -200) {
+                    this.bossActive = false;
+                    this.bossSegments.forEach(s => s.destroy());
+                    this.bossSegments = [];
+                    this.bossTrail = [];
+                    this.bossGroup.clear(true, true);
+                    this.bossProjectilesGroup.clear(true, true);
+                }
             }
         }
     }
@@ -1942,17 +1983,23 @@ export class GameScene extends Phaser.Scene {
 
     private handleBossCollision() {
         // Player loses a life
+        this.destroyShip(); // Trigger ship destruction animation (spin and fall)
         this.callbacks.onShipDestroyed();
 
-        // Reset boss (destroy and let it respawn fully)
-        this.bossActive = false;
-        this.bossSegments.forEach(s => s.destroy());
-        this.bossSegments = [];
-        this.bossTrail = [];
-        this.bossGroup.clear(true, true);
+        // Boss Victory Dance (Figure-8 upwards)
+        this.bossAttackPattern = 'victory';
+        this.bossAttackTimer = 0;
+
+        // Clear projectiles but keep boss
         this.bossProjectilesGroup.clear(true, true);
 
         // Note: The game loop will respawn the boss because lettersDestroyed threshold is still met
+        // But we want it to exit first. The respawn logic might need to wait?
+        // Actually, since we set bossActive=false ONLY after it exits screen, 
+        // the spawn logic in update() shouldn't trigger until then.
+        // Wait... spawn logic checks !bossActive. 
+        // We need to keep bossActive = true while it exits.
+        // So we DON'T set bossActive = false here.
     }
 
     private defeatBoss() {

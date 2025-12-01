@@ -92,8 +92,9 @@ export const PhaserGame = forwardRef<PhaserGameRef, PhaserGameProps>(({
                 // Actualizar el estado en la escena
                 scene.updateGameState(gameState);
 
-                // Pausar/reanudar según el estado (pausa tradicional o pausa por pérdida de vida)
-                if (gameState.isPaused || gameState.isLifeLostPaused) {
+                // Pausar/reanudar según el estado (pausa tradicional SOLAMENTE)
+                // NO pausar si es pérdida de vida, para permitir animaciones
+                if (gameState.isPaused) {
                     scene.setPaused(true);
                 } else {
                     scene.setPaused(false);
