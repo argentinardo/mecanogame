@@ -46,7 +46,7 @@ export const Game: React.FC = () => {
         playBossSpawn,
         startBossMusic,
         startMenuMusic,
-        stopMenuMusic,
+
         playScoringSound,
         playBlastSound
     } = useAudio();
