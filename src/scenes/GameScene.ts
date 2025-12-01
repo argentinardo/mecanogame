@@ -1570,7 +1570,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Update ALL segments to follow trail based on their offset
-        this.bossSegments.forEach((segment, index) => {
+        this.bossSegments.forEach((segment) => {
             if (!segment.active) return;
 
             const trailOffset = segment.getData('trailOffset') || 0;
