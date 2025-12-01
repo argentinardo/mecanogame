@@ -105,16 +105,12 @@ export const Game: React.FC = () => {
     const [currentOrderMessage, setCurrentOrderMessage] = useState<string | null>(null);
     const [isOrderMessageVisible, setIsOrderMessageVisible] = useState<boolean>(false);
 
-    const [isLifeLostPaused, setIsLifeLostPaused] = useState<boolean>(false);
-
     const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
-    const [isMobile, setIsMobile] = useState<boolean>(false);
 
     const phaserRef = useRef<PhaserGameRef>(null);
     const proximityBeepIntervalRef = useRef<number | undefined>(undefined);
-    const penaltyIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const lifeLostCountdownRef = useRef<NodeJS.Timeout | null>(null);
-    const [isLifeLostCountdown, setIsLifeLostCountdown] = useState<boolean>(false);
+    const penaltyIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lifeLostCountdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {
@@ -276,7 +272,7 @@ export const Game: React.FC = () => {
             };
         });
 
-        setIsLifeLostCountdown(true);
+        // Life lost countdown started
 
         // Countdown from 3 to 1
         let countdown = 3;
@@ -291,7 +287,6 @@ export const Game: React.FC = () => {
             } else {
                 clearInterval(countdownInterval);
                 lifeLostCountdownRef.current = null;
-                setIsLifeLostCountdown(false);
                 // Resume game and restore ship visibility
                 setGameState(prev => ({
                     ...prev,
@@ -313,7 +308,7 @@ export const Game: React.FC = () => {
             }
         }, 1000);
 
-        lifeLostCountdownRef.current = countdownInterval as unknown as NodeJS.Timeout;
+        lifeLostCountdownRef.current = countdownInterval;
     }, [playLifeLostSound, handleGameOver, playCountdownSound]);
 
     const handleShipDestroyed = useCallback(() => {
@@ -349,7 +344,7 @@ export const Game: React.FC = () => {
             };
         });
 
-        setIsLifeLostCountdown(true);
+        // Ship destroyed countdown started
 
         // Countdown from 3 to 1
         let countdown = 3;
@@ -364,7 +359,6 @@ export const Game: React.FC = () => {
             } else {
                 clearInterval(countdownInterval);
                 lifeLostCountdownRef.current = null;
-                setIsLifeLostCountdown(false);
                 // Resume game and restore ship visibility
                 setGameState(prev => ({
                     ...prev,
@@ -386,7 +380,7 @@ export const Game: React.FC = () => {
             }
         }, 1000);
 
-        lifeLostCountdownRef.current = countdownInterval as unknown as NodeJS.Timeout;
+        lifeLostCountdownRef.current = countdownInterval;
     }, [playLifeLostSound, handleGameOver, playCountdownSound]);
 
     const handleLetterMiss = useCallback(() => {
@@ -596,13 +590,7 @@ export const Game: React.FC = () => {
         };
     }, []);
 
-    // Mobile Detection
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(/Mobi|Android/i.test(navigator.userAgent));
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
+    // Mobile Detection (currently not used but kept for future features)
 
     // Start Menu Music on Mount
     useEffect(() => {

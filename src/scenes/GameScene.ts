@@ -761,8 +761,8 @@ export class GameScene extends Phaser.Scene {
 
     // Public method called from React
     public shootBullet(targetLetter: string) {
-        // Don't shoot if game is paused, penalized, or in life lost countdown
-        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
+        // Don't shoot if game is paused, penalized, life lost countdown, OR force field is active
+        if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused || this.forceFieldActive) {
             return;
         }
 
@@ -901,7 +901,11 @@ export class GameScene extends Phaser.Scene {
             tint: enemyColor,
             angle: { min: 0, max: 360 },
             gravityY: 0,
-            emitZone: { source: circle }
+            emitZone: {
+                type: 'random',
+                source: circle,
+                quantity: 2
+            }
         });
 
         // Auto destroy pixel particles
