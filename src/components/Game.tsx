@@ -39,7 +39,16 @@ export const Game: React.FC = () => {
         initAudioContext,
         toggleMute,
         isMuted,
-        playCountdownSound
+        playCountdownSound,
+        playBossShot,
+        playForceFieldHit,
+        playSegmentExplosion,
+        playBossSpawn,
+        startBossMusic,
+        startMenuMusic,
+        stopMenuMusic,
+        playScoringSound,
+        playBlastSound
     } = useAudio();
 
     const [gameState, setGameState] = useState<GameState>({
@@ -132,6 +141,7 @@ export const Game: React.FC = () => {
     // Callbacks for Phaser
     const handleLetterHit = useCallback((_letterObj: FallingLetter) => {
         playExplosionSound();
+        playScoringSound(); // Play scoring sound on hit
 
         // Combo Logic - use refs to get current values
         const currentTime = Date.now();
@@ -423,7 +433,7 @@ export const Game: React.FC = () => {
                 }));
             }
         }, 1000);
-        
+
         penaltyIntervalRef.current = interval;
     }, [playMissSound, lowerBackgroundVolume, restoreBackgroundVolume, playCountdownSound]);
 
@@ -445,7 +455,7 @@ export const Game: React.FC = () => {
     const handleBossDefeated = useCallback((nextStage: number) => {
         // Boss defeated - advance stage, show sector info and pause
         playLevelUpSound();
-        
+
         // Pause for sector info
         const timeout = setTimeout(() => {
             setGameState(p => ({ ...p, showSectorInfo: false, isPaused: false, sectorInfoTimeout: null }));
@@ -524,11 +534,11 @@ export const Game: React.FC = () => {
                 if (gameState.sectorInfoTimeout) {
                     clearTimeout(gameState.sectorInfoTimeout);
                 }
-                setGameState(prev => ({ 
-                    ...prev, 
-                    showSectorInfo: false, 
-                    isPaused: false, 
-                    sectorInfoTimeout: null 
+                setGameState(prev => ({
+                    ...prev,
+                    showSectorInfo: false,
+                    isPaused: false,
+                    sectorInfoTimeout: null
                 }));
                 return;
             }
@@ -594,6 +604,13 @@ export const Game: React.FC = () => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    // Start Menu Music on Mount
+    useEffect(() => {
+        if (!gameState.isPlaying) {
+            startMenuMusic();
+        }
+    }, [startMenuMusic, gameState.isPlaying]);
+
     return (
         <div className="game-container">
             <MobileWarning />
@@ -627,7 +644,13 @@ export const Game: React.FC = () => {
                         setCurrentOrderMessage(`ORDEN PERFECTO!\n+${bonus} BONUS`);
                         setIsOrderMessageVisible(true);
                         setTimeout(() => setIsOrderMessageVisible(false), 2000);
-                    }
+                    },
+                    onBossShot: playBossShot,
+                    onForceFieldHit: playForceFieldHit,
+                    onSegmentExplosion: playSegmentExplosion,
+                    onBossSpawn: playBossSpawn,
+                    onBossMusicStart: startBossMusic,
+                    onMassiveExplosion: playBlastSound
                 }}
             />
             <div className="game-ui-container">
@@ -660,10 +683,10 @@ export const Game: React.FC = () => {
                 </div>
             </div>
 
-            <CentralMessage 
-                message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)} 
-                countdown={gameState.isPaused ? null : gameState.countdown} 
-                show={gameState.showCentralMessage || gameState.isPaused} 
+            <CentralMessage
+                message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)}
+                countdown={gameState.isPaused ? null : gameState.countdown}
+                show={gameState.showCentralMessage || gameState.isPaused}
             />
 
             {isComboMessageVisible && (

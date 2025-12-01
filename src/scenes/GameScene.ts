@@ -12,6 +12,9 @@ import enemy3BImg from '../assets/images/enemy_3b.svg';
 import asteroid1Img from '../assets/images/asteroid-01_40px.png';
 import asteroid2Img from '../assets/images/asteroid-02-40px.png';
 import asteroid3Img from '../assets/images/asteroid-03_40px.png';
+import bossHeadImg from '../assets/images/centipede_head.svg';
+import bossSegmentImg from '../assets/images/segmento.svg';
+import bossSegmentEmptyImg from '../assets/images/segmento_empty.svg';
 
 export interface GameSceneCallbacks {
     onScoreChange: (score: number) => void;
@@ -27,6 +30,12 @@ export interface GameSceneCallbacks {
     onProximityWarning: (hasWarning: boolean) => void;
     onCombo: (count: number, multiplier: number) => void;
     onSequentialBonus: (bonus: number) => void;
+    onBossShot: () => void;
+    onForceFieldHit: () => void;
+    onSegmentExplosion: () => void;
+    onBossSpawn: () => void;
+    onBossMusicStart: () => void;
+    onMassiveExplosion: () => void;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -91,6 +100,9 @@ export class GameScene extends Phaser.Scene {
         this.load.image('asteroid1', asteroid1Img);
         this.load.image('asteroid2', asteroid2Img);
         this.load.image('asteroid3', asteroid3Img);
+        this.load.image('boss_head', bossHeadImg);
+        this.load.image('boss_segment', bossSegmentImg);
+        this.load.image('boss_segment_empty', bossSegmentEmptyImg);
 
         // Create particle texture programmatically (square)
         const graphics = this.make.graphics({ x: 0, y: 0 }, false);
@@ -174,6 +186,8 @@ export class GameScene extends Phaser.Scene {
         // Groups
         this.lettersGroup = this.add.group();
         this.meteoritesGroup = this.add.group();
+        this.bossGroup = this.add.group();
+        this.bossProjectilesGroup = this.add.group();
 
         // Initialize force field (hidden)
         this.forceField = null;
@@ -196,7 +210,7 @@ export class GameScene extends Phaser.Scene {
             // Update force field position if active
             if (this.forceFieldActive && this.forceField) {
                 this.forceField.setPosition(this.ship.x, this.ship.y);
-                
+
                 // Check if duration expired
                 if (this.time.now - this.forceFieldStartTime >= this.forceFieldDuration) {
                     this.deactivateForceField();
@@ -228,10 +242,10 @@ export class GameScene extends Phaser.Scene {
                 // Normalize to 0-360 range
                 while (emitAngle < 0) emitAngle += 360;
                 while (emitAngle >= 360) emitAngle -= 360;
-                
+
                 // Debug: Log angle to verify it's changing
                 // console.log('Ship angle:', this.shipAngle, 'Emit angle:', emitAngle);
-                
+
                 // Update emitter physics - access the emitter manager's emitters
                 // this.add.particles() returns a ParticleEmitterManager, which contains emitters
                 const emitterManager = leftThruster as any;
@@ -240,18 +254,18 @@ export class GameScene extends Phaser.Scene {
                     const emitterList = emitterManager.emitters.list;
                     if (emitterList && emitterList.length > 0) {
                         const particleEmitter = emitterList[0];
-                        
+
                         // Calculate speed adjustment based on ship angle for more realistic physics
                         const angleRad = Phaser.Math.DegToRad(this.shipAngle);
                         const verticalComponent = Math.abs(Math.sin(angleRad));
                         const baseSpeed = 200;
                         const speedVariation = 50;
                         const adjustedSpeed = baseSpeed + (speedVariation * verticalComponent);
-                        
+
                         // Calculate gravity component based on ship angle for realistic inertia
                         const gravityX = Math.sin(angleRad) * 30;
                         const gravityY = Math.cos(angleRad) * 50 + 50;
-                        
+
                         // CRITICAL: Update angle - particles must emit opposite to ship direction
                         // Try multiple methods to ensure the angle updates
                         try {
@@ -270,7 +284,7 @@ export class GameScene extends Phaser.Scene {
                         } catch (e) {
                             console.warn('Error updating particle angle:', e, 'emitAngle:', emitAngle, 'shipAngle:', this.shipAngle);
                         }
-                        
+
                         // Update speed
                         try {
                             if (particleEmitter.setSpeed) {
@@ -281,7 +295,7 @@ export class GameScene extends Phaser.Scene {
                         } catch (e) {
                             console.warn('Error updating particle speed:', e);
                         }
-                        
+
                         // Update gravity
                         try {
                             if (particleEmitter.setGravity) {
@@ -316,7 +330,7 @@ export class GameScene extends Phaser.Scene {
                 // Normalize to 0-360 range
                 while (emitAngle < 0) emitAngle += 360;
                 while (emitAngle >= 360) emitAngle -= 360;
-                
+
                 // Update emitter physics - access the emitter manager's emitters
                 const emitterManager = rightThruster as any;
                 if (emitterManager && emitterManager.emitters) {
@@ -324,18 +338,18 @@ export class GameScene extends Phaser.Scene {
                     const emitterList = emitterManager.emitters.list;
                     if (emitterList && emitterList.length > 0) {
                         const particleEmitter = emitterList[0];
-                        
+
                         // Calculate speed adjustment based on ship angle for more realistic physics
                         const angleRad = Phaser.Math.DegToRad(this.shipAngle);
                         const verticalComponent = Math.abs(Math.sin(angleRad));
                         const baseSpeed = 200;
                         const speedVariation = 50;
                         const adjustedSpeed = baseSpeed + (speedVariation * verticalComponent);
-                        
+
                         // Calculate gravity component based on ship angle for realistic inertia
                         const gravityX = Math.sin(angleRad) * 30;
                         const gravityY = Math.cos(angleRad) * 50 + 50;
-                        
+
                         // CRITICAL: Update angle - particles must emit opposite to ship direction
                         // Try multiple methods to ensure the angle updates
                         try {
@@ -354,7 +368,7 @@ export class GameScene extends Phaser.Scene {
                         } catch (e) {
                             console.warn('Error updating particle angle:', e, 'emitAngle:', emitAngle, 'shipAngle:', this.shipAngle);
                         }
-                        
+
                         // Update speed
                         try {
                             if (particleEmitter.setSpeed) {
@@ -365,7 +379,7 @@ export class GameScene extends Phaser.Scene {
                         } catch (e) {
                             console.warn('Error updating particle speed:', e);
                         }
-                        
+
                         // Update gravity
                         try {
                             if (particleEmitter.setGravity) {
@@ -394,64 +408,64 @@ export class GameScene extends Phaser.Scene {
         // Don't update letters during life lost countdown
         if (!this.gameState.isLifeLostPaused) {
             this.lettersGroup.getChildren().forEach((child: any) => {
-            const letterContainer = child as Phaser.GameObjects.Container;
-            if (!letterContainer.active) return;
+                const letterContainer = child as Phaser.GameObjects.Container;
+                if (!letterContainer.active) return;
 
-            // Skip if letter has been hit
-            if (letterContainer.getData('hit')) return;
+                // Skip if letter has been hit
+                if (letterContainer.getData('hit')) return;
 
-            const speed = letterContainer.getData('speed');
-            const phase = letterContainer.getData('phase');
+                const speed = letterContainer.getData('speed');
+                const phase = letterContainer.getData('phase');
 
-            if (phase === 'approaching') {
-                // Phase 1: Move down (approaching from horizon) and scale up to 0.7
-                letterContainer.y += speed * (delta / 16.66);
+                if (phase === 'approaching') {
+                    // Phase 1: Move down (approaching from horizon) and scale up to 0.7
+                    letterContainer.y += speed * (delta / 16.66);
 
-                // Scale from 0.1 to 0.7 as it approaches
-                const startY = height * 0.5;
-                const progress = (letterContainer.y - startY) / (turnaroundPoint - startY);
-                const currentScale = 0.1 + (progress * 0.6); // 0.1 -> 0.7
-                letterContainer.setScale(Math.min(currentScale, 0.7));
+                    // Scale from 0.1 to 0.7 as it approaches
+                    const startY = height * 0.5;
+                    const progress = (letterContainer.y - startY) / (turnaroundPoint - startY);
+                    const currentScale = 0.1 + (progress * 0.6); // 0.1 -> 0.7
+                    letterContainer.setScale(Math.min(currentScale, 0.7));
 
-                // Interpolate X position for perspective (from near center to target position)
-                const spawnX = letterContainer.getData('spawnX');
-                const targetX = letterContainer.getData('targetX');
-                if (spawnX !== undefined && targetX !== undefined) {
-                    const currentX = spawnX + (progress * (targetX - spawnX));
-                    letterContainer.x = currentX;
+                    // Interpolate X position for perspective (from near center to target position)
+                    const spawnX = letterContainer.getData('spawnX');
+                    const targetX = letterContainer.getData('targetX');
+                    if (spawnX !== undefined && targetX !== undefined) {
+                        const currentX = spawnX + (progress * (targetX - spawnX));
+                        letterContainer.x = currentX;
+                    }
+
+                    // Check if reached turnaround point
+                    if (letterContainer.y >= turnaroundPoint) {
+                        letterContainer.setData('phase', 'rising');
+                        letterContainer.setData('risingStartY', letterContainer.y);
+                    }
+
+                    // Check danger zone during approach (only when playing)
+                    if (!this.gameState.isPaused && !this.gameState.isPenalized && letterContainer.y > dangerZone) {
+                        hasDanger = true;
+                    }
+                } else if (phase === 'rising') {
+                    // Phase 2: Move up (rising toward player) and scale up to 1.0
+                    letterContainer.y -= speed * (delta / 16.66);
+
+                    // Scale from 0.7 to 1.0 as it rises
+                    const risingStartY = letterContainer.getData('risingStartY') || turnaroundPoint;
+                    const risingDistance = risingStartY - 0;
+                    const risingProgress = (risingStartY - letterContainer.y) / risingDistance;
+                    const currentScale = 0.7 + (risingProgress * 0.3); // 0.7 -> 1.0
+                    letterContainer.setScale(Math.min(currentScale, 1.0));
+
+                    // Letter escapes when it goes off the TOP of screen
+                    if (letterContainer.y < 0) {
+                        this.handleLetterEscaped(letterContainer);
+                    }
+
+                    // Danger zone is more critical when rising (only when playing)
+                    if (!this.gameState.isPaused && !this.gameState.isPenalized) {
+                        hasDanger = true;
+                    }
                 }
-
-                // Check if reached turnaround point
-                if (letterContainer.y >= turnaroundPoint) {
-                    letterContainer.setData('phase', 'rising');
-                    letterContainer.setData('risingStartY', letterContainer.y);
-                }
-
-                // Check danger zone during approach (only when playing)
-                if (!this.gameState.isPaused && !this.gameState.isPenalized && letterContainer.y > dangerZone) {
-                    hasDanger = true;
-                }
-            } else if (phase === 'rising') {
-                // Phase 2: Move up (rising toward player) and scale up to 1.0
-                letterContainer.y -= speed * (delta / 16.66);
-
-                // Scale from 0.7 to 1.0 as it rises
-                const risingStartY = letterContainer.getData('risingStartY') || turnaroundPoint;
-                const risingDistance = risingStartY - 0;
-                const risingProgress = (risingStartY - letterContainer.y) / risingDistance;
-                const currentScale = 0.7 + (risingProgress * 0.3); // 0.7 -> 1.0
-                letterContainer.setScale(Math.min(currentScale, 1.0));
-
-                // Letter escapes when it goes off the TOP of screen
-                if (letterContainer.y < 0) {
-                    this.handleLetterEscaped(letterContainer);
-                }
-
-                // Danger zone is more critical when rising (only when playing)
-                if (!this.gameState.isPaused && !this.gameState.isPenalized) {
-                    hasDanger = true;
-                }
-            }
             });
         }
 
@@ -530,7 +544,7 @@ export class GameScene extends Phaser.Scene {
         const displacementFromCenter = targetX - centerX;
         const maxDisplacement = this.scale.width / 2; // Maximum possible displacement
         const normalizedDisplacement = Math.abs(displacementFromCenter) / maxDisplacement; // 0 to 1
-        
+
         // Use a curve: letters closer to center start closer (5%), letters at edges start further (40%)
         // This prevents extreme letters from having to travel too much horizontally
         const spawnFactor = 0.2 + (normalizedDisplacement * 0.8); // 5% to 40% based on distance
@@ -578,15 +592,15 @@ export class GameScene extends Phaser.Scene {
         let isNormalFrame = true;
         const animateEnemy = () => {
             if (!sprite.active) return; // Stop if sprite is destroyed
-            
+
             const currentKey = isNormalFrame ? sprite.getData('enemyKey') : sprite.getData('enemyBKey');
             sprite.setTexture(currentKey);
             isNormalFrame = !isNormalFrame;
-            
+
             // Schedule next frame change (1 second = 1000ms)
             this.time.delayedCall(1000, animateEnemy);
         };
-        
+
         // Start animation after 1 second
         this.time.delayedCall(1000, animateEnemy);
 
@@ -630,31 +644,31 @@ export class GameScene extends Phaser.Scene {
 
     private spawnMeteorite(time: number) {
         const { width, height } = this.scale;
-        
+
         // Spawn only from top half of screen (from middle to top)
         // Random position in top half
         const x = Math.random() * width;
         const y = -50 - Math.random() * (height / 2); // From -50 to -(height/2 + 50)
-        
+
         // Random asteroid image
         const asteroidKey = `asteroid${Math.floor(Math.random() * 3) + 1}`;
-        
+
         // Random size
         const size = 30 + Math.random() * 20; // 30-50px
-        
+
         // Target is ship position
         const targetX = this.ship.x;
         const targetY = this.ship.y;
-        
+
         // Calculate speed (half speed - divide by 120 instead of 60)
         const speedX = (targetX - x) / 120; // Half speed
         const speedY = (targetY - y) / 120; // Half speed
-        
+
         const meteorite = this.add.image(x, y, asteroidKey);
         meteorite.setDisplaySize(size, size);
         meteorite.setTint(0xff6600); // Orange tint
         meteorite.setDepth(8);
-        
+
         // Add rotation animation
         this.tweens.add({
             targets: meteorite,
@@ -663,29 +677,29 @@ export class GameScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Linear'
         });
-        
+
         // Set data
         meteorite.setData('speedX', speedX);
         meteorite.setData('speedY', speedY);
         meteorite.setData('id', time + Math.random());
-        
+
         this.meteoritesGroup.add(meteorite);
     }
 
     private updateMeteorites(delta: number) {
         const { width, height } = this.scale;
-        
+
         this.meteoritesGroup.getChildren().forEach((child: any) => {
             const meteorite = child as Phaser.GameObjects.Image;
             if (!meteorite.active) return;
-            
+
             const speedX = meteorite.getData('speedX') || 0;
             const speedY = meteorite.getData('speedY') || 0;
-            
+
             // Update position
             meteorite.x += speedX * (delta / 16.66);
             meteorite.y += speedY * (delta / 16.66);
-            
+
             // Check collision with ship or force field
             const distance = Phaser.Math.Distance.Between(
                 meteorite.x, meteorite.y,
@@ -694,7 +708,7 @@ export class GameScene extends Phaser.Scene {
             const meteoriteRadius = meteorite.displayWidth / 2;
             const shipRadius = this.ship.displayWidth / 2;
             const forceFieldRadius = 150;
-            
+
             if (this.forceFieldActive) {
                 // Check collision with force field
                 if (distance < forceFieldRadius) {
@@ -710,7 +724,7 @@ export class GameScene extends Phaser.Scene {
                     return;
                 }
             }
-            
+
             // Remove if off screen
             if (meteorite.x < -100 || meteorite.x > width + 100 ||
                 meteorite.y < -100 || meteorite.y > height + 100) {
@@ -727,15 +741,15 @@ export class GameScene extends Phaser.Scene {
             meteorite.destroy();
             return;
         }
-        
+
         // Meteorite hit ship - lose a life
         // Create reduced explosion (10% of force field particles)
         this.createShipHitExplosion(meteorite.x, meteorite.y);
         meteorite.destroy();
-        
+
         // Destroy ship animation (similar to enemies)
         this.destroyShip();
-        
+
         // Notify React to lose a life with ship destroyed message
         this.callbacks.onShipDestroyed();
     }
@@ -754,24 +768,34 @@ export class GameScene extends Phaser.Scene {
 
         // First check if boss is active and has this letter
         if (this.bossActive) {
-            if (this.hitBossSegment(targetLetter)) {
+            const hitSegment = this.hitBossSegment(targetLetter);
+            if (hitSegment) {
                 // Hit boss segment - create laser effect
-                const hitSegment = this.bossHead.getData('letter') === targetLetter 
-                    ? this.bossHead 
-                    : this.bossSegments.find(s => s.getData('letter') === targetLetter);
-                
-                if (hitSegment) {
-                    const laser = this.add.line(0, 0, this.ship.x, this.ship.y, hitSegment.x, hitSegment.y, 0xff0000);
-                    laser.setLineWidth(4);
-                    laser.setOrigin(0, 0);
-                    laser.setDepth(5);
-                    this.tweens.add({
-                        targets: laser,
-                        alpha: 0,
-                        duration: 150,
-                        onComplete: () => laser.destroy()
-                    });
-                }
+                // Improved Laser Visibility
+                // Core white/cyan line
+                const laser = this.add.line(0, 0, this.ship.x, this.ship.y, hitSegment.x, hitSegment.y, 0x00ffff);
+                laser.setLineWidth(6);
+                laser.setOrigin(0, 0);
+                laser.setDepth(200); // Increased depth to be visible over boss (was 20)
+                laser.setBlendMode(Phaser.BlendModes.ADD);
+
+                // Outer glow (red)
+                const laserGlow = this.add.line(0, 0, this.ship.x, this.ship.y, hitSegment.x, hitSegment.y, 0xff0000);
+                laserGlow.setLineWidth(12);
+                laserGlow.setOrigin(0, 0);
+                laserGlow.setDepth(199); // Increased depth (was 19)
+                laserGlow.setAlpha(0.6);
+                laserGlow.setBlendMode(Phaser.BlendModes.ADD);
+
+                this.tweens.add({
+                    targets: [laser, laserGlow],
+                    alpha: 0,
+                    duration: 250,
+                    onComplete: () => {
+                        laser.destroy();
+                        laserGlow.destroy();
+                    }
+                });
                 return;
             }
         }
@@ -798,13 +822,13 @@ export class GameScene extends Phaser.Scene {
         // Calculate angle for ship rotation
         const angle = Phaser.Math.Angle.Between(this.ship.x, this.ship.y, target.x, target.y);
         const targetAngle = Phaser.Math.RadToDeg(angle) + 90;
-        
+
         // Cancel any existing tween
         if (this.shipAngleTween) {
             this.shipAngleTween.stop();
             this.shipAngleTween = null;
         }
-        
+
         // Animate ship angle quickly to target (fast tilt when shooting)
         this.shipAngleTween = this.tweens.addCounter({
             from: this.shipAngle,
@@ -905,12 +929,12 @@ export class GameScene extends Phaser.Scene {
             speed: target.getData('speed'),
             id: target.getData('id')
         };
-        
+
         // Callback calculates points and combo, returns points but doesn't update score yet
         const result = this.callbacks.onLetterHit(letterObj);
         const pointsEarned = result?.points || 10;
         const totalScoreToAdd = result?.totalScore || 10;
-        
+
         // Store points for display and score for later update
         target.setData('points', pointsEarned);
         target.setData('scoreToAdd', totalScoreToAdd);
@@ -946,12 +970,12 @@ export class GameScene extends Phaser.Scene {
                     // Get points from target data
                     const points = target.getData('points') || 10;
                     const scoreToAdd = target.getData('scoreToAdd') || points;
-                    
+
                     // Update score when points text appears (when letter reaches ship)
                     const currentScore = this.gameState.score;
                     const newScore = currentScore + scoreToAdd;
                     this.callbacks.onScoreChange(newScore);
-                    
+
                     const pointsText = this.add.text(
                         this.ship.x,
                         this.ship.y - 30, // Start slightly above ship
@@ -972,7 +996,7 @@ export class GameScene extends Phaser.Scene {
                             }
                         }
                     ).setOrigin(0.5).setDepth(15);
-                    
+
                     // Animate points text: move up and fade out
                     this.tweens.add({
                         targets: pointsText,
@@ -984,7 +1008,7 @@ export class GameScene extends Phaser.Scene {
                             pointsText.destroy();
                         }
                     });
-                    
+
                     target.destroy();
                 }
             });
@@ -1130,13 +1154,13 @@ export class GameScene extends Phaser.Scene {
     public updateGameState(newState: GameState) {
         const wasLifeLostPaused = this.gameState?.isLifeLostPaused || false;
         this.gameState = newState;
-        
+
         // Restore ship visibility when game resumes after destruction
         if (this.ship && wasLifeLostPaused && !newState.isLifeLostPaused && !this.ship.visible) {
             this.ship.setVisible(true);
             this.ship.setAlpha(1);
             this.ship.setScale(0.2); // Restore original scale
-            
+
             // Restart thrusters
             const leftThruster = (this.ship as any).leftThruster;
             const rightThruster = (this.ship as any).rightThruster;
@@ -1232,7 +1256,7 @@ export class GameScene extends Phaser.Scene {
         if (!stage || !stage.letters.length) return;
 
         // Get learned letters from current and previous stages
-        const learnedLetters: string[] = [];
+        let learnedLetters: string[] = [];
         for (let i = 0; i <= this.gameState.currentStage; i++) {
             const prevStage = TYPING_STAGES[i];
             if (prevStage) {
@@ -1244,10 +1268,24 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
+        // Ensure at least 10 segments by repeating letters if necessary
+        if (learnedLetters.length > 0) {
+            while (learnedLetters.length < 10) {
+                // Add random letters from the learned set to reach 10
+                const randomLetter = learnedLetters[Math.floor(Math.random() * learnedLetters.length)];
+                learnedLetters.push(randomLetter);
+            }
+        }
+
         if (learnedLetters.length === 0) return;
+
+        // Clear existing enemies
+        this.lettersGroup.clear(true, true);
 
         // Create boss snake with learned letters
         this.bossActive = true;
+        this.callbacks.onBossSpawn(); // Play boss spawn sound
+        this.callbacks.onBossMusicStart(); // Start boss music
         this.bossSegments = [];
         this.bossTrail = [];
         this.bossMaxHealth = learnedLetters.length * 2; // 2 HP per segment
@@ -1260,76 +1298,228 @@ export class GameScene extends Phaser.Scene {
 
         const { width } = this.scale;
 
-        // Create head (first letter)
-        const headLetter = learnedLetters[0];
-        this.bossHead = this.createBossSegment(headLetter, width / 2, -100, true);
-        this.bossHead.setDepth(12);
-        this.bossGroup.add(this.bossHead);
-
-        // Create body segments (rest of letters)
-        for (let i = 1; i < learnedLetters.length; i++) {
-            const segment = this.createBossSegment(learnedLetters[i], width / 2, -100 - (i * 60), false);
-            segment.setDepth(11);
-            this.bossSegments.push(segment);
-            this.bossGroup.add(segment);
-        }
-
         // Initialize trail with starting positions
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 2000; i++) { // Increased trail length for safety (more segments now)
             this.bossTrail.push({
                 x: width / 2,
                 y: -100,
                 rotation: 0
             });
         }
+
+        // Create all segments (including the first one which acts as visual head)
+        const segmentDelay = 8; // Reduced from 15 for even tighter spacing
+
+        // 1. Create HEAD (Square, no letter)
+        const headSegment = this.createBossHead(width / 2, -100);
+        headSegment.setDepth(100); // Head on top
+        headSegment.setData('trailOffset', 0);
+        this.bossHead = headSegment;
+        this.bossSegments.push(headSegment);
+        this.bossGroup.add(headSegment);
+
+        // 2. Create BODY segments (Interleaved: Empty -> Empty -> Letter)
+        let currentTrailOffset = segmentDelay; // Start after head
+
+        for (let i = 0; i < learnedLetters.length; i++) {
+            // A. Create EMPTY segment 1
+            const emptySegment1 = this.createBossSegment(null, width / 2, -100);
+            emptySegment1.setDepth(90 - (i * 3));
+            emptySegment1.setData('trailOffset', currentTrailOffset);
+            this.bossSegments.push(emptySegment1);
+            this.bossGroup.add(emptySegment1);
+
+            currentTrailOffset += segmentDelay;
+
+            // B. Create EMPTY segment 2
+            const emptySegment2 = this.createBossSegment(null, width / 2, -100);
+            emptySegment2.setDepth(90 - (i * 3) - 1);
+            emptySegment2.setData('trailOffset', currentTrailOffset);
+            this.bossSegments.push(emptySegment2);
+            this.bossGroup.add(emptySegment2);
+
+            currentTrailOffset += segmentDelay;
+
+            // C. Create LETTER segment
+            const letterSegment = this.createBossSegment(learnedLetters[i], width / 2, -100);
+            letterSegment.setDepth(90 - (i * 3) - 2);
+            letterSegment.setData('trailOffset', currentTrailOffset);
+            this.bossSegments.push(letterSegment);
+            this.bossGroup.add(letterSegment);
+
+            currentTrailOffset += segmentDelay;
+        }
+
+        // 3. Create TAIL (10 empty segments, tapering size)
+        for (let i = 0; i < 10; i++) {
+            const tailSegment = this.createBossSegment(null, width / 2, -100);
+
+            // Lower depth than body
+            tailSegment.setDepth(10 - i);
+            tailSegment.setData('trailOffset', currentTrailOffset);
+
+            // Tapering logic
+            // Pivot at top to shrink upwards
+            const sprite = tailSegment.getAt(0) as Phaser.GameObjects.Sprite;
+            if (sprite) {
+                // Set origin to Top Center
+                sprite.setOrigin(0.5, 0);
+                // Align top with the top of regular segments (-70)
+                // Regular segments are centered at -30 with height 80, so top is -70.
+                sprite.y = -70;
+
+                // Scale down
+                // FIX: Use setDisplaySize to respect the base size of 80x80
+                // Original image might be huge, so setScale(0.9) makes it huge.
+                // We want it to be 80 * 0.9, 80 * 0.8, etc.
+                const scaleFactor = 1.0 - (i * 0.08); // Start at 1.0, then 0.92, etc.
+                const targetSize = 80 * Math.max(0.2, scaleFactor);
+
+                sprite.setDisplaySize(targetSize, targetSize);
+            }
+
+            this.bossSegments.push(tailSegment);
+            this.bossGroup.add(tailSegment);
+
+            // Scale the distance between segments based on their size
+            // As segments get smaller, they should be closer together
+            const scaleFactor = 1.0 - (i * 0.08);
+            const scaledDelay = Math.max(3, Math.floor(segmentDelay * scaleFactor));
+            currentTrailOffset += scaledDelay;
+        }
     }
 
-    private createBossSegment(letter: string, x: number, y: number, isHead: boolean): Phaser.GameObjects.Container {
+    private createBossHead(x: number, y: number): Phaser.GameObjects.Container {
         const container = this.add.container(x, y);
 
-        // Create background circle for segment
-        const bg = this.add.circle(0, 0, isHead ? 40 : 35, 0x000000, 0.8);
-        bg.setStrokeStyle(3, isHead ? 0xff00ff : 0xff00aa, 1);
-        bg.setBlendMode(Phaser.BlendModes.ADD);
+        // Use Sprite for head
+        const headSprite = this.add.sprite(0, 0, 'boss_head');
+        headSprite.setDisplaySize(100, 100); // Adjust size as needed
 
-        // Create letter text
-        const text = this.add.text(0, 0, letter, {
-            fontSize: isHead ? '48px' : '40px',
-            fontFamily: '"Press Start 2P", monospace',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
+        // Offset head sprite position (100% down/up?)
+        // User said "por debajo un 100% de su propia altura mas arriba" -> "100% of its height higher"
+        // Previous was y=30. Height is 100. So move up by 100?
+        // Or set to -70 as planned?
+        // Let's set to -70 to move it UP relative to the container center.
+        // UPDATE: User said "quedo muy arriba, hay que bajarla un 50" -> -70 + 50 = -20.
+        headSprite.y = -20;
 
-        // Add neon glow effect
-        const glow = this.add.circle(0, 0, isHead ? 45 : 40, 0xff00ff, 0.3);
-        glow.setBlendMode(Phaser.BlendModes.ADD);
-
-        container.add([glow, bg, text]);
+        // No glow effect
+        container.add(headSprite);
 
         // Store data
-        container.setData('letter', letter);
-        container.setData('isHead', isHead);
-        container.setData('health', isHead ? 2 : 2);
-        container.setData('index', isHead ? 0 : this.bossSegments.length);
+        container.setData('isHead', true);
+        container.setData('health', 9999); // Indestructible by normal means
+        container.setData('index', 0);
 
-        // Add pulsing animation
+        // Spawn animation: Scale from 0.8 to 1.2
+        container.setScale(0.8);
         this.tweens.add({
-            targets: glow,
-            alpha: { from: 0.3, to: 0.6 },
-            scale: { from: 1, to: 1.2 },
-            duration: 1000,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
+            targets: container,
+            scale: 1.2,
+            duration: 2000,
+            ease: 'Sine.easeOut'
         });
 
         return container;
     }
 
+    private createBossSegment(letter: string | null, x: number, y: number): Phaser.GameObjects.Container {
+        const container = this.add.container(x, y);
+        const isSpacer = (letter === null);
+
+        // Use Sprite for segment
+        // Use 'boss_segment_empty' for spacers, 'boss_segment' for letters
+        const texture = isSpacer ? 'boss_segment_empty' : 'boss_segment';
+        const segmentSprite = this.add.sprite(0, 0, texture);
+        segmentSprite.setDisplaySize(80, 80); // Adjust size as needed
+
+        // Offset upwards as requested
+        // "bastante desplazado segun 'y' para arriba"
+        segmentSprite.y = -30;
+
+        if (!isSpacer && letter) {
+            // Create letter text - Positioned relative to the sprite
+            // User requested "100% of its height lower"
+            // Previous: -30. Height: ~32-40px. New: ~10.
+            const text = this.add.text(0, 10, letter, {
+                fontSize: '32px',
+                fontFamily: '"Press Start 2P", monospace',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }).setOrigin(0.5);
+
+            container.add(text);
+        }
+
+        // Add to container (Order: Sprite, [Text])
+        container.addAt(segmentSprite, 0);
+
+        // Store data
+        container.setData('letter', letter); // null for spacers
+        container.setData('isHead', false);
+        container.setData('isSpacer', isSpacer);
+        container.setData('health', 2);
+        container.setData('index', this.bossSegments.length);
+
+        // Spawn animation: Scale from 0.8 to 1.2
+        container.setScale(0.8);
+        this.tweens.add({
+            targets: container,
+            scale: 1.2,
+            duration: 2000,
+            ease: 'Sine.easeOut'
+        });
+
+        return container;
+    }
+
+    private createSpectacularExplosion(x: number, y: number, color: number | number[]) {
+        // More particles, higher speed
+        // Reduced scale (50% of previous)
+        // Multicolor: color can be array
+
+        const particles = this.add.particles(x, y, 'particle', {
+            speed: { min: 200, max: 600 },
+            scale: { start: 0.4, end: 0 }, // Reduced from 0.75 to 0.4 (User said "mas pequeño")
+            lifespan: 800,
+            blendMode: 'ADD',
+            quantity: 30, // More particles
+            tint: color, // Can be array
+            angle: { min: 0, max: 360 },
+            gravityY: 100
+        });
+
+        // NO RING EFFECT as requested
+        /*
+        const ring = this.add.circle(x, y, 10, color as number, 0);
+        ring.setStrokeStyle(4, color as number, 1);
+        this.tweens.add({
+            targets: ring,
+            radius: 50,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => ring.destroy()
+        });
+        */
+
+        // Auto destroy emitter
+        this.time.delayedCall(1000, () => {
+            particles.destroy();
+        });
+    }
+
     private updateBoss(time: number, delta: number) {
-        if (!this.bossActive || !this.bossHead || !this.bossHead.active) {
-            this.bossActive = false;
+        if (!this.bossActive) {
+            return;
+        }
+
+        // Check if only head remains (all body segments destroyed)
+        // Filter out head (index 0) and check if any other segments exist
+        const activeBodySegments = this.bossSegments.filter(s => s.active && !s.getData('isHead') && !s.getData('letterAbsorbed'));
+        if (activeBodySegments.length === 0 && this.bossSegments.length > 1) {
+            this.defeatBoss();
             return;
         }
 
@@ -1344,56 +1534,75 @@ export class GameScene extends Phaser.Scene {
             this.bossPhase = 2;
         }
 
-        // Update head position with wave movement
-        const waveSpeed = 0.002 + (this.bossPhase - 1) * 0.001; // Faster in later phases
-        const waveAmplitude = 150 + (this.bossPhase - 1) * 50; // Larger amplitude in later phases
-        const verticalWave = Math.sin(this.bossWaveTime * 0.5) * 30;
+        // Calculate Virtual Head position with wave movement
+        // Speed increased significantly (3x faster) -> User requested even faster/wider
+        const waveSpeed = 0.01 + (this.bossPhase - 1) * 0.005; // Increased speed
+        const waveAmplitude = 250 + (this.bossPhase - 1) * 50; // Increased amplitude (was 150)
 
         // Horizontal wave movement
         const baseX = width / 2;
         const waveX = baseX + Math.sin(this.bossWaveTime * waveSpeed * 100) * waveAmplitude;
 
         // Vertical movement (approaching player)
-        const baseY = height * 0.3;
-        const approachY = baseY + verticalWave + Math.sin(this.bossWaveTime * 0.3) * 20;
+        // Linear approach instead of wave
+        const approachSpeed = 40; // Increased from 20 to 40
+        const currentY = this.bossHead.y;
+        const approachY = currentY + (approachSpeed * (delta / 1000));
 
-        // Z depth oscillation (for future 3D effect - not used yet)
-        // const bossZDepth = Math.sin(this.bossWaveTime * 0.4) * 50;
-
-        // Update head position
-        this.bossHead.x = waveX;
-        this.bossHead.y = approachY;
-
-        // Calculate rotation based on movement direction
-        const prevTrail = this.bossTrail[0];
-        if (prevTrail) {
-            const dx = waveX - prevTrail.x;
-            const dy = approachY - prevTrail.y;
-            const rotation = Math.atan2(dy, dx) + Math.PI / 2;
-            this.bossHead.setRotation(rotation);
-        }
+        // Keep within bounds (don't go too low)
+        const maxY = height * 0.8;
+        const finalY = Math.min(approachY, maxY);
 
         // Add current position to trail
         this.bossTrail.unshift({
             x: waveX,
-            y: approachY,
-            rotation: this.bossHead.rotation
+            y: finalY,
+            rotation: 0 // Always 0 rotation
         });
 
         // Limit trail length
-        if (this.bossTrail.length > 100) {
+        if (this.bossTrail.length > 1000) {
             this.bossTrail.pop();
         }
 
-        // Update segments to follow trail
-        const segmentDelay = 10; // Frames between segments
+        // Update ALL segments to follow trail based on their offset
         this.bossSegments.forEach((segment, index) => {
-            const trailIndex = (index + 1) * segmentDelay;
-            if (trailIndex < this.bossTrail.length) {
-                const trailPos = this.bossTrail[trailIndex];
+            if (!segment.active) return;
+
+            const trailOffset = segment.getData('trailOffset') || 0;
+
+            if (trailOffset < this.bossTrail.length) {
+                const trailPos = this.bossTrail[trailOffset];
                 segment.x = trailPos.x;
                 segment.y = trailPos.y;
-                segment.setRotation(trailPos.rotation);
+                segment.setRotation(0); // Always horizontal/fixed orientation
+
+                // Check collision with ship
+                // Improved Collision Detection
+                // Only check if segment is actually on screen and close enough to matter
+                if (segment.y > 0 && segment.y < height) {
+                    // Check collision with ship
+                    // FIX: Reduce hit radius and adjust offset
+                    // Previous: hitRadius = 40 (too big)
+                    // Previous: collisionY = isHead ? segment.y + 30 : segment.y
+
+                    const isHead = segment.getData('isHead');
+                    const hitRadius = 25; // Reduced from 40
+                    const shipRadius = 20; // Approx ship body radius
+
+                    // For the head, we need to account for the visual offset
+                    // The head sprite is at y=-20 relative to container, but container moves.
+                    // Let's use the container center, but maybe slightly lower for the "head" visual
+                    const collisionX = segment.x;
+                    const collisionY = isHead ? segment.y + 20 : segment.y;
+
+                    const distance = Phaser.Math.Distance.Between(collisionX, collisionY, this.ship.x, this.ship.y);
+
+                    if (distance < hitRadius + shipRadius) {
+                        this.handleBossCollision();
+                        return;
+                    }
+                }
             }
         });
 
@@ -1407,9 +1616,9 @@ export class GameScene extends Phaser.Scene {
         // Check collision with ship bullets
         this.checkBossCollisions();
 
-        // Check if boss is defeated
+        // Check if boss is defeated (Health check is secondary now, mainly checking segments)
         if (this.bossHealth <= 0) {
-            this.defeatBoss();
+            // this.defeatBoss(); // Handled by segment count check at start
         }
     }
 
@@ -1466,26 +1675,40 @@ export class GameScene extends Phaser.Scene {
     }
 
     private bossShoot() {
+        // Use the HEAD segment as the shooting point
         if (!this.bossHead || !this.bossHead.active) return;
 
+        const shooter = this.bossHead;
+
+        // Shoot from the visual center (offset by 30)
+        // User requested "mouth", which is at the bottom of the head
+        const shootY = shooter.y + 40;
+
         const angle = Phaser.Math.Angle.Between(
-            this.bossHead.x, this.bossHead.y,
+            shooter.x, shootY,
             this.ship.x, this.ship.y
         );
 
-        const projectile = this.add.circle(this.bossHead.x, this.bossHead.y, 8, 0xff00ff, 1);
-        projectile.setStrokeStyle(2, 0xffffff, 1);
+        // Create a SPHERE projectile (Green/Yellow plasma ball)
+        const projectile = this.add.circle(shooter.x, shootY, 12, 0x00ff00, 1);
+        projectile.setStrokeStyle(3, 0xffff00, 1);
         projectile.setBlendMode(Phaser.BlendModes.ADD);
         projectile.setDepth(10);
 
-        const speed = 300;
+        // Add a glow/trail effect
+        // We can't easily add a trail to a raw shape without a container or particles, 
+        // but let's just make it look "energetic"
+
+        const speed = 7.29; // ~48x slower than original (350/48 ≈ 7.29)
         const velocityX = Math.cos(angle) * speed;
         const velocityY = Math.sin(angle) * speed;
 
         projectile.setData('velocityX', velocityX);
         projectile.setData('velocityY', velocityY);
+        projectile.setData('isBossProjectile', true); // Mark as boss projectile
 
         this.bossProjectilesGroup.add(projectile);
+        this.callbacks.onBossShot(); // Play shot sound
     }
 
     private updateBossProjectiles(delta: number) {
@@ -1507,10 +1730,28 @@ export class GameScene extends Phaser.Scene {
                 this.ship.x, this.ship.y
             );
 
-            if (distance < 30) {
-                // Hit ship - lose a life
+            // Force Field Interaction
+            if (this.forceFieldActive && distance < 150) { // Match visual force field radius
+                // Bounce/Destroy on shield
                 projectile.destroy();
-                this.callbacks.onShipDestroyed();
+                this.callbacks.onForceFieldHit(); // Play shield sound
+
+                // Play shield hit sound/effect (visual feedback)
+                const shieldHit = this.add.circle(this.ship.x, this.ship.y, 55, 0x00ffff, 0.5);
+                this.tweens.add({
+                    targets: shieldHit,
+                    alpha: 0,
+                    scale: 1.2,
+                    duration: 200,
+                    onComplete: () => shieldHit.destroy()
+                });
+                return;
+            }
+
+            if (distance < 30) {
+                // Hit ship - penalize like wrong key (not destroy)
+                projectile.destroy();
+                this.callbacks.onWrongKey();
                 return;
             }
 
@@ -1528,92 +1769,276 @@ export class GameScene extends Phaser.Scene {
         // For now, we'll handle it when player shoots at boss letters
     }
 
-    public hitBossSegment(letter: string): boolean {
-        if (!this.bossActive) return false;
+    // Modified to return the actual segment hit, not just boolean
+    public hitBossSegment(letter: string): Phaser.GameObjects.Container | null {
+        if (!this.bossActive) return null;
 
-        // Check head
-        if (this.bossHead && this.bossHead.getData('letter') === letter && this.bossHead.active) {
-            const health = this.bossHead.getData('health') || 2;
-            const newHealth = health - 1;
-            this.bossHead.setData('health', newHealth);
-            this.bossHealth--;
+        // Find the FIRST segment that matches the letter AND has a letter visible
+        // Exclude the head (isHead=true)
+        const segment = this.bossSegments.find(s =>
+            s.active &&
+            !s.getData('isHead') &&
+            s.getData('letter') === letter &&
+            !s.getData('letterAbsorbed')
+        );
 
-            if (newHealth <= 0) {
-                // Head destroyed - boss defeated
+        if (segment) {
+            // Mark letter as absorbed
+            segment.setData('letterAbsorbed', true);
+
+            // Absorb the letter (visuals)
+            this.absorbBossLetter(segment);
+
+            // Check if all body segments are gone
+            // FIX: Filter out spacers (isSpacer=true) or check if letter is present
+            const remainingLetters = this.bossSegments.filter(s =>
+                s.active &&
+                !s.getData('isHead') &&
+                !s.getData('isSpacer') && // Ignore spacers
+                !s.getData('letterAbsorbed')
+            ).length;
+
+            if (remainingLetters === 0) {
                 this.defeatBoss();
-            } else {
-                // Create hit effect
-                this.createExplosion(this.bossHead.x, this.bossHead.y, 0xff00ff);
             }
-            return true;
+            return segment;
         }
 
-        // Check segments
-        for (let i = 0; i < this.bossSegments.length; i++) {
-            const segment = this.bossSegments[i];
-            if (segment && segment.getData('letter') === letter && segment.active) {
-                const health = segment.getData('health') || 2;
-                const newHealth = health - 1;
-                segment.setData('health', newHealth);
-                this.bossHealth--;
+        return null;
+    }
 
-                if (newHealth <= 0) {
-                    // Remove segment
-                    this.createExplosion(segment.x, segment.y, 0xff00aa);
-                    segment.destroy();
-                    this.bossSegments.splice(i, 1);
-                    // Increase aggressiveness
-                    this.bossPhase = Math.min(3, this.bossPhase + 0.5);
-                } else {
-                    this.createExplosion(segment.x, segment.y, 0xff00aa);
+    private absorbBossLetter(segment: Phaser.GameObjects.Container) {
+        // Get the text object (index 1 now, since glow removed)
+        const letterText = segment.getAt(1) as Phaser.GameObjects.Text;
+
+        if (!letterText) return;
+
+        // Clone the text to animate it separately (so segment keeps moving)
+        // Offset +10 to match new text position
+        const flyingText = this.add.text(segment.x, segment.y + 10, letterText.text, {
+            fontSize: letterText.style.fontSize,
+            fontFamily: letterText.style.fontFamily,
+            color: letterText.style.color,
+            stroke: letterText.style.stroke,
+            strokeThickness: letterText.style.strokeThickness
+        }).setOrigin(0.5).setDepth(20);
+
+        // Hide original text
+        letterText.setVisible(false);
+
+        // Change segment appearance to show it's "dead" but still there
+        // FIX: segment.getAt(0) is now the Sprite (since glow was removed)
+        // Previous order: Glow (0), Sprite (1), Text (2)
+        // New order: Sprite (0), Text (1)
+
+        const sprite = segment.getAt(0) as Phaser.GameObjects.Sprite;
+        if (sprite && sprite.setTint) {
+            sprite.setTint(0x555555); // Grey out
+        }
+
+        // Chain Extinction Logic
+        const currentIndex = this.bossSegments.indexOf(segment);
+        if (currentIndex !== -1) {
+            // 1. Always dim the next 2 spacers (Standard behavior)
+            // 2. If it's the LAST letter, dim EVERYTHING until the end (Tail)
+
+            // Check if there are any more letters after this one
+            const hasMoreLetters = this.bossSegments.slice(currentIndex + 1).some(s =>
+                s.active && !s.getData('isSpacer') && !s.getData('letterAbsorbed')
+            );
+
+            let dimCount = 2; // Default: dim next 2 spacers
+            if (!hasMoreLetters) {
+                // Last letter: Dim everything until the end (Tail)
+                dimCount = this.bossSegments.length - 1 - currentIndex;
+            }
+
+            // Apply dimming forward
+            for (let i = 1; i <= dimCount; i++) {
+                const nextSegment = this.bossSegments[currentIndex + i];
+                if (nextSegment && nextSegment.active) {
+                    const spacerSprite = nextSegment.getAt(0) as Phaser.GameObjects.Sprite;
+                    if (spacerSprite && spacerSprite.setTint) {
+                        spacerSprite.setTint(0x555555);
+                    }
                 }
-                return true;
+            }
+
+            // 3. First Letter Check (Index 3: Head=0, S=1, S=2, L=3)
+            // If this is the first letter, dim the 2 preceding segments (spacers behind head)
+            if (currentIndex === 3) {
+                for (let i = 1; i <= 2; i++) {
+                    const prevSegment = this.bossSegments[currentIndex - i];
+                    if (prevSegment && prevSegment.active) {
+                        const spacerSprite = prevSegment.getAt(0) as Phaser.GameObjects.Sprite;
+                        if (spacerSprite && spacerSprite.setTint) {
+                            spacerSprite.setTint(0x555555);
+                        }
+                    }
+                }
             }
         }
 
-        return false;
+        // Animate flying text
+        this.tweens.add({
+            targets: flyingText,
+            scale: 1.5,
+            duration: 100
+        });
+
+        this.tweens.add({
+            targets: flyingText,
+            alpha: 0,
+            duration: 300,
+            ease: 'Linear'
+        });
+
+        this.tweens.add({
+            targets: flyingText,
+            x: this.ship.x,
+            y: this.ship.y,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => {
+                // Add score
+                const points = 50; // Boss segment points
+                this.callbacks.onScoreChange(this.gameState.score + points);
+
+                // Points text
+                const pointsText = this.add.text(
+                    this.ship.x,
+                    this.ship.y - 30,
+                    `+${points}`,
+                    {
+                        fontSize: '24px',
+                        fontFamily: '"Press Start 2P", monospace',
+                        color: '#ff00ff',
+                        stroke: '#000000',
+                        strokeThickness: 3
+                    }
+                ).setOrigin(0.5).setDepth(15);
+
+                this.tweens.add({
+                    targets: pointsText,
+                    y: this.ship.y - 80,
+                    alpha: 0,
+                    ease: 'Power1',
+                    duration: 800,
+                    onComplete: () => pointsText.destroy()
+                });
+
+                flyingText.destroy();
+
+                // DO NOT Destroy the segment here anymore
+                // this.createExplosion(segment.x, segment.y, 0xff00aa);
+                // segment.destroy();
+            }
+        });
+    }
+
+    private handleBossCollision() {
+        // Player loses a life
+        this.callbacks.onShipDestroyed();
+
+        // Reset boss (destroy and let it respawn fully)
+        this.bossActive = false;
+        this.bossSegments.forEach(s => s.destroy());
+        this.bossSegments = [];
+        this.bossTrail = [];
+        this.bossGroup.clear(true, true);
+        this.bossProjectilesGroup.clear(true, true);
+
+        // Note: The game loop will respawn the boss because lettersDestroyed threshold is still met
     }
 
     private defeatBoss() {
         if (!this.bossActive) return;
 
-        // Create big explosion
-        if (this.bossHead) {
-            this.createExplosion(this.bossHead.x, this.bossHead.y, 0xff00ff);
-        }
+        // Prevent multiple calls
+        this.bossActive = false;
 
-        // Destroy all segments
-        this.bossSegments.forEach(segment => {
+        this.bossProjectilesGroup.clear(true, true);
+
+        // Stop all movement
+        this.bossSegments.forEach(s => this.tweens.killTweensOf(s));
+        if (this.bossHead) this.tweens.killTweensOf(this.bossHead);
+
+        // Chain Reaction: Explode from Head to Tail
+        this.bossSegments.forEach((segment, index) => {
             if (segment.active) {
-                this.createExplosion(segment.x, segment.y, 0xff00aa);
-                segment.destroy();
+                // Delay increases with index (Head is 0)
+                // Much faster now because we have 3x segments
+                this.time.delayedCall(index * 50, () => {
+                    if (segment.active) {
+                        // Different color for head vs body
+                        const isHead = segment.getData('isHead');
+                        // Random color for explosion
+                        // Red, Yellow, Orange, White
+                        const colors = [0xff0000, 0xffff00, 0xffa500, 0xffffff];
+
+                        // Create SPECTACULAR explosion
+                        this.createSpectacularExplosion(segment.x, segment.y, colors);
+                        this.callbacks.onSegmentExplosion(); // Play segment boom sound
+
+                        // If head, maybe a bit more flair but not blinding
+                        if (isHead) {
+                            this.cameras.main.shake(200, 0.01); // Subtle shake
+                        }
+
+                        segment.destroy();
+                    }
+                });
             }
         });
 
-        // Destroy projectiles
-        this.bossProjectilesGroup.clear(true, true);
+        // 2. Massive Flash AFTER Chain Reaction
+        // Wait for chain reaction to finish
+        // Total time = segments * delay + buffer
+        const totalDuration = this.bossSegments.length * 50 + 1000;
 
-        // Clean up
-        if (this.bossHead) {
-            this.bossHead.destroy();
-        }
+        this.time.delayedCall(totalDuration, () => {
+            // Create massive flash
+            this.callbacks.onMassiveExplosion(); // Play massive blast sound
+            this.createMassiveFlash();
 
-        this.bossActive = false;
-        this.bossSegments = [];
-        this.bossTrail = [];
+            // Clean up
+            this.bossSegments = [];
+            this.bossTrail = [];
+            this.bossGroup.clear(true, true);
 
-        // Calculate next stage (don't update gameState directly - let React handle it)
-        const nextStage = this.gameState.currentStage + 1;
-        
-        // Notify React to advance stage and show sector info
-        // The callback will update the React state with the new stage
-        if (nextStage < TYPING_STAGES.length) {
-            this.callbacks.onStageAdvance(nextStage);
-        }
+            // Calculate next stage
+            const nextStage = this.gameState.currentStage + 1;
+
+            // Notify React to advance stage
+            if (nextStage < TYPING_STAGES.length) {
+                // Delay slightly more to let flash fade
+                this.time.delayedCall(1000, () => {
+                    this.callbacks.onStageAdvance(nextStage);
+                });
+            }
+        });
+    }
+
+
+
+    private createMassiveFlash() {
+        const flash = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0xffffff, 1);
+        flash.setOrigin(0, 0);
+        flash.setBlendMode(Phaser.BlendModes.ADD);
+        flash.setAlpha(0);
+
+        this.tweens.add({
+            targets: flash,
+            alpha: { from: 1, to: 0 },
+            duration: 1500,
+            onComplete: () => flash.destroy()
+        });
+
+        this.cameras.main.shake(500, 0.03);
     }
 
     private getThresholdForStage(stage: number): number {
-        const thresholds = [50, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500];
+        const thresholds = [5, 15, 30, 50, 75, 100, 1300, 1600, 2000, 2500];
         return thresholds[stage] || thresholds[thresholds.length - 1];
     }
 }

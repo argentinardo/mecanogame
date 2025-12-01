@@ -1,14 +1,28 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
-import mainThemeUrl from '../assets/sound/main-theme.mp3';
+import mainThemeUrl from '../assets/sound/mecanogame_main-theme.mp3';
+import menuThemeUrl from '../assets/sound/mecanogame_menu-theme.mp3';
+import laserUrl from '../assets/sound/mecanogame_laser.mp3';
+import blastUrl from '../assets/sound/mecanogame_blast.mp3';
+import lostLifeUrl from '../assets/sound/mecanogame_lost-life.mp3';
+import lostLife2Url from '../assets/sound/mecanogame_lost-life-2.mp3';
+import gameOverUrl from '../assets/sound/mecanogame_game-over.mp3';
+import scoringUrl from '../assets/sound/mecanogame_scoring.mp3';
+import pointUrl from '../assets/sound/mecanogame_point.mp3';
+import bossSongUrl from '../assets/sound/mecanogame_boss-song.mp3';
+import bossSpawnUrl from '../assets/sound/mecanogame_boss.mp3';
+import centipedeShotUrl from '../assets/sound/mecanogame_centipede-shot.mp3';
+import fieldForceUrl from '../assets/sound/mecanogame_field-force.mp3';
+import segmentBoomUrl from '../assets/sound/mecanogame_segment-boom.mp3';
 
 export const useAudio = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
-    const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
-    const [isMuted, setIsMuted] = useState(true); // Cambiado a true por defecto
+    const [isMuted, setIsMuted] = useState(true);
     const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
-    const normalVolumeRef = useRef<number>(0.3); // Volumen normal de la música
+    const bossMusicRef = useRef<HTMLAudioElement | null>(null);
+    const menuMusicRef = useRef<HTMLAudioElement | null>(null);
+    const normalVolumeRef = useRef<number>(0.3);
 
-    // Inicializar AudioContext
+    // Initialize AudioContext (kept for legacy or specific needs, but mostly using HTML5 Audio now)
     const initAudioContext = useCallback(() => {
         if (!audioContextRef.current) {
             audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -16,334 +30,225 @@ export const useAudio = () => {
         return audioContextRef.current;
     }, []);
 
-    // Crear audio sintético más complejo para efectos 16-bit
-    const createComplexSound = useCallback((config: {
-        frequencies: number[];
-        durations: number[];
-        types: OscillatorType[];
-        volumes: number[];
-        delays: number[];
-        effects?: {
-            distortion?: boolean;
-            reverb?: boolean;
-            filter?: { frequency: number; type: BiquadFilterType };
-        };
-    }) => {
+    // Helper to play a sound file
+    const playSound = useCallback((url: string, volume: number = 0.5) => {
         if (isMuted) return;
-        
-        const audioContext = initAudioContext();
-        
-        config.frequencies.forEach((freq, index) => {
-            setTimeout(() => {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                let finalNode: AudioNode = gainNode;
-
-                // Aplicar filtros si se especifican
-                if (config.effects?.filter) {
-                    const filter = audioContext.createBiquadFilter();
-                    filter.type = config.effects.filter.type;
-                    filter.frequency.setValueAtTime(config.effects.filter.frequency, audioContext.currentTime);
-                    oscillator.connect(filter);
-                    filter.connect(gainNode);
-                } else {
-                    oscillator.connect(gainNode);
-                }
-
-                // Aplicar distorsión si se especifica
-                if (config.effects?.distortion) {
-                    const waveshaper = audioContext.createWaveShaper();
-                    const samples = 44100;
-                    const curve = new Float32Array(samples);
-                    const deg = Math.PI / 180;
-                    for (let i = 0; i < samples; i++) {
-                        const x = (i * 2) / samples - 1;
-                        curve[i] = ((3 + 20) * x * 20 * deg) / (Math.PI + 20 * Math.abs(x));
-                    }
-                    waveshaper.curve = curve;
-                    waveshaper.oversample = '4x';
-                    
-                    gainNode.connect(waveshaper);
-                    finalNode = waveshaper;
-                }
-
-                finalNode.connect(audioContext.destination);
-
-                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
-                oscillator.type = config.types[index] || 'square';
-
-                const volume = config.volumes[index] || 0.1;
-                const duration = config.durations[index] || 0.1;
-                
-                gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
-
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + duration);
-            }, config.delays[index] || 0);
-        });
-    }, [initAudioContext, isMuted]);
-
-    // Sonido de disparo techno mejorado
-    const playShootSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [1200, 800, 1600, 600],
-            durations: [0.05, 0.08, 0.03, 0.1],
-            types: ['sawtooth', 'square', 'triangle', 'sawtooth'],
-            volumes: [0.15, 0.12, 0.08, 0.1],
-            delays: [0, 20, 40, 60],
-            effects: {
-                filter: { frequency: 2000, type: 'lowpass' },
-                distortion: true
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de explosión techno mejorado
-    const playExplosionSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [300, 150, 75, 200, 100, 50],
-            durations: [0.2, 0.3, 0.4, 0.25, 0.35, 0.5],
-            types: ['sawtooth', 'square', 'triangle', 'sawtooth', 'square', 'triangle'],
-            volumes: [0.2, 0.18, 0.15, 0.12, 0.1, 0.08],
-            delays: [0, 50, 100, 150, 200, 250],
-            effects: {
-                distortion: true,
-                filter: { frequency: 800, type: 'lowpass' }
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de fallo techno mejorado
-    const playMissSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [400, 300, 200, 150],
-            durations: [0.15, 0.2, 0.25, 0.3],
-            types: ['sawtooth', 'square', 'sawtooth', 'triangle'],
-            volumes: [0.15, 0.12, 0.1, 0.08],
-            delays: [0, 80, 160, 240],
-            effects: {
-                filter: { frequency: 600, type: 'lowpass' },
-                distortion: true
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de vida perdida techno mejorado
-    const playLifeLostSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [523, 440, 349, 293, 220],
-            durations: [0.3, 0.4, 0.5, 0.6, 0.8],
-            types: ['sine', 'triangle', 'sawtooth', 'square', 'triangle'],
-            volumes: [0.15, 0.13, 0.11, 0.09, 0.07],
-            delays: [0, 200, 400, 600, 800],
-            effects: {
-                filter: { frequency: 1000, type: 'lowpass' }
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de game over techno mejorado
-    const playGameOverSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [659, 554, 440, 349, 293, 220, 175],
-            durations: [0.4, 0.4, 0.4, 0.4, 0.4, 0.6, 1.0],
-            types: ['sine', 'triangle', 'sawtooth', 'square', 'triangle', 'sawtooth', 'sine'],
-            volumes: [0.12, 0.11, 0.1, 0.09, 0.08, 0.07, 0.05],
-            delays: [0, 300, 600, 900, 1200, 1500, 1800],
-            effects: {
-                filter: { frequency: 800, type: 'lowpass' }
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de level up techno mejorado
-    const playLevelUpSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [523, 659, 784, 1047, 1319],
-            durations: [0.2, 0.2, 0.2, 0.3, 0.4],
-            types: ['sine', 'triangle', 'sawtooth', 'square', 'sine'],
-            volumes: [0.1, 0.12, 0.14, 0.16, 0.18],
-            delays: [0, 150, 300, 450, 600],
-            effects: {
-                filter: { frequency: 3000, type: 'highpass' },
-                distortion: false
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de éxito para combos
-    const playComboSuccessSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [440, 554, 659, 880, 1109],
-            durations: [0.1, 0.1, 0.1, 0.15, 0.2],
-            types: ['sine', 'triangle', 'sine', 'triangle', 'sine'],
-            volumes: [0.08, 0.1, 0.12, 0.14, 0.16],
-            delays: [0, 80, 160, 240, 320],
-            effects: {
-                filter: { frequency: 2500, type: 'highpass' },
-                distortion: false
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de meteorito apareciendo
-    const playMeteoriteSound = useCallback(() => {
-        createComplexSound({
-            frequencies: [200, 150, 100, 80],
-            durations: [0.3, 0.4, 0.5, 0.6],
-            types: ['sawtooth', 'triangle', 'sawtooth', 'sine'],
-            volumes: [0.08, 0.06, 0.05, 0.04],
-            delays: [0, 100, 200, 300],
-            effects: {
-                filter: { frequency: 400, type: 'lowpass' },
-                distortion: true
-            }
-        });
-    }, [createComplexSound]);
-
-    // Sonido de detector de proximidad (beep como coche)
-    const playProximityBeep = useCallback(() => {
-        if (isMuted) return; // No reproducir si está silenciado
-        
-        createComplexSound({
-            frequencies: [800, 1000, 1200],
-            durations: [0.1, 0.1, 0.1],
-            types: ['sine', 'sine', 'sine'],
-            volumes: [0.25, 0.3, 0.35],
-            delays: [0, 50, 100],
-            effects: {
-                filter: { frequency: 2000, type: 'highpass' },
-                distortion: false
-            }
-        });
-    }, [createComplexSound, isMuted]);
-
-    // Sonido de cuenta regresiva - diferentes tonos para cada número
-    const playCountdownSound = useCallback((number: number) => {
-        // Frecuencias diferentes para cada número: 2, 1, 0 (final)
-        const frequencies = {
-            2: 900,   // Tono medio-alto (era para el 2)
-            1: 1000,  // Tono alto (era para el 1)
-            0: 1200   // Tono más alto para el final
-        };
-        
-        const freq = frequencies[number as keyof typeof frequencies] || 600;
-        
-        createComplexSound({
-            frequencies: [freq, freq * 1.2],
-            durations: [0.2, 0.3],
-            types: ['square', 'sine'],
-            volumes: [0.15, 0.1],
-            delays: [0, 100],
-            effects: {
-                filter: { frequency: 2000, type: 'bandpass' },
-                distortion: false
-            }
-        });
-    }, [createComplexSound]);
-
-    // Iniciar música de fondo desde archivo MP3
-    const startBackgroundMusic = useCallback(() => {
-        if (isMuted) return;
-        
-        // Si ya existe y está reproduciéndose, no hacer nada
-        if (backgroundMusicRef.current && !backgroundMusicRef.current.paused) {
-            return;
-        }
-        
-        // Detener y limpiar música anterior si existe
-        if (backgroundMusicRef.current) {
-            backgroundMusicRef.current.pause();
-            backgroundMusicRef.current.removeEventListener('canplaythrough', () => {});
-            backgroundMusicRef.current.removeEventListener('error', () => {});
-            backgroundMusicRef.current.src = '';
-            backgroundMusicRef.current = null;
-        }
-
-        // Crear nuevo elemento de audio
-        const audio = new Audio(mainThemeUrl);
-        audio.loop = true;
-        audio.volume = normalVolumeRef.current; // Usar el volumen normal guardado
-        audio.preload = 'auto';
-        
-        // Configurar eventos
-        const canPlayHandler = () => {
-            if (!isMuted && backgroundMusicRef.current === audio) {
-                audio.play().catch(console.error);
-            }
-        };
-        
-        const errorHandler = (e: Event) => {
-            console.error('Error cargando música de fondo:', e);
-        };
-        
-        audio.addEventListener('canplaythrough', canPlayHandler, { once: true });
-        audio.addEventListener('error', errorHandler);
-
-        backgroundMusicRef.current = audio;
-        
-        // Cargar el archivo
-        audio.load();
+        const audio = new Audio(url);
+        audio.volume = volume;
+        audio.play().catch(e => console.error("Error playing sound:", url, e));
     }, [isMuted]);
 
-    // Detener música de fondo
-    const stopBackgroundMusic = useCallback(() => {
-        if (backgroundMusicRef.current) {
-            backgroundMusicRef.current.pause();
-            backgroundMusicRef.current.currentTime = 0;
-            // No limpiar completamente aquí para permitir reanudar
+    // --- Sound Effects ---
+
+    const playShootSound = useCallback(() => {
+        playSound(laserUrl, 0.15);
+    }, [playSound]);
+
+    const playExplosionSound = useCallback(() => {
+        playSound(blastUrl, 0.2);
+    }, [playSound]);
+
+    const playMissSound = useCallback(() => {
+        playSound(lostLife2Url, 0.2); // Using lost-life-2 as "miss/error" sound
+    }, [playSound]);
+
+    const playLifeLostSound = useCallback(() => {
+        playSound(lostLifeUrl, 0.3);
+    }, [playSound]);
+
+    const playGameOverSound = useCallback(() => {
+        playSound(gameOverUrl, 0.4);
+    }, [playSound]);
+
+    const playLevelUpSound = useCallback(() => {
+        playSound(scoringUrl, 0.3);
+    }, [playSound]);
+
+    const playComboSuccessSound = useCallback(() => {
+        playSound(pointUrl, 0.2);
+    }, [playSound]);
+
+    const playScoringSound = useCallback(() => {
+        playSound(scoringUrl, 0.25);
+    }, [playSound]);
+
+    const playBlastSound = useCallback(() => {
+        playSound(blastUrl, 0.4); // Louder blast for massive explosion
+    }, [playSound]);
+
+    const playMeteoriteSound = useCallback(() => {
+        // Keep synthetic or find a file?
+        // Using a low pitch blast for now or synthetic if preferred.
+        // Let's stick to synthetic for meteorite to keep it distinct if no specific file
+        // Or re-use blast with lower volume?
+        // Let's use blastUrl but quieter
+        playSound(blastUrl, 0.1);
+    }, [playSound]);
+
+    const playProximityBeep = useCallback(() => {
+        // Keep synthetic beep as it's functional
+        if (isMuted) return;
+        const ctx = initAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(1000, ctx.currentTime);
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+    }, [isMuted, initAudioContext]);
+
+    const playCountdownSound = useCallback((number: number) => {
+        // Keep synthetic for countdown clarity
+        if (isMuted) return;
+        const ctx = initAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const freq = number === 0 ? 1200 : (number === 1 ? 1000 : 800);
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+    }, [isMuted, initAudioContext]);
+
+    // --- New Boss Sounds ---
+
+    const playBossShot = useCallback(() => {
+        playSound(centipedeShotUrl, 0.25);
+    }, [playSound]);
+
+    const playForceFieldHit = useCallback(() => {
+        playSound(fieldForceUrl, 0.3);
+    }, [playSound]);
+
+    const playSegmentExplosion = useCallback(() => {
+        playSound(segmentBoomUrl, 0.2);
+    }, [playSound]);
+
+    const playBossSpawn = useCallback(() => {
+        playSound(bossSpawnUrl, 0.35);
+    }, [playSound]);
+
+    // --- Music Control ---
+
+    const startMenuMusic = useCallback(() => {
+        if (isMuted) return;
+        if (menuMusicRef.current && !menuMusicRef.current.paused) return;
+
+        // Stop other music
+        stopBackgroundMusic();
+
+        const audio = new Audio(menuThemeUrl);
+        audio.loop = true;
+        audio.volume = normalVolumeRef.current;
+        audio.play().catch(console.error);
+        menuMusicRef.current = audio;
+    }, [isMuted]);
+
+    const stopMenuMusic = useCallback(() => {
+        if (menuMusicRef.current) {
+            menuMusicRef.current.pause();
+            menuMusicRef.current = null;
         }
     }, []);
 
-    // Reducir volumen de la música durante el recalibrado
+    const startBackgroundMusic = useCallback(() => {
+        if (isMuted) return;
+
+        // Stop menu music
+        stopMenuMusic();
+
+        // Stop boss music if playing
+        if (bossMusicRef.current) {
+            bossMusicRef.current.pause();
+            bossMusicRef.current = null;
+        }
+
+        if (backgroundMusicRef.current && !backgroundMusicRef.current.paused) return;
+
+        if (backgroundMusicRef.current) {
+            backgroundMusicRef.current.play().catch(console.error);
+        } else {
+            const audio = new Audio(mainThemeUrl);
+            audio.loop = true;
+            audio.volume = normalVolumeRef.current;
+            audio.play().catch(console.error);
+            backgroundMusicRef.current = audio;
+        }
+    }, [isMuted, stopMenuMusic]);
+
+    const startBossMusic = useCallback(() => {
+        if (isMuted) return;
+
+        // Stop background music
+        if (backgroundMusicRef.current) {
+            backgroundMusicRef.current.pause();
+        }
+
+        if (bossMusicRef.current && !bossMusicRef.current.paused) return;
+
+        const audio = new Audio(bossSongUrl);
+        audio.loop = true;
+        audio.volume = normalVolumeRef.current;
+        audio.play().catch(console.error);
+        bossMusicRef.current = audio;
+    }, [isMuted]);
+
+    const stopBackgroundMusic = useCallback(() => {
+        if (backgroundMusicRef.current) {
+            backgroundMusicRef.current.pause();
+        }
+        if (bossMusicRef.current) {
+            bossMusicRef.current.pause();
+        }
+    }, []);
+
     const lowerBackgroundVolume = useCallback(() => {
-        if (backgroundMusicRef.current && !isMuted) {
-            // Reducir el volumen a 30% del volumen normal
-            backgroundMusicRef.current.volume = normalVolumeRef.current * 0.3;
-        }
-    }, [isMuted]);
+        if (backgroundMusicRef.current) backgroundMusicRef.current.volume = normalVolumeRef.current * 0.3;
+        if (bossMusicRef.current) bossMusicRef.current.volume = normalVolumeRef.current * 0.3;
+        if (menuMusicRef.current) menuMusicRef.current.volume = normalVolumeRef.current * 0.3;
+    }, []);
 
-    // Restaurar volumen normal de la música
     const restoreBackgroundVolume = useCallback(() => {
-        if (backgroundMusicRef.current && !isMuted) {
-            // Restaurar el volumen normal
-            backgroundMusicRef.current.volume = normalVolumeRef.current;
-        }
-    }, [isMuted]);
+        if (backgroundMusicRef.current) backgroundMusicRef.current.volume = normalVolumeRef.current;
+        if (bossMusicRef.current) bossMusicRef.current.volume = normalVolumeRef.current;
+        if (menuMusicRef.current) menuMusicRef.current.volume = normalVolumeRef.current;
+    }, []);
 
-    // Toggle mute/unmute
     const toggleMute = useCallback(() => {
         setIsMuted(prev => {
             const newMuted = !prev;
-            
-            if (backgroundMusicRef.current) {
-                if (newMuted) {
-                    backgroundMusicRef.current.pause();
-                } else {
+            if (newMuted) {
+                if (backgroundMusicRef.current) backgroundMusicRef.current.pause();
+                if (bossMusicRef.current) bossMusicRef.current.pause();
+                if (menuMusicRef.current) menuMusicRef.current.pause();
+            } else {
+                // Resume whichever was active
+                if (bossMusicRef.current) {
+                    bossMusicRef.current.play().catch(console.error);
+                } else if (backgroundMusicRef.current) {
                     backgroundMusicRef.current.play().catch(console.error);
+                } else if (menuMusicRef.current) {
+                    menuMusicRef.current.play().catch(console.error);
                 }
             }
-            
             return newMuted;
         });
     }, []);
 
-    // Limpiar recursos al desmontar
     useEffect(() => {
         return () => {
-            if (backgroundMusicRef.current) {
-                backgroundMusicRef.current.pause();
-                backgroundMusicRef.current.src = '';
-            }
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-            }
-            audioElementsRef.current.forEach(audio => {
-                audio.pause();
-                audio.src = '';
-            });
-            audioElementsRef.current.clear();
+            if (backgroundMusicRef.current) backgroundMusicRef.current.pause();
+            if (bossMusicRef.current) bossMusicRef.current.pause();
+            if (menuMusicRef.current) menuMusicRef.current.pause();
+            if (audioContextRef.current) audioContextRef.current.close();
         };
     }, []);
 
@@ -355,15 +260,24 @@ export const useAudio = () => {
         playGameOverSound,
         playLevelUpSound,
         playComboSuccessSound,
+        playScoringSound,
+        playBlastSound,
         playMeteoriteSound,
         playProximityBeep,
+        playCountdownSound,
+        playBossShot,
+        playForceFieldHit,
+        playSegmentExplosion,
+        playBossSpawn,
         startBackgroundMusic,
+        startBossMusic,
+        startMenuMusic,
+        stopMenuMusic,
         stopBackgroundMusic,
         lowerBackgroundVolume,
         restoreBackgroundVolume,
         initAudioContext,
         toggleMute,
-        isMuted,
-        playCountdownSound
+        isMuted
     };
 }; 
