@@ -185,6 +185,7 @@ export const useAudio = () => {
     }, [isMuted, stopMenuMusic]);
 
     const startBossMusic = useCallback(() => {
+        console.log('>>> startBossMusic called, isMuted:', isMuted);
         if (isMuted) return;
 
         // Stop background music

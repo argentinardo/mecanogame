@@ -54,7 +54,7 @@ export class GameScene extends Phaser.Scene {
     // Force Field
     private forceField!: Phaser.GameObjects.Arc | null;
     private forceFieldActive: boolean = false;
-    private forceFieldDuration: number = 3000; // 3 seconds
+    private forceFieldDuration: number = 1500; // 1.5 seconds
     private forceFieldStartTime: number = 0;
 
     // Spawning logic
@@ -75,6 +75,8 @@ export class GameScene extends Phaser.Scene {
     private bossLastShotTime: number = 0;
     private bossWaveTime: number = 0;
     private previousStage: number = -1;
+    private bossHasExited: boolean | null = null; // null = never spawned, true = exited after collision, false = needs to exit
+    private bossDefeatedForCurrentStage: boolean = false; // Track if boss was defeated for current stage
 
     constructor() {
         super({ key: 'GameScene' });
@@ -481,7 +483,13 @@ export class GameScene extends Phaser.Scene {
 
         // Check if we should spawn boss (when threshold is reached but boss not active)
         // Boss spawns when lettersDestroyed reaches threshold for current stage
-        if (!this.bossActive && this.gameState.isPlaying && !this.gameState.isPaused && !this.gameState.isPenalized && !this.gameState.isLifeLostPaused) {
+        // IMPORTANT: Boss must have completely exited screen before respawning (only if it collided before)
+        // If bossHasExited is null, it means boss never spawned, so allow first spawn
+        // If bossHasExited is true, it means boss exited after collision, so allow respawn
+        // If bossHasExited is false, it means boss is still exiting OR was just defeated, so wait
+        // Also check that boss hasn't been defeated for current stage yet
+        const canSpawnBoss = (this.bossHasExited === null || this.bossHasExited === true) && !this.bossDefeatedForCurrentStage;
+        if (!this.bossActive && canSpawnBoss && this.gameState.isPlaying && !this.gameState.isPaused && !this.gameState.isPenalized && !this.gameState.isLifeLostPaused) {
             const currentThreshold = this.getThresholdForStage(this.gameState.currentStage);
             if (this.gameState.lettersDestroyed >= currentThreshold && this.gameState.currentStage + 1 < TYPING_STAGES.length) {
                 // Spawn boss before advancing stage
@@ -1148,17 +1156,41 @@ export class GameScene extends Phaser.Scene {
         if (leftThruster) leftThruster.stop();
         if (rightThruster) rightThruster.stop();
 
-        // Make ship spin and fall off screen
+        // Make ship spin and fall off screen IMMEDIATELY
+        // Cancel any existing rotation tween
+        if (this.shipAngleTween) {
+            this.shipAngleTween.stop();
+            this.shipAngleTween = null;
+        }
+
+        // Immediately rotate ship to a falling angle (45 degrees)
+        this.shipAngle = 45;
+        this.ship.setRotation(Phaser.Math.DegToRad(45));
+
+        // Continuous rotation animation (spins while falling)
+        // Create rotation tween first so it can be referenced in fall tween
+        const rotationTween = this.tweens.add({
+            targets: this.ship,
+            rotation: this.ship.rotation + Math.PI * 8, // Spin 4 full rotations
+            duration: 1500, // Same duration as fall
+            ease: 'Linear', // Constant rotation speed
+            repeat: 0 // No repeat, but we'll make it spin enough
+        });
+
+        // Make ship fall off screen with continuous rotation
         this.tweens.add({
             targets: this.ship,
             y: this.scale.height + 100, // Fall off screen
-            rotation: this.ship.rotation + Math.PI * 4, // Spin 2 times
-            duration: 2000, // Slow fall
+            duration: 1500, // Faster fall
             ease: 'Quad.easeIn', // Accelerate falling
             onComplete: () => {
                 // Ship will be recreated when game resumes, so we don't destroy it
                 // Just hide it temporarily
                 this.ship.setVisible(false);
+                // Stop rotation when ship is hidden
+                if (rotationTween) {
+                    rotationTween.stop();
+                }
             }
         });
     }
@@ -1173,13 +1205,23 @@ export class GameScene extends Phaser.Scene {
             this.ship.setAlpha(1);
             this.ship.setScale(0.2); // Restore original scale
 
-            // Respawn Animation: Rise from bottom
+            // Reset ship angle to neutral (pointing up/center)
+            this.shipAngle = 0;
+            if (this.shipAngleTween) {
+                this.shipAngleTween.stop();
+                this.shipAngleTween = null;
+            }
             this.ship.setRotation(0); // Upright
-            this.ship.y = this.scale.height + 100; // Start off-screen bottom
 
+            // Respawn Animation: Rise from bottom to neutral position
+            const { width, height } = this.scale;
+            this.ship.x = width / 2; // Center horizontally
+            this.ship.y = height + 100; // Start off-screen bottom
+
+            // Restore to neutral position (height - 200, same as initial spawn)
             this.tweens.add({
                 targets: this.ship,
-                y: this.scale.height - 100, // Target position (adjust as needed)
+                y: height - 200, // Neutral position (same as initial spawn)
                 duration: 1000,
                 ease: 'Power2.easeOut'
             });
@@ -1189,6 +1231,14 @@ export class GameScene extends Phaser.Scene {
             const rightThruster = (this.ship as any).rightThruster;
             if (leftThruster) leftThruster.start();
             if (rightThruster) rightThruster.start();
+
+            // Resume boss attack pattern if boss is active and in victory pattern
+            if (this.bossActive && this.bossAttackPattern === 'victory' && this.bossHead && this.bossHead.active) {
+                // Simply resume idle pattern (advancing)
+                // The boss will start advancing from its current position (retreatTargetY)
+                this.bossAttackPattern = 'idle';
+                this.bossAttackTimer = 0;
+            }
         }
     }
 
@@ -1307,7 +1357,10 @@ export class GameScene extends Phaser.Scene {
 
         // Create boss snake with learned letters
         this.bossActive = true;
+        this.bossHasExited = false; // Set to false when boss spawns (will be set to true when it exits after collision)
+        this.bossDefeatedForCurrentStage = false; // Reset defeat flag when boss spawns
         this.callbacks.onBossSpawn(); // Play boss spawn sound
+        console.log('Starting boss music...'); // Debug log
         this.callbacks.onBossMusicStart(); // Start boss music
         this.bossSegments = [];
         this.bossTrail = [];
@@ -1538,11 +1591,22 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Check if only head remains (all body segments destroyed)
-        // Filter out head (index 0) and check if any other segments exist
-        const activeBodySegments = this.bossSegments.filter(s => s.active && !s.getData('isHead') && !s.getData('letterAbsorbed'));
-        if (activeBodySegments.length === 0 && this.bossSegments.length > 1) {
+        // Check if only head remains (all letter segments destroyed)
+        // Filter out head and spacers, only check letter segments
+        const activeLetterSegments = this.bossSegments.filter(s =>
+            s.active &&
+            !s.getData('isHead') &&
+            !s.getData('isSpacer') &&
+            !s.getData('letterAbsorbed')
+        );
+        if (activeLetterSegments.length === 0 && this.bossSegments.length > 1) {
             this.defeatBoss();
+            return;
+        }
+
+        // If boss is in victory pattern, let updateBossAttackPattern handle all movement
+        if (this.bossAttackPattern === 'victory') {
+            this.updateBossAttackPattern(time, delta);
             return;
         }
 
@@ -1600,7 +1664,7 @@ export class GameScene extends Phaser.Scene {
                 segment.y = trailPos.y;
                 segment.setRotation(0); // Always horizontal/fixed orientation
 
-                // Check collision with ship
+                // Check collision with ship (only if not in victory pattern)
                 // Improved Collision Detection
                 // Only check if segment is actually on screen and close enough to matter
                 if (segment.y > 0 && segment.y < height) {
@@ -1631,7 +1695,7 @@ export class GameScene extends Phaser.Scene {
 
         // Update attack patterns
         this.bossAttackTimer += delta;
-        this.updateBossAttackPattern(time);
+        this.updateBossAttackPattern(time, delta);
 
         // Update boss projectiles
         this.updateBossProjectiles(delta);
@@ -1645,7 +1709,7 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    private updateBossAttackPattern(time: number) {
+    private updateBossAttackPattern(time: number, delta?: number) {
         const phaseSpeed = this.bossPhase === 3 ? 2000 : this.bossPhase === 2 ? 3000 : 4000;
 
         if (this.bossAttackPattern === 'idle') {
@@ -1695,26 +1759,65 @@ export class GameScene extends Phaser.Scene {
                 this.bossAttackTimer = 0;
             }
         } else if (this.bossAttackPattern === 'victory') {
-            // Figure-8 pattern upwards
-            const speed = 0.005;
-            const amplitudeX = 200;
-            const amplitudeY = 100;
+            // Partial retreat pattern - move to upper screen and hover
+            const { width, height } = this.scale;
 
-            // Move head
+            // Match updateBoss parameters for continuity (Smooth undulating movement)
+            const waveSpeed = 0.01 + (this.bossPhase - 1) * 0.005;
+            const waveAmplitude = 250 + (this.bossPhase - 1) * 50;
+
+            const retreatTargetY = height * 0.15; // Retreat to 15% (higher up)
+            const upwardSpeed = 300; // Pixels per second (smooth retreat)
+
+            // Update wave time for zigzag animation
+            if (delta !== undefined) {
+                this.bossWaveTime += delta * 0.001; // Use actual delta for smooth animation
+            } else {
+                this.bossWaveTime += 16 * 0.001; // Fallback
+            }
+
+            // Move head in undulating pattern away from player
             if (this.bossHead && this.bossHead.active) {
-                this.bossHead.y -= 2; // Move up constantly
-                this.bossHead.x = this.scale.width / 2 + Math.sin(time * speed) * amplitudeX * Math.cos(time * speed * 0.5); // Figure 8
-                this.bossHead.y += Math.sin(time * speed * 2) * amplitudeY * 0.1; // Add some vertical wave
+                // Calculate wave position (Same formula as updateBoss for continuity)
+                const waveX = width / 2 + Math.sin(this.bossWaveTime * waveSpeed * 100) * waveAmplitude;
 
-                // If off screen top, destroy
-                if (this.bossHead.y < -200) {
-                    this.bossActive = false;
-                    this.bossSegments.forEach(s => s.destroy());
-                    this.bossSegments = [];
-                    this.bossTrail = [];
-                    this.bossGroup.clear(true, true);
-                    this.bossProjectilesGroup.clear(true, true);
+                // Calculate Y position (Retreating upwards)
+                let nextY = this.bossHead.y;
+
+                if (nextY > retreatTargetY) {
+                    // Move up smoothly
+                    nextY -= upwardSpeed * (delta ? delta / 1000 : 0.016);
+                } else {
+                    // Reached retreat position - hover with subtle vertical wave
+                    nextY = retreatTargetY + Math.sin(this.bossWaveTime * 3) * 10;
                 }
+
+                this.bossHead.x = waveX;
+                this.bossHead.y = nextY;
+
+                // Update trail
+                this.bossTrail.unshift({
+                    x: waveX,
+                    y: nextY,
+                    rotation: 0
+                });
+
+                // Limit trail length
+                if (this.bossTrail.length > 1000) {
+                    this.bossTrail.pop();
+                }
+
+                // Update all segments to follow the trail
+                this.bossSegments.forEach((segment) => {
+                    if (!segment.active) return;
+                    const trailOffset = segment.getData('trailOffset') || 0;
+                    if (trailOffset < this.bossTrail.length) {
+                        const trailPos = this.bossTrail[trailOffset];
+                        segment.x = trailPos.x;
+                        segment.y = trailPos.y;
+                        segment.setRotation(0); // Keep horizontal orientation
+                    }
+                });
             }
         }
     }
@@ -1983,23 +2086,20 @@ export class GameScene extends Phaser.Scene {
 
     private handleBossCollision() {
         // Player loses a life
-        this.destroyShip(); // Trigger ship destruction animation (spin and fall)
+        this.destroyShip(); // Trigger ship destruction animation (spin and fall immediately)
         this.callbacks.onShipDestroyed();
 
-        // Boss Victory Dance (Figure-8 upwards)
+        // Boss Victory Dance (Large wave upwards)
         this.bossAttackPattern = 'victory';
         this.bossAttackTimer = 0;
+        // Do NOT reset bossWaveTime to ensure continuous movement
+        // this.bossWaveTime = 0;
 
         // Clear projectiles but keep boss
         this.bossProjectilesGroup.clear(true, true);
 
-        // Note: The game loop will respawn the boss because lettersDestroyed threshold is still met
-        // But we want it to exit first. The respawn logic might need to wait?
-        // Actually, since we set bossActive=false ONLY after it exits screen, 
-        // the spawn logic in update() shouldn't trigger until then.
-        // Wait... spawn logic checks !bossActive. 
-        // We need to keep bossActive = true while it exits.
-        // So we DON'T set bossActive = false here.
+        // Stop normal boss movement updates (victory pattern will handle movement)
+        // The victory pattern in updateBossAttackPattern will handle the wave movement
     }
 
     private defeatBoss() {
@@ -2007,6 +2107,11 @@ export class GameScene extends Phaser.Scene {
 
         // Prevent multiple calls
         this.bossActive = false;
+        // Mark that boss was defeated for current stage to prevent respawn
+        this.bossDefeatedForCurrentStage = true;
+        // When boss is defeated, prevent spawning another boss until stage advances
+        // Set to false to prevent respawn until stage advance completes
+        this.bossHasExited = false; // Prevent respawn until stage advances
 
         this.bossProjectilesGroup.clear(true, true);
 
@@ -2025,7 +2130,7 @@ export class GameScene extends Phaser.Scene {
                         const isHead = segment.getData('isHead');
                         // Random color for explosion
                         // Red, Yellow, Orange, White
-                        const colors = [0xff0000, 0xffff00, 0xffa500, 0xffffff];
+                        const colors = [0xff0000, 0xffff00, 0xffa500, 0xffffff, 0x0000ff, 0x00ff00];
 
                         // Create SPECTACULAR explosion
                         this.createSpectacularExplosion(segment.x, segment.y, colors);
@@ -2064,6 +2169,9 @@ export class GameScene extends Phaser.Scene {
             if (nextStage < TYPING_STAGES.length) {
                 // Delay slightly more to let flash fade
                 this.time.delayedCall(1000, () => {
+                    // Reset boss exit flag when advancing stage to allow boss to spawn in new level
+                    this.bossHasExited = null; // Reset to null so boss can spawn in new level
+                    this.bossDefeatedForCurrentStage = false; // Reset defeat flag for new stage
                     this.callbacks.onStageAdvance(nextStage);
                 });
             }
@@ -2089,7 +2197,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private getThresholdForStage(stage: number): number {
-        const thresholds = [5, 15, 30, 50, 75, 100, 1300, 1600, 2000, 2500];
+        const thresholds = [15, 60, 120, 170, 240, 340, 440, 550, 650, 800];
         return thresholds[stage] || thresholds[thresholds.length - 1];
     }
 }

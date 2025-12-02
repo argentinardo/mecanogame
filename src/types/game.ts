@@ -1,4 +1,4 @@
-export interface GameState {
+ export interface GameState {
     score: number;
     lives: number;
     isPlaying: boolean;
