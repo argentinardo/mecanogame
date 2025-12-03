@@ -19,7 +19,7 @@ const GAME_SPEED_DECREMENT = 50;
 const MIN_GAME_SPEED = 800;
 
 const LETTERS_DESTROYED_THRESHOLDS = [
-    50, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500
+    5, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500
 ];
 
 export const Game: React.FC = () => {
@@ -136,8 +136,12 @@ export const Game: React.FC = () => {
 
     // Callbacks for Phaser
     const handleLetterHit = useCallback((_letterObj: FallingLetter) => {
-        playExplosionSound();
-        playScoringSound(); // Play scoring sound on hit
+        // Delay explosion sound to let laser sound play first (sequence: Laser -> Explosion)
+        setTimeout(() => {
+            playExplosionSound();
+        }, 150);
+
+        // playScoringSound(); // Removed: Now played when points actually appear (in handleScoreChange)
 
         // Combo Logic - use refs to get current values
         const currentTime = Date.now();
@@ -205,6 +209,7 @@ export const Game: React.FC = () => {
 
     // Handle score change when points text disappears
     const handleScoreChange = useCallback((newScore: number) => {
+        playScoringSound(); // Play scoring sound when points are awarded (text appears)
         setGameState(prev => {
             const newLettersDestroyed = prev.lettersDestroyed + 1;
 
@@ -231,7 +236,17 @@ export const Game: React.FC = () => {
                 letterSpeed: newLetterSpeed
             };
         });
-    }, [advanceStage]);
+    }, [advanceStage, playScoringSound]);
+
+    // Handle score change ONLY (no difficulty progression or letter count update)
+    // Used for boss segments and other bonus points
+    const handleScoreUpdateOnly = useCallback((scoreToAdd: number) => {
+        playScoringSound(); // Play scoring sound when points are awarded
+        setGameState(prev => ({
+            ...prev,
+            score: prev.score + scoreToAdd
+        }));
+    }, [playScoringSound]);
 
     const handleGameOver = useCallback(() => {
         playGameOverSound();
@@ -449,6 +464,7 @@ export const Game: React.FC = () => {
     const handleBossDefeated = useCallback((nextStage: number) => {
         // Boss defeated - advance stage, show sector info and pause
         playLevelUpSound();
+        startBackgroundMusic(); // Resume main theme
 
         // Pause for sector info
         const timeout = setTimeout(() => {
@@ -462,7 +478,7 @@ export const Game: React.FC = () => {
             isPaused: true,
             sectorInfoTimeout: timeout as unknown as number
         }));
-    }, [playLevelUpSound]);
+    }, [playLevelUpSound, startBackgroundMusic]);
 
     const handleProximityWarning = useCallback((hasWarning: boolean) => {
         if (hasWarning) {
@@ -592,12 +608,28 @@ export const Game: React.FC = () => {
 
     // Mobile Detection (currently not used but kept for future features)
 
-    // Start Menu Music on Mount
+    // Start Menu Music on Mount - handled via interaction to avoid autoplay policy issues
+    const [hasInteracted, setHasInteracted] = useState(false);
+
     useEffect(() => {
-        if (!gameState.isPlaying) {
-            startMenuMusic();
-        }
-    }, [startMenuMusic, gameState.isPlaying]);
+        const handleInteraction = () => {
+            if (!hasInteracted) {
+                setHasInteracted(true);
+                initAudioContext();
+                if (!gameState.isPlaying) {
+                    startMenuMusic();
+                }
+            }
+        };
+
+        window.addEventListener('click', handleInteraction);
+        window.addEventListener('keydown', handleInteraction);
+
+        return () => {
+            window.removeEventListener('click', handleInteraction);
+            window.removeEventListener('keydown', handleInteraction);
+        };
+    }, [hasInteracted, initAudioContext, startMenuMusic, gameState.isPlaying]);
 
     return (
         <div className="game-container">
@@ -611,6 +643,7 @@ export const Game: React.FC = () => {
                 gameState={gameState}
                 callbacks={{
                     onScoreChange: handleScoreChange,
+                    onScoreUpdateOnly: handleScoreUpdateOnly,
                     onLivesChange: () => { },
                     onLetterHit: handleLetterHit,
                     onLetterMiss: handleLetterMiss,

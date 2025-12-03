@@ -18,6 +18,7 @@ import bossSegmentEmptyImg from '../assets/images/segmento_empty.svg';
 
 export interface GameSceneCallbacks {
     onScoreChange: (score: number) => void;
+    onScoreUpdateOnly: (scoreToAdd: number) => void; // New callback for score only (no progression)
     onLivesChange: (lives: number) => void;
     onLetterHit: (letterObj: FallingLetter) => { points: number; totalScore: number };
     onLetterMiss: () => void;
@@ -407,8 +408,8 @@ export class GameScene extends Phaser.Scene {
         const turnaroundPoint = height * 0.55; // Point where enemies reach "front" and start rising (55%)
         let hasDanger = false;
 
-        // Don't update letters during life lost countdown
-        if (!this.gameState.isLifeLostPaused) {
+        // Update Letters with perspective movement (Only when playing and not life lost paused)
+        if (this.gameState.isPlaying && !this.gameState.isLifeLostPaused) {
             this.lettersGroup.getChildren().forEach((child: any) => {
                 const letterContainer = child as Phaser.GameObjects.Container;
                 if (!letterContainer.active) return;
@@ -471,8 +472,8 @@ export class GameScene extends Phaser.Scene {
             });
         }
 
-        // Update meteorites (ALWAYS - except when life lost countdown)
-        if (!this.gameState.isLifeLostPaused) {
+        // Update meteorites (Only when playing and not life lost paused)
+        if (this.gameState.isPlaying && !this.gameState.isLifeLostPaused) {
             this.updateMeteorites(delta);
         }
 
@@ -1259,6 +1260,40 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
+    private shakeShip() {
+        if (!this.ship || !this.ship.active) return;
+
+        // Store original position
+        const originalX = this.ship.x;
+        const originalY = this.ship.y;
+
+        // Create shake effect over 1 second
+        const shakeIntensity = 8;
+        const shakeDuration = 1000;
+        const shakeSteps = 20;
+        const stepDuration = shakeDuration / shakeSteps;
+
+        let currentStep = 0;
+
+        const shakeInterval = setInterval(() => {
+            currentStep++;
+
+            if (currentStep >= shakeSteps) {
+                // Return to original position
+                clearInterval(shakeInterval);
+                this.ship.setPosition(originalX, originalY);
+            } else {
+                // Random offset decreasing over time
+                const progress = currentStep / shakeSteps;
+                const currentIntensity = shakeIntensity * (1 - progress);
+                const offsetX = (Math.random() - 0.5) * currentIntensity * 2;
+                const offsetY = (Math.random() - 0.5) * currentIntensity * 2;
+                this.ship.setPosition(originalX + offsetX, originalY + offsetY);
+            }
+        }, stepDuration);
+    }
+
+
     public activateForceField() {
         // Don't activate if game is not playing, paused, penalized, or in life lost countdown
         if (!this.gameState.isPlaying || this.gameState.isPaused || this.gameState.isPenalized || this.gameState.isLifeLostPaused) {
@@ -1899,6 +1934,10 @@ export class GameScene extends Phaser.Scene {
             if (distance < 30) {
                 // Hit ship - penalize like wrong key (not destroy)
                 projectile.destroy();
+
+                // Shake ship for 1 second
+                this.shakeShip();
+
                 this.callbacks.onWrongKey();
                 return;
             }
@@ -2048,9 +2087,9 @@ export class GameScene extends Phaser.Scene {
             duration: 300,
             ease: 'Power2',
             onComplete: () => {
-                // Add score
+                // Add score using the new callback that DOES NOT increment lettersDestroyed
                 const points = 50; // Boss segment points
-                this.callbacks.onScoreChange(this.gameState.score + points);
+                this.callbacks.onScoreUpdateOnly(points);
 
                 // Points text
                 const pointsText = this.add.text(

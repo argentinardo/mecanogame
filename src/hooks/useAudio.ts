@@ -16,7 +16,10 @@ import segmentBoomUrl from '../assets/sound/mecanogame_segment-boom.mp3';
 
 export const useAudio = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
-    const [isMuted, setIsMuted] = useState(true);
+    const [isMuted, setIsMuted] = useState(() => {
+        const saved = localStorage.getItem('mecanogame_muted');
+        return saved !== null ? JSON.parse(saved) : true; // Default to true if not saved
+    });
     const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
     const bossMusicRef = useRef<HTMLAudioElement | null>(null);
     const menuMusicRef = useRef<HTMLAudioElement | null>(null);
@@ -133,24 +136,50 @@ export const useAudio = () => {
     }, [playSound]);
 
     const playBossSpawn = useCallback(() => {
-        playSound(bossSpawnUrl, 0.35);
-    }, [playSound]);
-
+        // playSound(bossSpawnUrl, 0.35); // Disabled as per user request
+    }, []);
     // --- Music Control ---
 
-    const startMenuMusic = useCallback(() => {
-        if (isMuted) return;
-        if (menuMusicRef.current && !menuMusicRef.current.paused) return;
+    const musicTypeRef = useRef<'menu' | 'background' | 'boss' | 'none'>('none');
 
-        // Stop other music
-        stopBackgroundMusic();
+    const fadeIntervalRef = useRef<number | null>(null);
+
+    const stopAllMusic = useCallback(() => {
+        if (menuMusicRef.current) {
+            menuMusicRef.current.pause();
+            menuMusicRef.current = null;
+        }
+        if (backgroundMusicRef.current) {
+            backgroundMusicRef.current.pause();
+            // Don't null background music ref if we want to resume it later, 
+            // but for strict exclusivity we pause it.
+        }
+        if (bossMusicRef.current) {
+            bossMusicRef.current.pause();
+            bossMusicRef.current = null;
+        }
+        // Clear fade interval
+        if (fadeIntervalRef.current) {
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
+        }
+    }, []);
+
+    const startMenuMusic = useCallback(() => {
+        musicTypeRef.current = 'menu';
+        if (isMuted) return;
+
+        // Stop all other music first
+        stopAllMusic();
+
+        if (menuMusicRef.current && !menuMusicRef.current.paused) return;
 
         const audio = new Audio(menuThemeUrl);
         audio.loop = true;
         audio.volume = normalVolumeRef.current;
         audio.play().catch(console.error);
         menuMusicRef.current = audio;
-    }, [isMuted]);
+    }, [isMuted, stopAllMusic]);
 
     const stopMenuMusic = useCallback(() => {
         if (menuMusicRef.current) {
@@ -160,20 +189,29 @@ export const useAudio = () => {
     }, []);
 
     const startBackgroundMusic = useCallback(() => {
+        musicTypeRef.current = 'background';
         if (isMuted) return;
 
-        // Stop menu music
-        stopMenuMusic();
-
-        // Stop boss music if playing
+        // Stop menu music and boss music explicitly
+        if (menuMusicRef.current) {
+            menuMusicRef.current.pause();
+            menuMusicRef.current = null;
+        }
         if (bossMusicRef.current) {
             bossMusicRef.current.pause();
             bossMusicRef.current = null;
         }
 
+        // Clear fade interval if any
+        if (fadeIntervalRef.current) {
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
+        }
+
         if (backgroundMusicRef.current && !backgroundMusicRef.current.paused) return;
 
         if (backgroundMusicRef.current) {
+            backgroundMusicRef.current.volume = normalVolumeRef.current; // Ensure volume is reset
             backgroundMusicRef.current.play().catch(console.error);
         } else {
             const audio = new Audio(mainThemeUrl);
@@ -182,15 +220,48 @@ export const useAudio = () => {
             audio.play().catch(console.error);
             backgroundMusicRef.current = audio;
         }
-    }, [isMuted, stopMenuMusic]);
+    }, [isMuted]);
 
     const startBossMusic = useCallback(() => {
-        console.log('>>> startBossMusic called, isMuted:', isMuted);
+        musicTypeRef.current = 'boss';
         if (isMuted) return;
 
-        // Stop background music
-        if (backgroundMusicRef.current) {
-            backgroundMusicRef.current.pause();
+        // Stop menu music immediately
+        if (menuMusicRef.current) {
+            menuMusicRef.current.pause();
+            menuMusicRef.current = null;
+        }
+
+        // Clear any existing fade interval
+        if (fadeIntervalRef.current) {
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
+        }
+
+        // Fade out background music and then pause
+        if (backgroundMusicRef.current && !backgroundMusicRef.current.paused) {
+            const bgAudio = backgroundMusicRef.current;
+            const startVolume = bgAudio.volume;
+            const fadeDuration = 800; // 0.8 second fade (faster)
+            const steps = 10;
+            const stepTime = fadeDuration / steps;
+            const volStep = startVolume / steps;
+
+            let currentStep = 0;
+            fadeIntervalRef.current = window.setInterval(() => {
+                currentStep++;
+                const newVol = Math.max(0, startVolume - (volStep * currentStep));
+                bgAudio.volume = newVol;
+
+                if (currentStep >= steps) {
+                    if (fadeIntervalRef.current) {
+                        clearInterval(fadeIntervalRef.current);
+                        fadeIntervalRef.current = null;
+                    }
+                    bgAudio.pause();
+                    bgAudio.volume = normalVolumeRef.current; // Reset volume for when it resumes
+                }
+            }, stepTime);
         }
 
         if (bossMusicRef.current && !bossMusicRef.current.paused) return;
@@ -208,6 +279,7 @@ export const useAudio = () => {
         }
         if (bossMusicRef.current) {
             bossMusicRef.current.pause();
+            bossMusicRef.current = null; // Reset boss music so it restarts next time
         }
     }, []);
 
@@ -224,19 +296,55 @@ export const useAudio = () => {
     }, []);
 
     const toggleMute = useCallback(() => {
-        setIsMuted(prev => {
+        setIsMuted((prev: boolean) => {
             const newMuted = !prev;
+            localStorage.setItem('mecanogame_muted', JSON.stringify(newMuted));
+
             if (newMuted) {
+                // Mute all
                 if (backgroundMusicRef.current) backgroundMusicRef.current.pause();
                 if (bossMusicRef.current) bossMusicRef.current.pause();
                 if (menuMusicRef.current) menuMusicRef.current.pause();
+
+                // Clear any fade interval
+                if (fadeIntervalRef.current) {
+                    clearInterval(fadeIntervalRef.current);
+                    fadeIntervalRef.current = null;
+                }
             } else {
-                // Resume whichever was active
-                if (bossMusicRef.current) {
+                // Resume based on active music type
+                const type = musicTypeRef.current;
+
+                if (type === 'boss') {
+                    if (!bossMusicRef.current) {
+                        const audio = new Audio(bossSongUrl);
+                        audio.loop = true;
+                        audio.volume = normalVolumeRef.current;
+                        bossMusicRef.current = audio;
+                    }
                     bossMusicRef.current.play().catch(console.error);
-                } else if (backgroundMusicRef.current) {
+                    // Ensure background is paused
+                    if (backgroundMusicRef.current) backgroundMusicRef.current.pause();
+
+                } else if (type === 'background') {
+                    if (!backgroundMusicRef.current) {
+                        const audio = new Audio(mainThemeUrl);
+                        audio.loop = true;
+                        audio.volume = normalVolumeRef.current;
+                        backgroundMusicRef.current = audio;
+                    }
+                    backgroundMusicRef.current.volume = normalVolumeRef.current;
                     backgroundMusicRef.current.play().catch(console.error);
-                } else if (menuMusicRef.current) {
+                    // Ensure boss is paused
+                    if (bossMusicRef.current) bossMusicRef.current.pause();
+
+                } else if (type === 'menu') {
+                    if (!menuMusicRef.current) {
+                        const audio = new Audio(menuThemeUrl);
+                        audio.loop = true;
+                        audio.volume = normalVolumeRef.current;
+                        menuMusicRef.current = audio;
+                    }
                     menuMusicRef.current.play().catch(console.error);
                 }
             }
