@@ -1,4 +1,4 @@
- export interface GameState {
+export interface GameState {
     score: number;
     lives: number;
     isPlaying: boolean;
@@ -22,6 +22,7 @@
     sectorInfoTimeout: number | null;
     firstMeteoritePause: boolean;
     forceFieldActivationMessage: boolean;
+    thresholds: number[]; // Array de umbrales para sincronizar Game.tsx y GameScene.ts
 }
 
 export interface FallingLetter {

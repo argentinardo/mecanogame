@@ -18,8 +18,26 @@ const SPEED_INCREMENT = 0.05;
 const GAME_SPEED_DECREMENT = 50;
 const MIN_GAME_SPEED = 800;
 
+// Umbrales de letras destruidas para cada sector (0-9)
+// Cuando el jugador destruye este número de letras en un sector, aparece el BOSS
+// Después de derrotar al boss, avanza al siguiente sector
+// Ejemplo:
+//   - Sector 0: Boss aparece después de destruir 3 letras
+//   - Sector 1: Boss aparece después de destruir 150 letras
+//   - Sector 2: Boss aparece después de destruir 300 letras
+//   - etc.
+// El índice del array corresponde al número del sector (currentStage)
 const LETTERS_DESTROYED_THRESHOLDS = [
-    5, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500
+    3,    // Sector 0: FILA SUPERIOR (QWERTYUIOP)
+    150,  // Sector 1: FILA CENTRAL (ASDFGHJKLÑ)
+    300,  // Sector 2: FILA INFERIOR (ZXCVBNM)
+    500,  // Sector 3: NÚMEROS 1-5
+    750,  // Sector 4: NÚMEROS 6-0
+    1000, // Sector 5: COMBINADO Superior + Central
+    1300, // Sector 6: COMBINADO Central + Inferior
+    1600, // Sector 7: COMBINADO Superior + Números
+    2000, // Sector 8: COMBINADO Central + Números
+    2500  // Sector 9: TODAS LAS TECLAS
 ];
 
 export const Game: React.FC = () => {
@@ -44,8 +62,11 @@ export const Game: React.FC = () => {
         playForceFieldHit,
         playSegmentExplosion,
         playBossSpawn,
+        playBossLaugh,
         startBossMusic,
         startMenuMusic,
+        startGameOverMusic,
+        stopGameOverMusic,
 
         playScoringSound,
         playBlastSound
@@ -74,10 +95,30 @@ export const Game: React.FC = () => {
         showSectorInfo: false,
         sectorInfoTimeout: null,
         firstMeteoritePause: false,
-        forceFieldActivationMessage: false
+        forceFieldActivationMessage: false,
+        thresholds: LETTERS_DESTROYED_THRESHOLDS
     });
 
     const [comboCount, setComboCount] = useState<number>(0);
+
+    const [isMobile, setIsMobile] = useState(false);
+    const [isLandscape, setIsLandscape] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+            const mobile = /android|ipad|iphone|ipod/i.test(userAgent);
+            setIsMobile(mobile);
+
+            if (mobile) {
+                setIsLandscape(window.innerWidth > window.innerHeight);
+            }
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
     const [lastHitTime, setLastHitTime] = useState<number>(0);
     const [sequentialHits, setSequentialHits] = useState<number>(0);
 
@@ -111,6 +152,7 @@ export const Game: React.FC = () => {
     const proximityBeepIntervalRef = useRef<number | undefined>(undefined);
     const penaltyIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lifeLostCountdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const bossLaughIntervalRef = useRef<number | undefined>(undefined);
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {
@@ -252,7 +294,18 @@ export const Game: React.FC = () => {
         playGameOverSound();
         stopBackgroundMusic();
         setGameState(prev => ({ ...prev, isPlaying: false, isPaused: false }));
-    }, [playGameOverSound, stopBackgroundMusic]);
+
+        // Start Game Over music and laugh interval
+        startGameOverMusic();
+
+        // Play laugh immediately
+        playBossLaugh();
+
+        // Set up interval to play laugh every 5 seconds
+        bossLaughIntervalRef.current = window.setInterval(() => {
+            playBossLaugh();
+        }, 5000);
+    }, [playGameOverSound, stopBackgroundMusic, startGameOverMusic, playBossLaugh]);
 
     const handleLetterEscaped = useCallback(() => {
         playLifeLostSound();
@@ -495,6 +548,13 @@ export const Game: React.FC = () => {
     }, [isMuted, gameState.isPlaying, playProximityBeep]);
 
     const startGame = useCallback((startingLevel: number = 0) => {
+        // Clear boss laugh interval if exists
+        if (bossLaughIntervalRef.current) {
+            clearInterval(bossLaughIntervalRef.current);
+            bossLaughIntervalRef.current = undefined;
+        }
+        stopGameOverMusic();
+
         initAudioContext();
         setGameState(prev => ({
             ...prev,
@@ -508,12 +568,20 @@ export const Game: React.FC = () => {
             meteorites: [],
             isPaused: false,
             isLifeLostPaused: false,
-            isPenalized: false
+            isPenalized: false,
+            thresholds: LETTERS_DESTROYED_THRESHOLDS // Pass thresholds to GameScene
         }));
         startBackgroundMusic();
-    }, [initAudioContext, startBackgroundMusic]);
+    }, [initAudioContext, startBackgroundMusic, stopGameOverMusic]);
 
     const continueGame = useCallback(() => {
+        // Clear boss laugh interval if exists
+        if (bossLaughIntervalRef.current) {
+            clearInterval(bossLaughIntervalRef.current);
+            bossLaughIntervalRef.current = undefined;
+        }
+        stopGameOverMusic();
+
         initAudioContext();
         setGameState(prev => ({
             ...prev,
@@ -523,10 +591,11 @@ export const Game: React.FC = () => {
             isLifeLostPaused: false,
             isPenalized: false,
             fallingLetters: [],
-            meteorites: []
+            meteorites: [],
+            thresholds: LETTERS_DESTROYED_THRESHOLDS // Pass thresholds to GameScene
         }));
         startBackgroundMusic();
-    }, [initAudioContext, startBackgroundMusic]);
+    }, [initAudioContext, startBackgroundMusic, stopGameOverMusic]);
 
     // Keyboard Input
     useEffect(() => {
@@ -631,9 +700,35 @@ export const Game: React.FC = () => {
         };
     }, [hasInteracted, initAudioContext, startMenuMusic, gameState.isPlaying]);
 
+    if (isMobile && isLandscape) {
+        return (
+            <div className="mobile-warning" style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#000',
+                color: '#fff',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 9999,
+                textAlign: 'center',
+                padding: '20px'
+            }}>
+                <h1 style={{ fontFamily: '"Press Start 2P", monospace', color: '#ff00ff', marginBottom: '20px' }}>MODO RETRATO REQUERIDO</h1>
+                <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '12px', lineHeight: '1.5' }}>
+                    Por favor, gira tu dispositivo para jugar.<br /><br />
+                    Este juego está diseñado para jugarse en vertical en dispositivos móviles.
+                </p>
+            </div>
+        );
+    }
+
     return (
-        <div className="game-container">
-            <MobileWarning />
+        <div className="game-container" style={isMobile ? { height: '50vh', position: 'absolute', top: 0, width: '100%', overflow: 'hidden' } : {}}>
             <Starfield />
             <div className="bg-grid"></div>
 
@@ -671,10 +766,11 @@ export const Game: React.FC = () => {
                     onSegmentExplosion: playSegmentExplosion,
                     onBossSpawn: playBossSpawn,
                     onBossMusicStart: startBossMusic,
+                    onBossLaugh: playBossLaugh,
                     onMassiveExplosion: playBlastSound
                 }}
             />
-            <div className="game-ui-container">
+            <div className="game-ui-container" style={isMobile ? { display: 'none' } : {}}>
                 <div className="sector-info">
                     <div className="sector-panel">
                         <div className="sector-label">SECTOR</div>
@@ -703,6 +799,38 @@ export const Game: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Keyboard Input Field (Hidden but focusable) */}
+            {isMobile && (
+                <input
+                    type="text"
+                    style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        top: '50%',
+                        left: 0,
+                        width: '100%',
+                        height: '50%',
+                        zIndex: 100,
+                        fontSize: '16px' // Prevent zoom on iOS
+                    }}
+                    autoFocus
+                    onBlur={(e) => e.target.focus()} // Force keep focus
+                    onChange={(e) => {
+                        const char = e.target.value.slice(-1).toUpperCase();
+                        if (char) {
+                            // Simulate key press
+                            const event = new KeyboardEvent('keydown', {
+                                key: char,
+                                code: `Key${char}`,
+                                bubbles: true
+                            });
+                            window.dispatchEvent(event);
+                        }
+                        e.target.value = ''; // Clear input
+                    }}
+                />
+            )}
 
             <CentralMessage
                 message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)}

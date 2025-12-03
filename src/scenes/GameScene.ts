@@ -36,6 +36,7 @@ export interface GameSceneCallbacks {
     onSegmentExplosion: () => void;
     onBossSpawn: () => void;
     onBossMusicStart: () => void;
+    onBossLaugh: () => void;
     onMassiveExplosion: () => void;
 }
 
@@ -2236,7 +2237,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private getThresholdForStage(stage: number): number {
-        const thresholds = [15, 60, 120, 170, 240, 340, 440, 550, 650, 800];
+        // Use thresholds passed from Game.tsx
+        if (this.gameState && this.gameState.thresholds) {
+            return this.gameState.thresholds[stage] || this.gameState.thresholds[this.gameState.thresholds.length - 1];
+        }
+        // Fallback (should not happen)
+        const thresholds = [3, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500];
         return thresholds[stage] || thresholds[thresholds.length - 1];
     }
 }

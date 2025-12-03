@@ -13,6 +13,7 @@ import bossSpawnUrl from '../assets/sound/mecanogame_boss.mp3';
 import centipedeShotUrl from '../assets/sound/mecanogame_centipede-shot.mp3';
 import fieldForceUrl from '../assets/sound/mecanogame_field-force.mp3';
 import segmentBoomUrl from '../assets/sound/mecanogame_segment-boom.mp3';
+import bossLaughUrl from '../assets/sound/mecanogame_boss-laugh.mp3';
 
 export const useAudio = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -138,9 +139,15 @@ export const useAudio = () => {
     const playBossSpawn = useCallback(() => {
         // playSound(bossSpawnUrl, 0.35); // Disabled as per user request
     }, []);
+
+    const playBossLaugh = useCallback(() => {
+        playSound(bossLaughUrl, 0.35);
+    }, [playSound]);
+
     // --- Music Control ---
 
     const musicTypeRef = useRef<'menu' | 'background' | 'boss' | 'none'>('none');
+    const gameOverMusicRef = useRef<HTMLAudioElement | null>(null);
 
     const fadeIntervalRef = useRef<number | null>(null);
 
@@ -295,6 +302,39 @@ export const useAudio = () => {
         if (menuMusicRef.current) menuMusicRef.current.volume = normalVolumeRef.current;
     }, []);
 
+    const startGameOverMusic = useCallback(() => {
+        if (isMuted) return;
+
+        // Stop all other music
+        if (backgroundMusicRef.current) {
+            backgroundMusicRef.current.pause();
+        }
+        if (bossMusicRef.current) {
+            bossMusicRef.current.pause();
+            bossMusicRef.current = null;
+        }
+        if (menuMusicRef.current) {
+            menuMusicRef.current.pause();
+            menuMusicRef.current = null;
+        }
+
+        // Play Game Over music (mecanogame_boss.mp3)
+        if (!gameOverMusicRef.current || gameOverMusicRef.current.paused) {
+            const audio = new Audio(bossSpawnUrl);
+            audio.loop = true;
+            audio.volume = normalVolumeRef.current;
+            audio.play().catch(console.error);
+            gameOverMusicRef.current = audio;
+        }
+    }, [isMuted]);
+
+    const stopGameOverMusic = useCallback(() => {
+        if (gameOverMusicRef.current) {
+            gameOverMusicRef.current.pause();
+            gameOverMusicRef.current = null;
+        }
+    }, []);
+
     const toggleMute = useCallback(() => {
         setIsMuted((prev: boolean) => {
             const newMuted = !prev;
@@ -378,11 +418,14 @@ export const useAudio = () => {
         playForceFieldHit,
         playSegmentExplosion,
         playBossSpawn,
+        playBossLaugh,
         startBackgroundMusic,
         startBossMusic,
         startMenuMusic,
         stopMenuMusic,
         stopBackgroundMusic,
+        startGameOverMusic,
+        stopGameOverMusic,
         lowerBackgroundVolume,
         restoreBackgroundVolume,
         initAudioContext,
