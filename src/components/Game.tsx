@@ -4,7 +4,7 @@ import { Instructions } from './Instructions';
 import { GameOver } from './GameOver';
 import { HandMap } from './HandMap';
 import { CentralMessage } from './CentralMessage';
-import MobileWarning from './MobileWarning';
+
 import { Starfield } from './Starfield';
 import { PhaserGame, type PhaserGameRef } from './PhaserGame';
 import { useAudio } from '../hooks/useAudio';
