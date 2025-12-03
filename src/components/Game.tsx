@@ -104,7 +104,6 @@ export const Game: React.FC = () => {
 
 
     const [isMobile, setIsMobile] = useState(false);
-    const [isLandscape, setIsLandscape] = useState(false);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -113,10 +112,6 @@ export const Game: React.FC = () => {
             const isSmallScreen = window.innerWidth <= 768; // Also check screen width for simulator
             const mobile = isMobileDevice || isSmallScreen;
             setIsMobile(mobile);
-
-            if (mobile) {
-                setIsLandscape(window.innerWidth > window.innerHeight);
-            }
         };
 
         checkMobile();
