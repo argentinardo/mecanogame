@@ -4,6 +4,7 @@ import { Instructions } from './Instructions';
 import { GameOver } from './GameOver';
 import { HandMap } from './HandMap';
 import { CentralMessage } from './CentralMessage';
+import { VirtualKeyboard } from './VirtualKeyboard';
 
 import { Starfield } from './Starfield';
 import { PhaserGame, type PhaserGameRef } from './PhaserGame';
@@ -28,7 +29,7 @@ const MIN_GAME_SPEED = 800;
 //   - etc.
 // El índice del array corresponde al número del sector (currentStage)
 const LETTERS_DESTROYED_THRESHOLDS = [
-    3,    // Sector 0: FILA SUPERIOR (QWERTYUIOP)
+    50,    // Sector 0: FILA SUPERIOR (QWERTYUIOP)
     150,  // Sector 1: FILA CENTRAL (ASDFGHJKLÑ)
     300,  // Sector 2: FILA INFERIOR (ZXCVBNM)
     500,  // Sector 3: NÚMEROS 1-5
@@ -101,13 +102,16 @@ export const Game: React.FC = () => {
 
     const [comboCount, setComboCount] = useState<number>(0);
 
+
     const [isMobile, setIsMobile] = useState(false);
     const [isLandscape, setIsLandscape] = useState(false);
 
     useEffect(() => {
         const checkMobile = () => {
             const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-            const mobile = /android|ipad|iphone|ipod/i.test(userAgent);
+            const isMobileDevice = /android|ipad|iphone|ipod/i.test(userAgent);
+            const isSmallScreen = window.innerWidth <= 768; // Also check screen width for simulator
+            const mobile = isMobileDevice || isSmallScreen;
             setIsMobile(mobile);
 
             if (mobile) {
@@ -597,6 +601,34 @@ export const Game: React.FC = () => {
         startBackgroundMusic();
     }, [initAudioContext, startBackgroundMusic, stopGameOverMusic]);
 
+    // Virtual Keyboard Handlers
+    const handleVirtualKeyPress = useCallback((key: string) => {
+        // Don't process keys when paused, penalized, or life lost countdown
+        if (!gameState.isPlaying || gameState.isPaused || gameState.isPenalized || gameState.isLifeLostPaused) return;
+
+        setGameState(prev => ({ ...prev, pressedKey: key }));
+        phaserRef.current?.shootBullet(key);
+        playShootSound();
+
+        // Reset pressed key after a short delay for visual feedback
+        setTimeout(() => {
+            setGameState(prev => ({ ...prev, pressedKey: null }));
+        }, 150);
+    }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.isLifeLostPaused, playShootSound]);
+
+    const handleVirtualSpacePress = useCallback(() => {
+        // Activate force field (only when playing and not paused/penalized)
+        if (gameState.isPlaying && !gameState.isPaused && !gameState.isPenalized && !gameState.isLifeLostPaused) {
+            setIsSpacePressed(true);
+            phaserRef.current?.activateForceField();
+
+            // Reset space pressed state
+            setTimeout(() => {
+                setIsSpacePressed(false);
+            }, 150);
+        }
+    }, [gameState.isPlaying, gameState.isPaused, gameState.isPenalized, gameState.isLifeLostPaused]);
+
     // Keyboard Input
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -700,162 +732,172 @@ export const Game: React.FC = () => {
         };
     }, [hasInteracted, initAudioContext, startMenuMusic, gameState.isPlaying]);
 
-    if (isMobile && isLandscape) {
-        return (
-            <div className="mobile-warning" style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                backgroundColor: '#000',
-                color: '#fff',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                zIndex: 9999,
-                textAlign: 'center',
-                padding: '20px'
-            }}>
-                <h1 style={{ fontFamily: '"Press Start 2P", monospace', color: '#ff00ff', marginBottom: '20px' }}>MODO RETRATO REQUERIDO</h1>
-                <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '12px', lineHeight: '1.5' }}>
-                    Por favor, gira tu dispositivo para jugar.<br /><br />
-                    Este juego está diseñado para jugarse en vertical en dispositivos móviles.
-                </p>
-            </div>
-        );
-    }
+    // Mobile warning removed to allow gameplay with virtual keyboard
+    // if (isMobile && isLandscape) { ... }
 
     return (
-        <div className="game-container" style={isMobile ? { height: '50vh', position: 'absolute', top: 0, width: '100%', overflow: 'hidden' } : {}}>
-            <Starfield />
-            <div className="bg-grid"></div>
-
-            {/* Phaser Game Layer */}
-            <PhaserGame
-                ref={phaserRef}
-                gameState={gameState}
-                callbacks={{
-                    onScoreChange: handleScoreChange,
-                    onScoreUpdateOnly: handleScoreUpdateOnly,
-                    onLivesChange: () => { },
-                    onLetterHit: handleLetterHit,
-                    onLetterMiss: handleLetterMiss,
-                    onLetterEscaped: handleLetterEscaped,
-                    onShipDestroyed: handleShipDestroyed,
-                    onWrongKey: handleLetterMiss,
-                    onMeteoriteHit: () => { },
-                    onStageAdvance: handleBossDefeated,
-                    onGameOver: handleGameOver,
-                    onProximityWarning: handleProximityWarning,
-                    onCombo: (count: number, multiplier: number) => {
-                        // Combo callback - already handled in handleLetterHit
-                        setCurrentComboMessage(`COMBO ${count}! x${multiplier}`);
-                        setIsComboMessageVisible(true);
-                        setTimeout(() => setIsComboMessageVisible(false), 1500);
-                    },
-                    onSequentialBonus: (bonus: number) => {
-                        // Sequential bonus callback
-                        setCurrentOrderMessage(`ORDEN PERFECTO!\n+${bonus} BONUS`);
-                        setIsOrderMessageVisible(true);
-                        setTimeout(() => setIsOrderMessageVisible(false), 2000);
-                    },
-                    onBossShot: playBossShot,
-                    onForceFieldHit: playForceFieldHit,
-                    onSegmentExplosion: playSegmentExplosion,
-                    onBossSpawn: playBossSpawn,
-                    onBossMusicStart: startBossMusic,
-                    onBossLaugh: playBossLaugh,
-                    onMassiveExplosion: playBlastSound
-                }}
-            />
-            <div className="game-ui-container" style={isMobile ? { display: 'none' } : {}}>
-                <div className="sector-info">
-                    <div className="sector-panel">
-                        <div className="sector-label">SECTOR</div>
-                        <div className="sector-name">{TYPING_STAGES[gameState.currentStage]?.name || 'N/A'}</div>
-                    </div>
-                </div>
-
-                {gameState.showSectorInfo && (
-                    <div className="sector-info-large">
-                        <div className="sector-panel-large">
-                            <div className="sector-label-large">NUEVO SECTOR</div>
-                            <div className="sector-name-large">{TYPING_STAGES[gameState.currentStage]?.name}</div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="integrated-control-panel">
-                    <div className="control-section left-section">
-                        <HandMap side="left" highlightedKey={gameState.pressedKey || undefined} isSpacePressed={isSpacePressed} subtleKeys={[]} />
-                    </div>
-                    <div className="central-instruments">
-                        <HUD score={gameState.score} lives={gameState.lives} isMuted={isMuted} onToggleMute={toggleMute} />
-                    </div>
-                    <div className="control-section right-section">
-                        <HandMap side="right" highlightedKey={gameState.pressedKey || undefined} isSpacePressed={isSpacePressed} subtleKeys={[]} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Mobile Keyboard Input Field (Hidden but focusable) */}
-            {isMobile && (
-                <input
-                    type="text"
-                    style={{
-                        position: 'absolute',
-                        opacity: 0,
-                        top: '50%',
-                        left: 0,
-                        width: '100%',
-                        height: '50%',
-                        zIndex: 100,
-                        fontSize: '16px' // Prevent zoom on iOS
-                    }}
-                    autoFocus
-                    onBlur={(e) => e.target.focus()} // Force keep focus
-                    onChange={(e) => {
-                        const char = e.target.value.slice(-1).toUpperCase();
-                        if (char) {
-                            // Simulate key press
-                            const event = new KeyboardEvent('keydown', {
-                                key: char,
-                                code: `Key${char}`,
-                                bubbles: true
-                            });
-                            window.dispatchEvent(event);
-                        }
-                        e.target.value = ''; // Clear input
-                    }}
-                />
-            )}
-
-            <CentralMessage
-                message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)}
-                countdown={gameState.isPaused ? null : gameState.countdown}
-                show={gameState.showCentralMessage || gameState.isPaused}
-            />
-
-            {isComboMessageVisible && (
-                <div className="floating-combo-message" style={{ zIndex: 20 }}>
-                    <div className="floating-combo-content">{currentComboMessage}</div>
-                </div>
-            )}
-
-            {isOrderMessageVisible && (
-                <div className="floating-order-message" style={{ zIndex: 20 }}>
-                    <div className="floating-order-content">{currentOrderMessage}</div>
-                </div>
-            )}
-
+        <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
+            {/* Instructions (Splash Screen) - Full Screen */}
             {!gameState.isPlaying && gameState.lives > 0 && (
                 <Instructions onStart={(level) => startGame(level)} onContinue={continueGame} showContinue={gameState.score > 0} />
             )}
 
+            {/* Game Over - Full Screen */}
             {!gameState.isPlaying && gameState.lives <= 0 && (
                 <GameOver score={gameState.score} onContinue={continueGame} onNewGame={startGame} />
+            )}
+
+            {/* Game Container - Only visible when playing */}
+            {gameState.isPlaying && (
+                <div className="game-container" style={isMobile ? {
+                    height: '66vh',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    overflow: 'hidden',
+                    zIndex: 0
+                } : {}}>
+                    <Starfield />
+                    <div className="bg-grid"></div>
+
+                    {/* Phaser Game Layer */}
+                    <PhaserGame
+                        ref={phaserRef}
+                        gameState={gameState}
+                        callbacks={{
+                            onScoreChange: handleScoreChange,
+                            onScoreUpdateOnly: handleScoreUpdateOnly,
+                            onLivesChange: () => { },
+                            onLetterHit: handleLetterHit,
+                            onLetterMiss: handleLetterMiss,
+                            onLetterEscaped: handleLetterEscaped,
+                            onShipDestroyed: handleShipDestroyed,
+                            onWrongKey: handleLetterMiss,
+                            onMeteoriteHit: () => { },
+                            onStageAdvance: handleBossDefeated,
+                            onGameOver: handleGameOver,
+                            onProximityWarning: handleProximityWarning,
+                            onCombo: (count: number, multiplier: number) => {
+                                // Combo callback - already handled in handleLetterHit
+                                setCurrentComboMessage(`COMBO ${count}! x${multiplier}`);
+                                setIsComboMessageVisible(true);
+                                setTimeout(() => setIsComboMessageVisible(false), 1500);
+                            },
+                            onSequentialBonus: (bonus: number) => {
+                                // Sequential bonus callback
+                                setCurrentOrderMessage(`ORDEN PERFECTO!\n+${bonus} BONUS`);
+                                setIsOrderMessageVisible(true);
+                                setTimeout(() => setIsOrderMessageVisible(false), 2000);
+                            },
+                            onBossShot: playBossShot,
+                            onForceFieldHit: playForceFieldHit,
+                            onSegmentExplosion: playSegmentExplosion,
+                            onBossSpawn: playBossSpawn,
+                            onBossMusicStart: startBossMusic,
+                            onBossLaugh: playBossLaugh,
+                            onMassiveExplosion: playBlastSound
+                        }}
+                    />
+
+                    <div className="game-ui-container" style={isMobile ? { display: 'none' } : {}}>
+                        <div className="sector-info">
+                            <div className="sector-panel">
+                                <div className="sector-label">SECTOR</div>
+                                <div className="sector-name">{TYPING_STAGES[gameState.currentStage]?.name || 'N/A'}</div>
+                            </div>
+                        </div>
+
+                        {gameState.showSectorInfo && (
+                            <div className="sector-info-large">
+                                <div className="sector-panel-large">
+                                    <div className="sector-label-large">NUEVO SECTOR</div>
+                                    <div className="sector-name-large">{TYPING_STAGES[gameState.currentStage]?.name}</div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="integrated-control-panel">
+                            <div className="control-section left-section">
+                                <HandMap side="left" highlightedKey={gameState.pressedKey || undefined} isSpacePressed={isSpacePressed} subtleKeys={[]} />
+                            </div>
+                            <div className="central-instruments">
+                                <HUD score={gameState.score} lives={gameState.lives} isMuted={isMuted} onToggleMute={toggleMute} />
+                            </div>
+                            <div className="control-section right-section">
+                                <HandMap side="right" highlightedKey={gameState.pressedKey || undefined} isSpacePressed={isSpacePressed} subtleKeys={[]} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Mobile Keyboard Input Field (Hidden but focusable) */}
+                    {isMobile && (
+                        <input
+                            type="text"
+                            style={{
+                                position: 'absolute',
+                                opacity: 0,
+                                top: '50%',
+                                left: 0,
+                                width: '100%',
+                                height: '50%',
+                                zIndex: 100,
+                                fontSize: '16px' // Prevent zoom on iOS
+                            }}
+                            autoFocus
+                            onBlur={(e) => e.target.focus()} // Force keep focus
+                            onChange={(e) => {
+                                const char = e.target.value.slice(-1).toUpperCase();
+                                if (char) {
+                                    // Simulate key press
+                                    const event = new KeyboardEvent('keydown', {
+                                        key: char,
+                                        code: `Key${char}`,
+                                        bubbles: true
+                                    });
+                                    window.dispatchEvent(event);
+                                }
+                                e.target.value = ''; // Clear input
+                            }}
+                        />
+                    )}
+
+                    <CentralMessage
+                        message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)}
+                        countdown={gameState.isPaused ? null : gameState.countdown}
+                        show={gameState.showCentralMessage || gameState.isPaused}
+                    />
+
+                    {isComboMessageVisible && (
+                        <div className="floating-combo-message" style={{ zIndex: 20 }}>
+                            <div className="floating-combo-content">{currentComboMessage}</div>
+                        </div>
+                    )}
+
+                    {isOrderMessageVisible && (
+                        <div className="floating-order-message" style={{ zIndex: 20 }}>
+                            <div className="floating-order-content">{currentOrderMessage}</div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Mobile Bottom Container: HUD + Virtual Keyboard - Always visible when playing */}
+            {isMobile && gameState.isPlaying && (
+                <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '34vh', zIndex: 1000, display: 'flex', flexDirection: 'column', backgroundColor: '#000' }}>
+                    {/* Mobile HUD */}
+                    <div style={{ flex: '0 0 auto', padding: '4px 8px', borderBottom: '1px solid #00ffff' }}>
+                        <HUD score={gameState.score} lives={gameState.lives} isMuted={isMuted} onToggleMute={toggleMute} />
+                    </div>
+                    {/* Virtual Keyboard */}
+                    <div style={{ flex: '1 1 auto', overflow: 'hidden' }}>
+                        <VirtualKeyboard
+                            onKeyPress={handleVirtualKeyPress}
+                            onSpacePress={handleVirtualSpacePress}
+                            pressedKey={gameState.pressedKey}
+                        />
+                    </div>
+                </div>
             )}
         </div>
     );

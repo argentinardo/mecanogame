@@ -1,0 +1,73 @@
+// =============================================================================
+// Virtual Keyboard Styles
+// =============================================================================
+
+// Importar mixins y variables para usar en este módulo
+@use 'mixins' as *;
+@use 'variables' as *;
+
+.virtual-keyboard {
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 6px;
+    box-shadow: 0 -5px 20px rgba(0, 255, 255, 0.2);
+
+    .keyboard-grid {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .keyboard-row {
+        display: flex;
+        justify-content: center;
+        gap: 3px;
+        width: 100%;
+
+        &.space-row {
+            margin-top: 4px;
+        }
+    }
+
+    .keyboard-key {
+        flex: 1;
+        height: 36px; // Reduced from 45px to fit in smaller space
+        background: rgba(0, 20, 40, 0.8);
+        border: 1px solid $color-cyan;
+        border-radius: 4px;
+        color: #fff;
+        font-family: $font-main;
+        font-size: 14px; // Slightly smaller font
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        touch-action: manipulation; // Improve touch response
+        transition: all 0.1s ease;
+        text-shadow: 0 0 5px $color-cyan;
+        box-shadow: 0 0 5px rgba(0, 255, 255, 0.1);
+
+        &:active,
+        &.active {
+            background: $color-cyan;
+            color: #000;
+            transform: scale(0.95);
+            box-shadow: 0 0 15px $color-cyan;
+            text-shadow: none;
+        }
+
+        &.space-key {
+            flex: 5; // Wider space bar
+            font-size: 12px; // Smaller font for space bar
+            letter-spacing: 1px;
+        }
+    }
+}
