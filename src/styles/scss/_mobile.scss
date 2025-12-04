@@ -243,7 +243,6 @@
     font-size: $font-size-large;
     font-family: $font-main;
     color: #fff;
-    background: linear-gradient(145deg, $color-blue, $color-cyan);
     border: 3px solid $color-cyan-light;
     border-radius: $radius-main;
     cursor: pointer;
@@ -438,7 +437,6 @@
     font-size: $font-size-large;
     font-family: $font-main;
     color: #fff;
-    background: linear-gradient(145deg, $color-blue, $color-cyan);
     border: 3px solid $color-cyan-light;
     border-radius: $radius-main;
     cursor: pointer;
@@ -446,6 +444,7 @@
     @include text-glow(#fff, 10px);
     @include glow($color-cyan, 30px);
     transition: all 0.2s ease-out;
+    background: transparent;
 
     &:hover {
       transform: scale(1.05);

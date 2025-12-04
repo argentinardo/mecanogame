@@ -11,7 +11,8 @@
 // =============================================================================
 
 // Carteles principales con mismo fondo que panel de sector
-.instructions, .game-over {
+.instructions,
+.game-over {
   @include absolute-center;
   @include gradient-bg(rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
   border: 2px solid #8000ff; // púrpura neón
@@ -21,10 +22,11 @@
   z-index: $z-overlay;
   @include glow(#8000ff, 30px);
   animation: instructionsGlow 2s ease-in-out infinite alternate;
-  p { 
-    color: #fff; 
-    margin-bottom: $spacing-md; 
-    line-height: 1.5; 
+
+  p {
+    color: #fff;
+    margin-bottom: $spacing-md;
+    line-height: 1.5;
     font-size: $font-size-large; // Añadido para aumentar el tamaño del párrafo
   }
 }
@@ -32,16 +34,16 @@
 .game-over {
   border-color: $color-red;
   @include glow($color-red, 30px);
-  
-  h2 { 
-    color: $color-red; 
+
+  h2 {
+    color: $color-red;
     font-size: $font-size-xxl; // Aumentado de 28px a variable xxl
-    @include text-glow($color-red, 20px); 
+    @include text-glow($color-red, 20px);
   }
-  
-  p span { 
-    color: $color-cyan; 
-    font-weight: bold; 
+
+  p span {
+    color: $color-cyan;
+    font-weight: bold;
   }
 }
 
@@ -55,6 +57,7 @@
   margin-bottom: $spacing-md;
   cursor: pointer;
   @include text-glow(#8000ff, 8px);
+
   &:hover {
     border: 2px solid #cb97ff;
 
@@ -102,7 +105,7 @@
   z-index: 12;
   @include glow(#ff00ff, 20px);
   animation: floatingMessageGlow 1.2s ease-in-out infinite alternate, comboMessageSlideIn 0.6s ease-out, comboPulse 0.8s ease-in-out infinite;
-  
+
   .floating-combo-content {
     color: #12002b;
     font-size: $font-size-large; // Aumentado de medium a large
@@ -125,7 +128,7 @@
   z-index: 12;
   @include glow(#00ffff, 20px);
   animation: floatingMessageGlow 1.2s ease-in-out infinite alternate, orderMessageSlideIn 0.6s ease-out, comboPulse 0.8s ease-in-out infinite;
-  
+
   .floating-order-content {
     color: #12002b;
     font-size: $font-size-large; // Aumentado de medium a large
@@ -139,7 +142,8 @@
 // =============================================================================
 
 // Mensaje central genérico con mismo fondo de sector
-.central-message, .combo-message {
+.central-message,
+.combo-message {
   @include absolute-center;
   @include gradient-bg(rgba(0, 30, 60, 0.95), rgba(0, 20, 40, 0.98));
   border: 3px solid #ff8000;
@@ -149,15 +153,16 @@
   z-index: 15;
   @include glow(#ff8000, 30px);
   animation: centralMessageGlow 2s ease-in-out infinite alternate;
-  
-  .central-message-content, .combo-message-content {
+
+  .central-message-content,
+  .combo-message-content {
     color: #fff;
     font-size: $font-size-xl; // Aumentado de large a xl
     line-height: 1.5;
     margin-bottom: $spacing-lg;
     font-family: $font-main;
   }
-  
+
   // Estilos específicos para el countdown
   .countdown {
     .countdown-number {
@@ -166,24 +171,25 @@
       @include text-glow($color-cyan, 20px);
       margin-bottom: $spacing-sm;
       font-family: $font-main;
+
       &.horizon-anim {
         animation: fromHorizon 0.6s ease-out forwards;
       }
     }
-    
+
     .countdown-text {
       font-size: $font-size-large; // Aumentado de medium a large
       color: #fff;
       font-family: $font-main;
     }
   }
-  
+
   // Estilos para mensajes de estado
   .status-message {
     .message-line {
       margin-bottom: $spacing-sm;
     }
-    
+
     .key-highlight {
       color: $color-cyan;
       font-weight: bold;
@@ -199,7 +205,7 @@
 .instructions {
   transition: $transition-main;
   cursor: pointer;
-  
+
   &:hover {
     transform: translate(-50%, -50%) scale(1.02);
     box-shadow: 0 0 40px rgba($color-cyan, 0.3);
@@ -212,31 +218,34 @@
 // =============================================================================
 
 @keyframes instructionsGlow {
-  0% { 
-    box-shadow: 0 0 30px rgba($color-cyan, 0.3); 
+  0% {
+    box-shadow: 0 0 30px rgba($color-cyan, 0.3);
   }
-  100% { 
-    box-shadow: 0 0 50px rgba($color-cyan, 0.3); 
+
+  100% {
+    box-shadow: 0 0 50px rgba($color-cyan, 0.3);
   }
 }
 
 @keyframes floatingMessageGlow {
-  0% { 
-    box-shadow: 0 0 20px rgba($color-cyan, 0.3); 
+  0% {
+    box-shadow: 0 0 20px rgba($color-cyan, 0.3);
   }
-  100% { 
-    box-shadow: 0 0 30px rgba($color-cyan, 0.3); 
+
+  100% {
+    box-shadow: 0 0 30px rgba($color-cyan, 0.3);
   }
 }
 
 @keyframes centralMessageGlow {
-  0% { 
-    box-shadow: 0 0 30px rgba($color-cyan, 0.3); 
-    border-color: $color-cyan; 
+  0% {
+    box-shadow: 0 0 30px rgba($color-cyan, 0.3);
+    border-color: $color-cyan;
   }
-  100% { 
-    box-shadow: 0 0 50px rgba($color-cyan, 0.3); 
-    border-color: $color-cyan-light; 
+
+  100% {
+    box-shadow: 0 0 50px rgba($color-cyan, 0.3);
+    border-color: $color-cyan-light;
   }
 }
 
@@ -249,10 +258,12 @@
     transform: translateY(-50%) translateX(100%) scale(0.3);
     opacity: 0;
   }
+
   50% {
     transform: translateY(-50%) translateX(20px) scale(1.1);
     opacity: 0.8;
   }
+
   100% {
     transform: translateY(-50%) translateX(0) scale(1);
     opacity: 1;
@@ -264,37 +275,80 @@
     transform: translateY(-50%) translateX(-100%) scale(0.3);
     opacity: 0;
   }
+
   50% {
     transform: translateY(-50%) translateX(-20px) scale(1.1);
     opacity: 0.8;
   }
+
   100% {
     transform: translateY(-50%) translateX(0) scale(1);
     opacity: 1;
   }
-} 
+}
 
 // Animación pulso para combo / order
 @keyframes comboPulse {
-  0% { transform: translateY(-50%) scale(1); box-shadow: 0 0 20px rgba(255, 0, 255, 0.6); }
-  50% { transform: translateY(-50%) scale(1.15); box-shadow: 0 0 35px rgba(255, 0, 255, 0.9); }
-  100% { transform: translateY(-50%) scale(1); box-shadow: 0 0 20px rgba(255, 0, 255, 0.6); }
-} 
+  0% {
+    transform: translateY(-50%) scale(1);
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
+  }
+
+  50% {
+    transform: translateY(-50%) scale(1.15);
+    box-shadow: 0 0 35px rgba(255, 0, 255, 0.9);
+  }
+
+  100% {
+    transform: translateY(-50%) scale(1);
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
+  }
+}
 
 @keyframes fromHorizon {
-  0%   { transform: translateY(-200px) scale(0); opacity: 0; }
-  50%  { transform: translateY(-10px) scale(1); opacity: 1; }
-  100% { transform: translateY(20px)  scale(1.5); opacity: 0; }
-} 
+  0% {
+    transform: translateY(-200px) scale(0);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateY(-10px) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(20px) scale(1.5);
+    opacity: 0;
+  }
+}
 
 // Animación del título MECANOGAME
 @keyframes neonTitleColors {
-  0%   { -webkit-text-stroke: 2px #ff00ff; text-shadow: 0 0 8px #ff00ff, 0 0 16px #ff00ff; }
-  25%  { -webkit-text-stroke: 2px #00ffff; text-shadow: 0 0 8px #00ffff, 0 0 16px #00ffff; }
-  50%  { -webkit-text-stroke: 2px #ffff00; text-shadow: 0 0 8px #ffff00, 0 0 16px #ffff00; }
-  75%  { -webkit-text-stroke: 2px #00ff00; text-shadow: 0 0 8px #00ff00, 0 0 16px #00ff00; }
-  100% { -webkit-text-stroke: 2px #ff00ff; text-shadow: 0 0 8px #ff00ff, 0 0 16px #ff00ff; }
-} 
+  0% {
+    -webkit-text-stroke: 2px #ff00ff;
+    text-shadow: 0 0 8px #ff00ff, 0 0 16px #ff00ff;
+  }
+
+  25% {
+    -webkit-text-stroke: 2px #00ffff;
+    text-shadow: 0 0 8px #00ffff, 0 0 16px #00ffff;
+  }
+
+  50% {
+    -webkit-text-stroke: 2px #ffff00;
+    text-shadow: 0 0 8px #ffff00, 0 0 16px #ffff00;
+  }
+
+  75% {
+    -webkit-text-stroke: 2px #00ff00;
+    text-shadow: 0 0 8px #00ff00, 0 0 16px #00ff00;
+  }
+
+  100% {
+    -webkit-text-stroke: 2px #ff00ff;
+    text-shadow: 0 0 8px #ff00ff, 0 0 16px #ff00ff;
+  }
+}
 
 // -----------------------------------------------------------------------------
 // TÍTULO NEÓN CON LETRAS INDIVIDUALES
@@ -317,11 +371,40 @@
   animation: neonLetterColors 1s linear infinite;
 }
 
+.mobile-title .neon-letter {
+  font-size: 48px;
+  margin-top: 20px;
+}
+
+
 @keyframes neonLetterColors {
-  0%   { -webkit-text-stroke: 1px rgba(255,0,255,1); text-shadow: 0 0 8px rgba(255,0,255,0.1), 0 0 16px rgba(255,0,255,0.1); }
-  20%  { -webkit-text-stroke: 1px rgba(0,255,255,1); text-shadow: 0 0 8px rgba(0,255,255,0.1), 0 0 16px rgba(0,255,255,0.1); }
-  40%  { -webkit-text-stroke: 1px rgba(255,255,1); text-shadow: 0 0 8px rgba(255,255,0,0.1), 0 0 16px rgba(255,255,0,0.1); }
-  60%  { -webkit-text-stroke: 1px rgba(0,255,0,1); text-shadow: 0 0 8px rgba(0,255,0,0.1), 0 0 16px rgba(0,255,0,0.1); }
-  80%  { -webkit-text-stroke: 1px rgba(255,0,153,1); text-shadow: 0 0 8px rgba(255,0,153,0.1), 0 0 16px rgba(255,0,153,0.1); }
-  100% { -webkit-text-stroke: 1px rgba(255,0,255,1); text-shadow: 0 0 8px rgba(255,0,255,0.1), 0 0 16px rgba(255,0,255,0.1); }
-} 
+  0% {
+    -webkit-text-stroke: 1px rgba(255, 0, 255, 1);
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.1), 0 0 16px rgba(255, 0, 255, 0.1);
+  }
+
+  20% {
+    -webkit-text-stroke: 1px rgba(0, 255, 255, 1);
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.1), 0 0 16px rgba(0, 255, 255, 0.1);
+  }
+
+  40% {
+    -webkit-text-stroke: 1px rgba(255, 255, 1);
+    text-shadow: 0 0 8px rgba(255, 255, 0, 0.1), 0 0 16px rgba(255, 255, 0, 0.1);
+  }
+
+  60% {
+    -webkit-text-stroke: 1px rgba(0, 255, 0, 1);
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.1), 0 0 16px rgba(0, 255, 0, 0.1);
+  }
+
+  80% {
+    -webkit-text-stroke: 1px rgba(255, 0, 153, 1);
+    text-shadow: 0 0 8px rgba(255, 0, 153, 0.1), 0 0 16px rgba(255, 0, 153, 0.1);
+  }
+
+  100% {
+    -webkit-text-stroke: 1px rgba(255, 0, 255, 1);
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.1), 0 0 16px rgba(255, 0, 255, 0.1);
+  }
+}

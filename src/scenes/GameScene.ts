@@ -56,7 +56,7 @@ export class GameScene extends Phaser.Scene {
     // Force Field
     private forceField!: Phaser.GameObjects.Arc | null;
     private forceFieldActive: boolean = false;
-    private forceFieldDuration: number = 1500; // 1.5 seconds
+    private forceFieldDuration: number = 1000;
     private forceFieldStartTime: number = 0;
 
     // Spawning logic
@@ -79,6 +79,7 @@ export class GameScene extends Phaser.Scene {
     private previousStage: number = -1;
     private bossHasExited: boolean | null = null; // null = never spawned, true = exited after collision, false = needs to exit
     private bossDefeatedForCurrentStage: boolean = false; // Track if boss was defeated for current stage
+    private lastSpawnedLetters: string[] = []; // Track last spawned letters to avoid duplicates
 
     constructor() {
         super({ key: 'GameScene' });
@@ -119,7 +120,11 @@ export class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Create Ship
-        this.ship = this.add.sprite(width / 2, height * 0.9, 'nave');
+        // Mobile check: width <= 800 (virtual resolution)
+        const isMobile = width <= 800;
+        const shipY = isMobile ? height * 0.9 : height - 200;
+
+        this.ship = this.add.sprite(width / 2, shipY, 'nave');
         this.ship.setScale(0.2);
         this.ship.setDepth(10);
 
@@ -502,6 +507,9 @@ export class GameScene extends Phaser.Scene {
         // Check for stage change (after boss is defeated)
         if (this.gameState.currentStage !== this.previousStage) {
             this.previousStage = this.gameState.currentStage;
+            // Reset boss flags for the new stage
+            this.bossDefeatedForCurrentStage = false;
+            this.bossHasExited = null;
         }
 
         // Update boss if active (only when not paused)
@@ -525,14 +533,30 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Spawning letters (not during boss fight)
-        if (!this.bossActive && time - this.lastSpawnTime > this.gameState.gameSpeed) {
-            this.spawnLetter(time);
-            this.lastSpawnTime = time;
+        // Spawning letters (not during boss fight and not after boss defeat)
+        if (!this.bossActive && !this.bossDefeatedForCurrentStage) {
+            // Dynamic Spawn Rate Logic
+            // Calculate progress within current level
+            const currentThreshold = this.getThresholdForStage(this.gameState.currentStage);
+            const previousThreshold = this.gameState.currentStage > 0 ? this.getThresholdForStage(this.gameState.currentStage - 1) : 0;
+            const lettersInLevel = Math.max(0, this.gameState.lettersDestroyed - previousThreshold);
+            const totalLettersInLevel = Math.max(1, currentThreshold - previousThreshold);
+            const levelProgress = Math.min(1, lettersInLevel / totalLettersInLevel);
+
+            // "las letras progresivamente spwaneen mas rapido una de otras"
+            // Start at 1.0 and go down to 0.3 (clamped)
+            const spawnMultiplier = Math.max(0.3, 1.0 - (levelProgress * 0.8));
+            const currentSpawnInterval = this.gameState.gameSpeed * spawnMultiplier;
+
+
+            if (time - this.lastSpawnTime > currentSpawnInterval) {
+                this.spawnLetter(time);
+                this.lastSpawnTime = time;
+            }
         }
 
         // Spawning meteorites (only from sector 3 onwards, and not during boss)
-        if (!this.bossActive && this.gameState.currentStage >= 3 && time - this.lastMeteoriteSpawnTime > this.meteoriteSpawnInterval) {
+        if (!this.bossActive && !this.bossDefeatedForCurrentStage && this.gameState.currentStage >= 3 && time - this.lastMeteoriteSpawnTime > this.meteoriteSpawnInterval) {
             this.spawnMeteorite(time);
             this.lastMeteoriteSpawnTime = time;
         }
@@ -543,7 +567,19 @@ export class GameScene extends Phaser.Scene {
         if (!stage || !stage.letters.length) return;
 
         // Filter out last spawned if possible (simple random for now)
-        const letterChar = stage.letters[Math.floor(Math.random() * stage.letters.length)];
+        // Avoid duplicates: Try to pick a letter that isn't in the last 2 spawned
+        let letterChar = stage.letters[Math.floor(Math.random() * stage.letters.length)];
+        let attempts = 0;
+        while (this.lastSpawnedLetters.includes(letterChar) && attempts < 10) {
+            letterChar = stage.letters[Math.floor(Math.random() * stage.letters.length)];
+            attempts++;
+        }
+
+        // Update history
+        this.lastSpawnedLetters.push(letterChar);
+        if (this.lastSpawnedLetters.length > 2) {
+            this.lastSpawnedLetters.shift();
+        }
 
         // Calculate target horizontal position (where letter will end up)
         const position = KEYBOARD_POSITIONS[letterChar];
@@ -1672,8 +1708,8 @@ export class GameScene extends Phaser.Scene {
         const currentY = this.bossHead.y;
         const approachY = currentY + (approachSpeed * (delta / 1000));
 
-        // Keep within bounds (don't go too low)
-        const maxY = height * 0.8;
+        // Keep within bounds (allow going off screen to hit ship)
+        const maxY = height + 100;
         const finalY = Math.min(approachY, maxY);
 
         // Add current position to trail
@@ -1710,6 +1746,10 @@ export class GameScene extends Phaser.Scene {
                     // Previous: collisionY = isHead ? segment.y + 30 : segment.y
 
                     const isHead = segment.getData('isHead');
+
+                    // ONLY THE HEAD CAN KILL THE SHIP
+                    if (!isHead) return;
+
                     const hitRadius = 25; // Reduced from 40
                     const shipRadius = 20; // Approx ship body radius
 
@@ -1717,7 +1757,7 @@ export class GameScene extends Phaser.Scene {
                     // The head sprite is at y=-20 relative to container, but container moves.
                     // Let's use the container center, but maybe slightly lower for the "head" visual
                     const collisionX = segment.x;
-                    const collisionY = isHead ? segment.y + 20 : segment.y;
+                    const collisionY = segment.y + 20;
 
                     const distance = Phaser.Math.Distance.Between(collisionX, collisionY, this.ship.x, this.ship.y);
 
@@ -2210,8 +2250,9 @@ export class GameScene extends Phaser.Scene {
                 // Delay slightly more to let flash fade
                 this.time.delayedCall(1000, () => {
                     // Reset boss exit flag when advancing stage to allow boss to spawn in new level
-                    this.bossHasExited = null; // Reset to null so boss can spawn in new level
-                    this.bossDefeatedForCurrentStage = false; // Reset defeat flag for new stage
+                    // MOVED TO UPDATE LOOP to avoid race condition
+                    // this.bossHasExited = null; 
+                    // this.bossDefeatedForCurrentStage = false; 
                     this.callbacks.onStageAdvance(nextStage);
                 });
             }
@@ -2241,8 +2282,6 @@ export class GameScene extends Phaser.Scene {
         if (this.gameState && this.gameState.thresholds) {
             return this.gameState.thresholds[stage] || this.gameState.thresholds[this.gameState.thresholds.length - 1];
         }
-        // Fallback (should not happen)
-        const thresholds = [3, 150, 300, 500, 750, 1000, 1300, 1600, 2000, 2500];
-        return thresholds[stage] || thresholds[thresholds.length - 1];
+        return 999999; // Fallback safe value
     }
 }

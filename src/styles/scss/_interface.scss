@@ -85,6 +85,7 @@
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -97,7 +98,7 @@
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 12px;
     padding: 15px;
-    max-height: 70vh;
+    max-height: 45vh;
     overflow-y: auto;
 
     // Custom scrollbar
@@ -237,7 +238,7 @@
         grid-template-columns: 1fr;
         gap: 8px;
         padding: 12px;
-        max-height: 60vh;
+        max-height: 40vh;
     }
 
     .level-card {
@@ -271,6 +272,13 @@
 }
 
 @keyframes twinkle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-} 
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}

@@ -7,9 +7,18 @@ interface InstructionsProps {
     onContinue?: () => void;
     showContinue?: boolean;
     isMobile?: boolean;
+    onDifficultyChange?: (difficulty: 'novice' | 'advanced' | 'expert') => void;
+    currentDifficulty?: 'novice' | 'advanced' | 'expert';
 }
 
-export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue, showContinue = false, isMobile = false }) => {
+export const Instructions: React.FC<InstructionsProps> = ({
+    onStart,
+    onContinue,
+    showContinue = false,
+    isMobile = false,
+    onDifficultyChange,
+    currentDifficulty = 'novice'
+}) => {
     const [showDetails, setShowDetails] = useState<boolean>(false);
     const [showLevelSelector, setShowLevelSelector] = useState<boolean>(false);
     const [selectedLevel, setSelectedLevel] = useState<number>(0);
@@ -91,16 +100,43 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                 backgroundColor: '#000'
             } : {})
         }}>
-            <h2 className="neon-title">
-                {Array.from('MECANOGAME').map((char, idx) => (
-                    <span
-                        key={`char-${idx}`}
-                        className="neon-letter"
-                        style={{ animationDelay: `${idx * 0.15}s` }}
-                    >
-                        {char}
-                    </span>
-                ))}
+            <h2 className={`neon-title ${isMobile ? 'mobile-title' : ''}`}>
+                {isMobile ? (
+                    <>
+                        <div className="title-line">
+                            {Array.from('MECANO').map((char, idx) => (
+                                <span
+                                    key={`char-1-${idx}`}
+                                    className="neon-letter"
+                                    style={{ animationDelay: `${idx * 0.15}s` }}
+                                >
+                                    {char}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="title-line">
+                            {Array.from('GAME').map((char, idx) => (
+                                <span
+                                    key={`char-2-${idx}`}
+                                    className="neon-letter"
+                                    style={{ animationDelay: `${(idx + 6) * 0.15}s` }}
+                                >
+                                    {char}
+                                </span>
+                            ))}
+                        </div>
+                    </>
+                ) : (
+                    Array.from('MECANOGAME').map((char, idx) => (
+                        <span
+                            key={`char-${idx}`}
+                            className="neon-letter"
+                            style={{ animationDelay: `${idx * 0.15}s` }}
+                        >
+                            {char}
+                        </span>
+                    ))
+                )}
             </h2>
 
             {/* Selector de Nivel */}
@@ -151,6 +187,32 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Selector de Dificultad */}
+            <div className="difficulty-selector" style={{ marginBottom: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                {(['novice', 'advanced', 'expert'] as const).map((level) => (
+                    <button
+                        key={level}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onDifficultyChange) onDifficultyChange(level);
+                        }}
+                        style={{
+                            padding: '8px 16px',
+                            fontSize: isMobile ? '12px' : '14px',
+                            fontFamily: '"Press Start 2P", monospace',
+                            color: '#fff',
+                            background: currentDifficulty === level ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.5)',
+                            border: `2px solid ${currentDifficulty === level ? '#00ffff' : '#555'}`,
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            textTransform: 'uppercase'
+                        }}
+                    >
+                        {level === 'novice' ? 'Novato' : level === 'advanced' ? 'Avanzado' : 'Experto'}
+                    </button>
+                ))}
             </div>
 
             {isMobile ? (

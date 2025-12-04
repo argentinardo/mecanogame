@@ -28,8 +28,17 @@ const MIN_GAME_SPEED = 800;
 //   - Sector 2: Boss aparece después de destruir 300 letras
 //   - etc.
 // El índice del array corresponde al número del sector (currentStage)
+// Umbrales de letras destruidas para cada sector (0-9)
+// Cuando el jugador destruye este número de letras en un sector, aparece el BOSS
+// Después de derrotar al boss, avanza al siguiente sector
+// Ejemplo:
+//   - Sector 0: Boss aparece después de destruir 3 letras
+//   - Sector 1: Boss aparece después de destruir 150 letras
+//   - Sector 2: Boss aparece después de destruir 300 letras
+//   - etc.
+// El índice del array corresponde al número del sector (currentStage)
 const LETTERS_DESTROYED_THRESHOLDS = [
-    50,    // Sector 0: FILA SUPERIOR (QWERTYUIOP)
+    30,    // Sector 0: FILA SUPERIOR (QWERTYUIOP) - Reduced from 50
     150,  // Sector 1: FILA CENTRAL (ASDFGHJKLÑ)
     300,  // Sector 2: FILA INFERIOR (ZXCVBNM)
     500,  // Sector 3: NÚMEROS 1-5
@@ -68,9 +77,9 @@ export const Game: React.FC = () => {
         startMenuMusic,
         startGameOverMusic,
         stopGameOverMusic,
-
         playScoringSound,
-        playBlastSound
+        playBlastSound,
+        stopBossLaugh
     } = useAudio();
 
     const [gameState, setGameState] = useState<GameState>({
@@ -105,6 +114,7 @@ export const Game: React.FC = () => {
 
     const [isMobile, setIsMobile] = useState(false);
     const [isLandscape, setIsLandscape] = useState(false);
+    const [difficulty, setDifficulty] = useState<'novice' | 'advanced' | 'expert'>('novice');
 
     useEffect(() => {
         const checkMobile = () => {
@@ -563,16 +573,30 @@ export const Game: React.FC = () => {
             bossLaughIntervalRef.current = undefined;
         }
         stopGameOverMusic();
+        stopBossLaugh();
 
         initAudioContext();
+
+        // Adjust settings based on difficulty
+        let initialGameSpeed = INITIAL_GAME_SPEED;
+        let initialLetterSpeed = INITIAL_LETTER_SPEED;
+
+        if (difficulty === 'advanced') {
+            initialGameSpeed = 1800;
+            initialLetterSpeed = 1.2;
+        } else if (difficulty === 'expert') {
+            initialGameSpeed = 1500;
+            initialLetterSpeed = 1.5;
+        }
+
         setGameState(prev => ({
             ...prev,
             isPlaying: true,
             score: 0,
             lives: 3,
             currentStage: startingLevel,
-            gameSpeed: INITIAL_GAME_SPEED,
-            letterSpeed: INITIAL_LETTER_SPEED,
+            gameSpeed: initialGameSpeed,
+            letterSpeed: initialLetterSpeed,
             fallingLetters: [],
             meteorites: [],
             isPaused: false,
@@ -581,7 +605,32 @@ export const Game: React.FC = () => {
             thresholds: LETTERS_DESTROYED_THRESHOLDS // Pass thresholds to GameScene
         }));
         startBackgroundMusic();
-    }, [initAudioContext, startBackgroundMusic, stopGameOverMusic]);
+    }, [initAudioContext, startBackgroundMusic, stopGameOverMusic, stopBossLaugh, difficulty]);
+
+    const resetToMenu = useCallback(() => {
+        // Clear boss laugh interval if exists
+        if (bossLaughIntervalRef.current) {
+            clearInterval(bossLaughIntervalRef.current);
+            bossLaughIntervalRef.current = undefined;
+        }
+        stopGameOverMusic();
+        stopBossLaugh();
+
+        setGameState(prev => ({
+            ...prev,
+            isPlaying: false, // Go back to menu
+            score: 0,
+            lives: 3, // Reset lives to show Instructions
+            currentStage: 0,
+            fallingLetters: [],
+            meteorites: [],
+            isPaused: false,
+            isLifeLostPaused: false,
+            isPenalized: false
+        }));
+
+        // Don't start background music yet, wait for user to start
+    }, [stopGameOverMusic, stopBossLaugh]);
 
     const continueGame = useCallback(() => {
         // Clear boss laugh interval if exists
@@ -778,12 +827,14 @@ export const Game: React.FC = () => {
                     onContinue={continueGame}
                     showContinue={gameState.score > 0}
                     isMobile={isMobile}
+                    onDifficultyChange={setDifficulty}
+                    currentDifficulty={difficulty}
                 />
             )}
 
             {/* Game Over - Full Screen */}
             {!gameState.isPlaying && gameState.lives <= 0 && (
-                <GameOver score={gameState.score} onContinue={continueGame} onNewGame={startGame} />
+                <GameOver score={gameState.score} onContinue={continueGame} onNewGame={resetToMenu} />
             )}
 
             {/* Game Container - Only visible when playing */}
@@ -874,8 +925,17 @@ export const Game: React.FC = () => {
                         show={gameState.showCentralMessage || gameState.isPaused}
                         isMobile={isMobile}
                         onMessageClick={() => {
-                            if (isMobile && (gameState.showCentralMessage || gameState.isPaused)) {
-                                handleVirtualKeyPress('BACKSPACE');
+                            if (isMobile) {
+                                if (gameState.isPaused) {
+                                    // Resume game (ESC)
+                                    handleVirtualKeyPress('Escape');
+                                } else if (gameState.showCentralMessage) {
+                                    // Handle other messages (BACKSPACE or ENTER)
+                                    // Try BACKSPACE first (respawn)
+                                    handleVirtualKeyPress('BACKSPACE');
+                                    // Also try ENTER (start game if needed, though usually handled by Instructions)
+                                    handleVirtualKeyPress('Enter');
+                                }
                             }
                         }}
                     />

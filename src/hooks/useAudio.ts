@@ -24,6 +24,7 @@ export const useAudio = () => {
     const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
     const bossMusicRef = useRef<HTMLAudioElement | null>(null);
     const menuMusicRef = useRef<HTMLAudioElement | null>(null);
+    const bossLaughRef = useRef<HTMLAudioElement | null>(null);
     const normalVolumeRef = useRef<number>(0.3);
 
     // Initialize AudioContext (kept for legacy or specific needs, but mostly using HTML5 Audio now)
@@ -141,8 +142,23 @@ export const useAudio = () => {
     }, []);
 
     const playBossLaugh = useCallback(() => {
-        playSound(bossLaughUrl, 0.35);
-    }, [playSound]);
+        // Stop previous laugh if any
+        if (bossLaughRef.current) {
+            bossLaughRef.current.pause();
+            bossLaughRef.current = null;
+        }
+        const audio = new Audio(bossLaughUrl);
+        audio.volume = 0.35;
+        audio.play().catch(console.error);
+        bossLaughRef.current = audio;
+    }, []);
+
+    const stopBossLaugh = useCallback(() => {
+        if (bossLaughRef.current) {
+            bossLaughRef.current.pause();
+            bossLaughRef.current = null;
+        }
+    }, []);
 
     // --- Music Control ---
 
@@ -430,6 +446,7 @@ export const useAudio = () => {
         restoreBackgroundVolume,
         initAudioContext,
         toggleMute,
-        isMuted
+        isMuted,
+        stopBossLaugh
     };
 }; 

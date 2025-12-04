@@ -13,9 +13,9 @@ export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdo
 
     const wrapperClass = countdown !== null ? 'central-message countdown-only' : 'central-message';
 
-    // Replace BACKSPACE with TOCA AQUÍ on mobile
+    // Replace BACKSPACE, ENTER, ESC with TOCA AQUÍ on mobile
     const displayMessage = isMobile && message
-        ? message.replace(/BACKSPACE/g, 'TOCA AQUÍ')
+        ? message.replace(/BACKSPACE|ENTER|ESC/g, 'TOCA AQUÍ')
         : message;
 
     return (
