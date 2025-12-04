@@ -44,39 +44,64 @@ export const PhaserGame = forwardRef<PhaserGameRef, PhaserGameProps>(({
     useEffect(() => {
         if (!gameRef.current || phaserGameRef.current) return;
 
-        const config: Phaser.Types.Core.GameConfig = {
-            type: Phaser.AUTO,
-            width: window.innerWidth,
-            height: window.innerHeight,
-            parent: gameRef.current,
-            scene: undefined, // Don't add scene here, we add it manually below
-            transparent: true, // Make canvas transparent so React background shows if needed
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 0, x: 0 },
-                    debug: false
+        // Wait a bit for parent container to have proper dimensions
+        const initPhaser = () => {
+            if (!gameRef.current) return;
+
+            const parent = gameRef.current.parentElement;
+            if (!parent) return;
+
+            const parentRect = parent.getBoundingClientRect();
+
+            // Virtual Resolution for Mobile
+            // We set a fixed width (e.g., 800px) and calculate height based on aspect ratio
+            // This makes the 100px sprites look smaller on the screen
+            const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+            const virtualWidth = isMobile ? 800 : (parentRect.width || window.innerWidth);
+
+            // Calculate height to maintain aspect ratio of the container
+            const containerRatio = (parentRect.height || window.innerHeight) / (parentRect.width || window.innerWidth);
+            const virtualHeight = isMobile ? virtualWidth * containerRatio : (parentRect.height || window.innerHeight);
+
+            const config: Phaser.Types.Core.GameConfig = {
+                type: Phaser.AUTO,
+                width: virtualWidth,
+                height: virtualHeight,
+                parent: gameRef.current,
+                scene: undefined,
+                transparent: true,
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        gravity: { y: 0, x: 0 },
+                        debug: false
+                    }
+                },
+                scale: {
+                    mode: Phaser.Scale.FIT,
+                    autoCenter: Phaser.Scale.CENTER_BOTH,
+                    width: virtualWidth,
+                    height: virtualHeight
                 }
-            },
-            scale: {
-                mode: Phaser.Scale.RESIZE,
-                autoCenter: Phaser.Scale.CENTER_BOTH
+            };
+
+            const game = new Phaser.Game(config);
+            phaserGameRef.current = game;
+
+            // Manually add and start the scene with data
+            game.scene.add('GameScene', GameScene);
+            game.scene.start('GameScene', { gameState, callbacks });
+
+            if (onGameReady) {
+                onGameReady(game);
             }
         };
 
-        const game = new Phaser.Game(config);
-        phaserGameRef.current = game;
-
-        // Manually add and start the scene with data
-        game.scene.add('GameScene', GameScene);
-        game.scene.start('GameScene', { gameState, callbacks });
-
-
-        if (onGameReady) {
-            onGameReady(game);
-        }
+        // Small delay to ensure container is sized
+        const timeoutId = setTimeout(initPhaser, 100);
 
         return () => {
+            clearTimeout(timeoutId);
             if (phaserGameRef.current) {
                 phaserGameRef.current.destroy(true);
                 phaserGameRef.current = null;

@@ -6,20 +6,15 @@ interface InstructionsProps {
     onStart: (startingLevel?: number) => void;
     onContinue?: () => void;
     showContinue?: boolean;
+    isMobile?: boolean;
 }
 
-export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue, showContinue = false }) => {
-    const [isMobile, setIsMobile] = useState(false);
+export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue, showContinue = false, isMobile = false }) => {
     const [showDetails, setShowDetails] = useState<boolean>(false);
     const [showLevelSelector, setShowLevelSelector] = useState<boolean>(false);
     const [selectedLevel, setSelectedLevel] = useState<number>(0);
 
     useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(/Mobi|Android/i.test(navigator.userAgent));
-        };
-        checkMobile();
-
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'c' || event.key === 'C') {
                 if (showContinue && onContinue) {
@@ -35,7 +30,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
         if (!isMobile) {
             document.addEventListener('keydown', handleKeyDown);
         }
-        
+
         return () => {
             if (!isMobile) {
                 document.removeEventListener('keydown', handleKeyDown);
@@ -46,7 +41,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
     const handleContainerClick = (event: React.MouseEvent) => {
         if (isMobile) return; // En móvil, solo el botón funciona
 
-        if (!(event.target as HTMLElement).closest('button') && 
+        if (!(event.target as HTMLElement).closest('button') &&
             !(event.target as HTMLElement).closest('.level-selector-container')) {
             if (showContinue && onContinue) {
                 onContinue();
@@ -65,7 +60,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
 
             // 2. Iniciar el juego (esto puede mostrar el teclado)
             onStart(selectedLevel);
-            
+
         } catch (error) {
             console.error("Error al iniciar en modo móvil:", error);
             // Si algo falla (ej. el usuario niega la pantalla completa), igual intentamos iniciar
@@ -79,7 +74,23 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
     };
 
     return (
-        <div className="instructions" onClick={handleContainerClick} style={{ cursor: isMobile ? 'default' : 'pointer' }}>
+        <div className="instructions" onClick={handleContainerClick} style={{
+            cursor: isMobile ? 'default' : 'pointer',
+            ...(isMobile ? {
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                transform: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 10000,
+                backgroundColor: '#000'
+            } : {})
+        }}>
             <h2 className="neon-title">
                 {Array.from('MECANOGAME').map((char, idx) => (
                     <span
@@ -91,7 +102,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                     </span>
                 ))}
             </h2>
-            
+
             {/* Selector de Nivel */}
             <div className="level-selector-container">
                 <button
@@ -141,7 +152,7 @@ export const Instructions: React.FC<InstructionsProps> = ({ onStart, onContinue,
                     </div>
                 )}
             </div>
-            
+
             {isMobile ? (
                 <>
                     <p>¡Prepárate para la acción!</p>

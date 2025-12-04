@@ -104,6 +104,7 @@ export const Game: React.FC = () => {
 
 
     const [isMobile, setIsMobile] = useState(false);
+    const [isLandscape, setIsLandscape] = useState(false);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -112,11 +113,20 @@ export const Game: React.FC = () => {
             const isSmallScreen = window.innerWidth <= 768; // Also check screen width for simulator
             const mobile = isMobileDevice || isSmallScreen;
             setIsMobile(mobile);
+
+            // Check orientation
+            if (mobile) {
+                setIsLandscape(window.innerWidth > window.innerHeight);
+            }
         };
 
         checkMobile();
         window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
+        window.addEventListener('orientationchange', checkMobile);
+        return () => {
+            window.removeEventListener('resize', checkMobile);
+            window.removeEventListener('orientationchange', checkMobile);
+        };
     }, []);
     const [lastHitTime, setLastHitTime] = useState<number>(0);
     const [sequentialHits, setSequentialHits] = useState<number>(0);
@@ -730,11 +740,45 @@ export const Game: React.FC = () => {
     // Mobile warning removed to allow gameplay with virtual keyboard
     // if (isMobile && isLandscape) { ... }
 
+    // Show landscape warning on mobile
+    if (isMobile && isLandscape) {
+        return (
+            <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#000',
+                color: '#fff',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 9999,
+                textAlign: 'center',
+                padding: '20px'
+            }}>
+                <h1 style={{ fontFamily: '"Press Start 2P", monospace', color: '#ff00ff', marginBottom: '20px', fontSize: '18px' }}>MODO VERTICAL REQUERIDO</h1>
+                <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '12px', lineHeight: '1.8' }}>
+                    Por favor, gira tu dispositivo<br />
+                    para jugar en vertical.<br /><br />
+                    🔄
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
             {/* Instructions (Splash Screen) - Full Screen */}
             {!gameState.isPlaying && gameState.lives > 0 && (
-                <Instructions onStart={(level) => startGame(level)} onContinue={continueGame} showContinue={gameState.score > 0} />
+                <Instructions
+                    onStart={(level) => startGame(level)}
+                    onContinue={continueGame}
+                    showContinue={gameState.score > 0}
+                    isMobile={isMobile}
+                />
             )}
 
             {/* Game Over - Full Screen */}
@@ -750,8 +794,7 @@ export const Game: React.FC = () => {
                     top: 0,
                     left: 0,
                     width: '100vw',
-                    overflow: 'hidden',
-                    zIndex: 0
+                    overflow: 'hidden'
                 } : {}}>
                     <Starfield />
                     <div className="bg-grid"></div>
@@ -825,42 +868,16 @@ export const Game: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Mobile Keyboard Input Field (Hidden but focusable) */}
-                    {isMobile && (
-                        <input
-                            type="text"
-                            style={{
-                                position: 'absolute',
-                                opacity: 0,
-                                top: '50%',
-                                left: 0,
-                                width: '100%',
-                                height: '50%',
-                                zIndex: 100,
-                                fontSize: '16px' // Prevent zoom on iOS
-                            }}
-                            autoFocus
-                            onBlur={(e) => e.target.focus()} // Force keep focus
-                            onChange={(e) => {
-                                const char = e.target.value.slice(-1).toUpperCase();
-                                if (char) {
-                                    // Simulate key press
-                                    const event = new KeyboardEvent('keydown', {
-                                        key: char,
-                                        code: `Key${char}`,
-                                        bubbles: true
-                                    });
-                                    window.dispatchEvent(event);
-                                }
-                                e.target.value = ''; // Clear input
-                            }}
-                        />
-                    )}
-
                     <CentralMessage
                         message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)}
                         countdown={gameState.isPaused ? null : gameState.countdown}
                         show={gameState.showCentralMessage || gameState.isPaused}
+                        isMobile={isMobile}
+                        onMessageClick={() => {
+                            if (isMobile && (gameState.showCentralMessage || gameState.isPaused)) {
+                                handleVirtualKeyPress('BACKSPACE');
+                            }
+                        }}
                     />
 
                     {isComboMessageVisible && (
@@ -877,14 +894,32 @@ export const Game: React.FC = () => {
                 </div>
             )}
 
-            {/* Mobile Bottom Container: HUD + Virtual Keyboard - Always visible when playing */}
+            {/* Mobile Virtual Keyboard - Bottom 34vh */}
             {isMobile && gameState.isPlaying && (
-                <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '34vh', zIndex: 1000, display: 'flex', flexDirection: 'column', backgroundColor: '#000' }}>
-                    {/* Mobile HUD */}
-                    <div style={{ flex: '0 0 auto', padding: '4px 8px', borderBottom: '1px solid #00ffff' }}>
-                        <HUD score={gameState.score} lives={gameState.lives} isMuted={isMuted} onToggleMute={toggleMute} />
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '34vh',
+                    zIndex: 1000,
+                    pointerEvents: 'auto',
+                    backgroundColor: '#000',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
+                    {/* HUD Mobile */}
+                    <div style={{ flex: '0 0 auto', padding: '2px', borderBottom: '1px solid #00ffff' }}>
+                        <HUD
+                            score={gameState.score}
+                            lives={gameState.lives}
+                            isMuted={isMuted}
+                            onToggleMute={toggleMute}
+                            isMobile={true}
+                        />
                     </div>
-                    {/* Virtual Keyboard */}
+
+                    {/* Keyboard */}
                     <div style={{ flex: '1 1 auto', overflow: 'hidden' }}>
                         <VirtualKeyboard
                             onKeyPress={handleVirtualKeyPress}

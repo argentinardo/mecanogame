@@ -4,22 +4,33 @@ interface CentralMessageProps {
     message: string | null;
     countdown: number | null;
     show: boolean;
+    onMessageClick?: () => void;
+    isMobile?: boolean;
 }
 
-export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdown, show }) => {
+export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdown, show, onMessageClick, isMobile = false }) => {
     if (!show) return null;
 
     const wrapperClass = countdown !== null ? 'central-message countdown-only' : 'central-message';
 
+    // Replace BACKSPACE with TOCA AQUÍ on mobile
+    const displayMessage = isMobile && message
+        ? message.replace(/BACKSPACE/g, 'TOCA AQUÍ')
+        : message;
+
     return (
-        <div className={wrapperClass}>
+        <div
+            className={wrapperClass}
+            onClick={onMessageClick}
+            style={onMessageClick ? { cursor: 'pointer', pointerEvents: 'auto' } : {}}
+        >
             <div className="central-message-content">
-                {message && (
+                {displayMessage && (
                     <div className="status-message">
-                        {message.split('\n').map((line, index) => (
+                        {displayMessage.split('\n').map((line, index) => (
                             <div key={index} className="message-line">
-                                {line.replace(/BACKSPACE|ENTER|ESC/gi, match => `||${match}||`).split('||').map((segment, i) => (
-                                    segment.match(/BACKSPACE|ENTER|ESC/i) ?
+                                {line.replace(/TOCA AQUÍ|ENTER|ESC/gi, match => `||${match}||`).split('||').map((segment, i) => (
+                                    segment.match(/TOCA AQUÍ|ENTER|ESC/i) ?
                                         <span key={i} className="key-label">{segment}</span> :
                                         <React.Fragment key={i}>{segment}</React.Fragment>
                                 ))}

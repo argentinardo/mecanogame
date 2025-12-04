@@ -14,8 +14,9 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 6px;
-    box-shadow: 0 -5px 20px rgba(0, 255, 255, 0.2);
+    padding: 8px;
+    box-shadow: 0 -5px 20px rgba(0, 255, 255, 0.3);
+    border-top: 2px solid rgba(0, 255, 255, 0.5);
 
     .keyboard-grid {
         width: 100%;
@@ -38,19 +39,19 @@
 
     .keyboard-key {
         flex: 1;
-        height: 36px; // Reduced from 45px to fit in smaller space
+        height: 40px;
         background: rgba(0, 20, 40, 0.8);
         border: 1px solid $color-cyan;
         border-radius: 4px;
         color: #fff;
         font-family: $font-main;
-        font-size: 14px; // Slightly smaller font
+        font-size: 16px;
         display: flex;
         justify-content: center;
         align-items: center;
         cursor: pointer;
         user-select: none;
-        touch-action: manipulation; // Improve touch response
+        touch-action: manipulation;
         transition: all 0.1s ease;
         text-shadow: 0 0 5px $color-cyan;
         box-shadow: 0 0 5px rgba(0, 255, 255, 0.1);
@@ -65,8 +66,8 @@
         }
 
         &.space-key {
-            flex: 5; // Wider space bar
-            font-size: 12px; // Smaller font for space bar
+            flex: 5;
+            font-size: 14px;
             letter-spacing: 1px;
         }
     }

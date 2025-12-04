@@ -119,7 +119,7 @@ export class GameScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Create Ship
-        this.ship = this.add.sprite(width / 2, height - 200, 'nave');
+        this.ship = this.add.sprite(width / 2, height * 0.9, 'nave');
         this.ship.setScale(0.2);
         this.ship.setDepth(10);
 
