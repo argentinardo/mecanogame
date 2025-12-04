@@ -172,6 +172,8 @@ export const Game: React.FC = () => {
     const penaltyIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lifeLostCountdownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const bossLaughIntervalRef = useRef<number | undefined>(undefined);
+    const deathReasonRef = useRef<string | null>(null);
+
 
     const advanceStage = useCallback(() => {
         setGameState(prev => {
@@ -314,16 +316,19 @@ export const Game: React.FC = () => {
         stopBackgroundMusic();
         setGameState(prev => ({ ...prev, isPlaying: false, isPaused: false }));
 
-        // Start Game Over music and laugh interval
+        // Start Game Over music
         startGameOverMusic();
 
-        // Play laugh immediately
-        playBossLaugh();
-
-        // Set up interval to play laugh every 5 seconds
-        bossLaughIntervalRef.current = window.setInterval(() => {
+        // Play laugh ONLY if killed by boss
+        if (deathReasonRef.current === 'boss') {
+            // Play laugh immediately
             playBossLaugh();
-        }, 5000);
+
+            // Set up interval to play laugh every 5 seconds
+            bossLaughIntervalRef.current = window.setInterval(() => {
+                playBossLaugh();
+            }, 5000);
+        }
     }, [playGameOverSound, stopBackgroundMusic, startGameOverMusic, playBossLaugh]);
 
     const handleLetterEscaped = useCallback(() => {
@@ -398,8 +403,9 @@ export const Game: React.FC = () => {
         lifeLostCountdownRef.current = countdownInterval;
     }, [playLifeLostSound, handleGameOver, playCountdownSound]);
 
-    const handleShipDestroyed = useCallback(() => {
+    const handleShipDestroyed = useCallback((reason?: string) => {
         playLifeLostSound();
+        deathReasonRef.current = reason || null;
         comboCountRef.current = 0;
         sequentialHitsRef.current = 0;
         lastHitTimeRef.current = 0;
@@ -638,6 +644,7 @@ export const Game: React.FC = () => {
             clearInterval(bossLaughIntervalRef.current);
             bossLaughIntervalRef.current = undefined;
         }
+        stopBossLaugh();
         stopGameOverMusic();
 
         initAudioContext();
@@ -653,7 +660,7 @@ export const Game: React.FC = () => {
             thresholds: LETTERS_DESTROYED_THRESHOLDS // Pass thresholds to GameScene
         }));
         startBackgroundMusic();
-    }, [initAudioContext, startBackgroundMusic, stopGameOverMusic]);
+    }, [initAudioContext, startBackgroundMusic, stopGameOverMusic, stopBossLaugh]);
 
     // Virtual Keyboard Handlers
     const handleVirtualKeyPress = useCallback((key: string) => {
@@ -954,22 +961,19 @@ export const Game: React.FC = () => {
                 </div>
             )}
 
-            {/* Mobile Virtual Keyboard - Bottom 34vh */}
+            {/* Mobile Virtual Keyboard - Bottom 34vh - Integrated with HUD */}
             {isMobile && gameState.isPlaying && (
-                <div style={{
+                <div className="mobile-control-panel" style={{
                     position: 'fixed',
                     bottom: 0,
                     left: 0,
                     width: '100%',
                     height: '34vh',
                     zIndex: 1000,
-                    pointerEvents: 'auto',
-                    backgroundColor: '#000',
-                    display: 'flex',
-                    flexDirection: 'column'
+                    pointerEvents: 'auto'
                 }}>
-                    {/* HUD Mobile */}
-                    <div style={{ flex: '0 0 auto', padding: '2px', borderBottom: '1px solid #00ffff' }}>
+                    {/* HUD Mobile Strip */}
+                    <div className="mobile-hud-strip">
                         <HUD
                             score={gameState.score}
                             lives={gameState.lives}
@@ -979,8 +983,8 @@ export const Game: React.FC = () => {
                         />
                     </div>
 
-                    {/* Keyboard */}
-                    <div style={{ flex: '1 1 auto', overflow: 'hidden' }}>
+                    {/* Keyboard Container */}
+                    <div className="keyboard-container">
                         <VirtualKeyboard
                             onKeyPress={handleVirtualKeyPress}
                             onSpacePress={handleVirtualSpacePress}

@@ -23,7 +23,7 @@ export interface GameSceneCallbacks {
     onLetterHit: (letterObj: FallingLetter) => { points: number; totalScore: number };
     onLetterMiss: () => void;
     onLetterEscaped: () => void;
-    onShipDestroyed: () => void; // New callback for ship destroyed by meteorite
+    onShipDestroyed: (reason?: string) => void; // New callback for ship destroyed by meteorite
     onWrongKey: () => void;
     onMeteoriteHit: () => void;
     onStageAdvance: (stage: number) => void;
@@ -58,6 +58,7 @@ export class GameScene extends Phaser.Scene {
     private forceFieldActive: boolean = false;
     private forceFieldDuration: number = 1000;
     private forceFieldStartTime: number = 0;
+    private forceFieldPulseEvent: Phaser.Time.TimerEvent | null = null;
 
     // Spawning logic
     private lastSpawnTime: number = 0;
@@ -1342,28 +1343,57 @@ export class GameScene extends Phaser.Scene {
         this.forceFieldActive = true;
         this.forceFieldStartTime = this.time.now;
 
-        // Create force field circle around ship
+        // Create force field circle around ship - RED/ORANGE theme
         this.forceField = this.add.circle(
             this.ship.x,
             this.ship.y,
             150, // radius
-            0x00ffff, // cyan color
-            0.3 // alpha
+            0xff4400, // orange-red color
+            0.2 // alpha
         );
-        this.forceField.setStrokeStyle(4, 0x00ffff, 1);
+        this.forceField.setStrokeStyle(4, 0xff0000, 1); // Red stroke
         this.forceField.setDepth(9);
         this.forceField.setBlendMode(Phaser.BlendModes.ADD);
 
-        // Pulse animation
+        // Red glow pulse animation
         this.tweens.add({
             targets: this.forceField,
-            scaleX: 1.2,
-            scaleY: 1.2,
-            alpha: 0.5,
-            duration: 500,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            alpha: 0.4,
+            duration: 400,
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut'
+        });
+
+        // Yellow ring pulses emanating outward every 500ms
+        const createYellowPulse = () => {
+            if (!this.forceFieldActive || !this.forceField) return;
+
+            const pulse = this.add.circle(this.ship.x, this.ship.y, 50, 0xffff00, 0);
+            pulse.setStrokeStyle(2, 0xffff00, 0.8);
+            pulse.setBlendMode(Phaser.BlendModes.ADD);
+            pulse.setDepth(8);
+
+            this.tweens.add({
+                targets: pulse,
+                radius: 170,
+                alpha: 0,
+                duration: 600,
+                ease: 'Cubic.easeOut',
+                onComplete: () => pulse.destroy()
+            });
+        };
+
+        // Initial pulse
+        createYellowPulse();
+
+        // Recurring pulses
+        this.forceFieldPulseEvent = this.time.addEvent({
+            delay: 500,
+            callback: createYellowPulse,
+            loop: true
         });
 
         // Auto deactivate after duration
@@ -1373,6 +1403,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     private deactivateForceField() {
+        // Stop pulse event
+        if (this.forceFieldPulseEvent) {
+            this.forceFieldPulseEvent.destroy();
+            this.forceFieldPulseEvent = null;
+        }
+
         if (this.forceField) {
             // Fade out animation
             this.tweens.add({
@@ -1390,6 +1426,98 @@ export class GameScene extends Phaser.Scene {
             });
         }
         this.forceFieldActive = false;
+    }
+
+    private createForceFieldImpactEffect() {
+        const shipX = this.ship.x;
+        const shipY = this.ship.y;
+
+        // Layer 1-5: Converging circles that scale up from center (red to orange gradient)
+        const circleColors = [0xff0000, 0xff2200, 0xff4400, 0xff6600, 0xff8800];
+        const circleDelays = [0, 50, 100, 150, 200];
+        const circleSizes = [30, 60, 90, 120, 150];
+
+        circleColors.forEach((color, index) => {
+            this.time.delayedCall(circleDelays[index], () => {
+                // Create circle that scales from 0 to target size
+                const circle = this.add.circle(shipX, shipY, circleSizes[index], color, 0);
+                circle.setStrokeStyle(3 + index, color, 0.8);
+                circle.setBlendMode(Phaser.BlendModes.ADD);
+                circle.setDepth(10 + index);
+                circle.setScale(0.1);
+
+                // Scale up animation
+                this.tweens.add({
+                    targets: circle,
+                    scale: 1,
+                    alpha: 0.6 - (index * 0.1),
+                    duration: 200,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => {
+                        // Fade out
+                        this.tweens.add({
+                            targets: circle,
+                            alpha: 0,
+                            scale: 1.2,
+                            duration: 300,
+                            ease: 'Cubic.easeIn',
+                            onComplete: () => circle.destroy()
+                        });
+                    }
+                });
+            });
+        });
+
+        // Yellow pulse rings (3 rings at different delays)
+        [0, 100, 200].forEach((delay, i) => {
+            this.time.delayedCall(delay + 100, () => {
+                const pulseRing = this.add.circle(shipX, shipY, 20, 0xffff00, 0);
+                pulseRing.setStrokeStyle(4 - i, 0xffff00, 1);
+                pulseRing.setBlendMode(Phaser.BlendModes.ADD);
+                pulseRing.setDepth(20);
+
+                this.tweens.add({
+                    targets: pulseRing,
+                    radius: 180 + (i * 20),
+                    alpha: 0,
+                    duration: 400,
+                    ease: 'Cubic.easeOut',
+                    onComplete: () => pulseRing.destroy()
+                });
+            });
+        });
+
+        // Red/orange particles burst
+        const particles = this.add.particles(shipX, shipY, 'particle', {
+            speed: { min: 150, max: 400 },
+            scale: { start: 0.5, end: 0 },
+            lifespan: 600,
+            blendMode: 'ADD',
+            quantity: 40,
+            tint: [0xff0000, 0xff4400, 0xff8800, 0xffff00],
+            angle: { min: 0, max: 360 },
+            gravityY: 0
+        });
+
+        // Flash at center
+        const flash = this.add.circle(shipX, shipY, 50, 0xffffff, 0.8);
+        flash.setBlendMode(Phaser.BlendModes.ADD);
+        flash.setDepth(25);
+        this.tweens.add({
+            targets: flash,
+            alpha: 0,
+            scale: 3,
+            duration: 300,
+            onComplete: () => flash.destroy()
+        });
+
+        // Camera shake
+        this.cameras.main.shake(200, 0.01);
+
+        // Destroy particles after effect
+        this.time.delayedCall(800, () => {
+            particles.destroy();
+        });
     }
 
     // ========== BOSS SNAKE METHODS ==========
@@ -1740,11 +1868,6 @@ export class GameScene extends Phaser.Scene {
                 // Improved Collision Detection
                 // Only check if segment is actually on screen and close enough to matter
                 if (segment.y > 0 && segment.y < height) {
-                    // Check collision with ship
-                    // FIX: Reduce hit radius and adjust offset
-                    // Previous: hitRadius = 40 (too big)
-                    // Previous: collisionY = isHead ? segment.y + 30 : segment.y
-
                     const isHead = segment.getData('isHead');
 
                     // ONLY THE HEAD CAN KILL THE SHIP
@@ -1754,12 +1877,13 @@ export class GameScene extends Phaser.Scene {
                     const shipRadius = 20; // Approx ship body radius
 
                     // For the head, we need to account for the visual offset
-                    // The head sprite is at y=-20 relative to container, but container moves.
-                    // Let's use the container center, but maybe slightly lower for the "head" visual
                     const collisionX = segment.x;
                     const collisionY = segment.y + 20;
 
                     const distance = Phaser.Math.Distance.Between(collisionX, collisionY, this.ship.x, this.ship.y);
+
+                    // NOTE: Force field does NOT protect against boss collision
+                    // It only blocks projectiles (handled in updateBossProjectiles)
 
                     if (distance < hitRadius + shipRadius) {
                         this.handleBossCollision();

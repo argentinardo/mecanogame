@@ -263,40 +263,6 @@
 }
 
 // =============================================================================
-// Ajustes de game over para móvil
-// =============================================================================
-
-.game-over-panel {
-  @include mobile {
-    padding: 8px;
-
-    .game-over-content {
-      h2 {
-        font-size: 16px;
-        margin-bottom: 6px;
-      }
-
-      .final-score {
-        font-size: 12px;
-        margin-bottom: 8px;
-      }
-
-      .game-over-buttons {
-        flex-direction: column;
-        gap: 6px;
-
-        button {
-          width: 100%;
-          padding: 6px 8px;
-          font-size: 10px;
-          border-radius: 4px;
-        }
-      }
-    }
-  }
-}
-
-// =============================================================================
 // Ajustes adicionales para móvil
 // =============================================================================
 
@@ -461,30 +427,29 @@
 // Ajustes de game over para móvil
 // =============================================================================
 
-.game-over-panel {
+.game-over {
   @include mobile {
-    padding: 8px;
+    padding: 20px;
+    width: 80%;
 
-    .game-over-content {
-      h2 {
-        font-size: 16px;
-        margin-bottom: 6px;
-      }
+    h2 {
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
 
-      .final-score {
-        font-size: 12px;
-        margin-bottom: 8px;
-      }
+    .final-score {
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
 
-      .game-over-buttons {
-        flex-direction: column;
-        gap: 6px;
+    .game-over-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
 
-        button {
-          width: 100%;
-          padding: 6px 8px;
-          font-size: 10px;
-          border-radius: 4px;
+      button {
+        svg {
+          margin-right: 6px;
         }
       }
     }

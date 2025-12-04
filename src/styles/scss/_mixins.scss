@@ -84,22 +84,26 @@
 }
 
 @mixin btn($bg-color, $border-color) {
-    background: rgba(0, 0, 0, 0.8);
+    background: $bg-color;
     border: 2px solid $border-color;
     border-radius: 10px;
-    color: $bg-color;
+    color: $border-color;
     cursor: pointer;
     transition: all 0.3s ease-in-out;
     font-family: $font-main;
     text-transform: uppercase;
     letter-spacing: 1px;
-    
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     &:hover {
         background: rgba($bg-color, 0.2);
         box-shadow: 0 0 20px $bg-color;
         transform: scale(1.05);
     }
-    
+
     &:active {
         transform: scale(0.95);
     }
@@ -122,17 +126,17 @@
     &::-webkit-scrollbar {
         width: 8px;
     }
-    
+
     &::-webkit-scrollbar-track {
         background: rgba(0, 0, 0, 0.3);
         border-radius: 4px;
     }
-    
+
     &::-webkit-scrollbar-thumb {
         background: $color-cyan;
         border-radius: 4px;
         box-shadow: 0 0 10px $color-cyan;
-        
+
         &:hover {
             background: $color-cyan-light;
         }
@@ -171,11 +175,14 @@
 
 @mixin pulse-animation($color, $size: 10px) {
     animation: pulse 2s ease-in-out infinite;
-    
+
     @keyframes pulse {
-        0%, 100% {
+
+        0%,
+        100% {
             box-shadow: 0 0 $size $color;
         }
+
         50% {
             box-shadow: 0 0 #{$size * 2} $color;
         }
@@ -200,4 +207,4 @@
     background: rgba(255, 255, 255, $opacity);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-} 
+}

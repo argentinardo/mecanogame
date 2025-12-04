@@ -20,12 +20,12 @@
     // Desactivar flotación
     animation-name: cannonFall;
   }
-  
+
   &.spawning {
     animation: cannonSpawn 1s ease-out forwards;
   }
 
-  .cannon-base{
+  .cannon-base {
     height: 80;
     @include absolute-center;
     transform-origin: center center;
@@ -34,7 +34,7 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.1s linear; // doble de rápido
-    
+
     // Sprite principal de la nave
     .ship-sprite {
       // Tamaño escalado respecto al sprite original (102px)
@@ -57,7 +57,7 @@
         transform: translateX(-50%);
         width: 24px; // doble ancho respecto a turbinas (12px)
         height: 80px; // doble alto respecto a turbinas (40px)
-        background: radial-gradient(ellipse at top, rgba(255,255,255,0.9) 0%, rgba(255,0,0,0.8) 30%, rgba(180,0,0,0.2) 60%, transparent 100%);
+        background: radial-gradient(ellipse at top, rgba(255, 255, 255, 0.9) 0%, rgba(255, 0, 0, 0.8) 30%, rgba(180, 0, 0, 0.2) 60%, transparent 100%);
         filter: blur(3px);
         transform-origin: top center;
         animation: centralFlame 0.3s infinite alternate;
@@ -66,29 +66,35 @@
       }
 
       // Llamas de las turbinas (pseudo-elementos)
-      &::before, &::after {
+      &::before,
+      &::after {
         content: '';
         position: absolute;
         bottom: -20px; // aparece debajo de la nave
         width: 12px;
         height: 40px;
-        background: radial-gradient(ellipse at center, rgba(255,255,255,0.9) 0%, rgba(255,200,0,0.8) 40%, rgba(255,100,0,0.5) 70%, transparent 100%);
+        background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.9) 0%, rgba(255, 200, 0, 0.8) 40%, rgba(255, 100, 0, 0.5) 70%, transparent 100%);
         filter: blur(2px);
         transform-origin: top center;
         animation: engineFlame 0.25s infinite alternate;
         pointer-events: none;
         z-index: -1; // detrás de la nave
 
-      // Usamos clip-path para mostrar solo la mitad superior de la llama
-      // IMPORTANTE: Asegúrate de que el elemento no tenga overflow visible ni efectos que sobresalgan el clip
+        // Usamos clip-path para mostrar solo la mitad superior de la llama
+        // IMPORTANTE: Asegúrate de que el elemento no tenga overflow visible ni efectos que sobresalgan el clip
 
       }
 
       // Ajustar posición de cada turbina
-      &::before { left: 14px; }
-      &::after  { right: 14px; }
+      &::before {
+        left: 14px;
+      }
+
+      &::after {
+        right: 14px;
+      }
     }
-    
+
     @include mobile {
       .ship-sprite {
         width: 60px;
@@ -99,10 +105,10 @@
 
 
   }
-  
+
   .cannon-barrel {
     @include absolute-center;
-    width: 8px; 
+    width: 8px;
     height: 80px;
     background: linear-gradient(90deg, white 0%, red 30%, red 70%, white 100%);
     border: 1px solid black;
@@ -111,7 +117,7 @@
     z-index: 3;
     clip-path: inset(0 0 50% 0);
     transition: transform 0.03s linear; // doble de rápido
-    
+
   }
 
   &.reloading .cannon-barrel {
@@ -123,14 +129,14 @@
 .lives-ships {
   @include flex-center;
   gap: $spacing-sm;
-  
-  .life-ship{
-    width: 30x; 
+
+  .life-ship {
+    width: 30x;
     height: 30px;
     @include flex-center;
-    
+
     .mini-ship {
-      width: 24px; 
+      width: 24px;
       height: 24px;
       display: flex;
       align-items: center;
@@ -143,22 +149,20 @@
 .compact-lives-ships {
   @include flex-center;
   gap: $spacing-xs;
-  
-  .compact-mini-ship{
-    width: 20px; 
+
+  .compact-mini-ship {
+    width: 20px;
     height: 20px;
     min-width: 20px;
     min-height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    filter: drop-shadow(0 0 6px $color-cyan);
-    
+
     .life-ship-icon {
       width: 100%;
       height: 100%;
       object-fit: contain;
-      filter: drop-shadow(0 0 4px $color-cyan);
     }
   }
 }
@@ -168,26 +172,32 @@
 // =============================================================================
 
 @keyframes shipFloating {
-  0%, 100% { 
-    transform: scale(1.5)  translateY(0px) rotate(0deg); 
+
+  0%,
+  100% {
+    transform: scale(1.5) translateY(0px) rotate(0deg);
   }
-  25% { 
-    transform: scale(1.5)  translateY(-8px) rotate(1deg); 
+
+  25% {
+    transform: scale(1.5) translateY(-8px) rotate(1deg);
   }
-  50% { 
-    transform: scale(1.5)  translateY(-4px) rotate(-0.5deg); 
+
+  50% {
+    transform: scale(1.5) translateY(-4px) rotate(-0.5deg);
   }
-  75% { 
-    transform: scale(1.5) translateY(-12px) rotate(0.8deg); 
+
+  75% {
+    transform: scale(1.5) translateY(-12px) rotate(0.8deg);
   }
 }
 
 @keyframes cannonGlow {
-  0% { 
-    box-shadow: 0 0 20px $color-cyan; 
+  0% {
+    box-shadow: 0 0 20px $color-cyan;
   }
-  100% { 
-    box-shadow: 0 0 30px $color-cyan; 
+
+  100% {
+    box-shadow: 0 0 30px $color-cyan;
   }
 }
 
@@ -195,65 +205,86 @@
 
 // Animación para recorrer los 4 cuadros del sprite
 @keyframes shipSpriteAnim {
-  0%   { background-position:    0 0; }
-  100% { background-position: -320px 0; }
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: -320px 0;
+  }
 }
 
 @keyframes reloadPulse {
-  0% { 
-    box-shadow: 0 0 15px $color-red; 
-    border-color: $color-red; 
+  0% {
+    box-shadow: 0 0 15px $color-red;
+    border-color: $color-red;
   }
-  100% { 
-    box-shadow: 0 0 25px #ff6666; 
-    border-color: #ff9999; 
+
+  100% {
+    box-shadow: 0 0 25px #ff6666;
+    border-color: #ff9999;
   }
 }
-
-@keyframes miniShipGlow {
-  0% { 
-    filter: drop-shadow(0 0 8px $color-cyan); 
-    transform: scale(1); 
-  }
-  100% { 
-    filter: drop-shadow(0 0 12px $color-cyan); 
-    transform: scale(1.05); 
-  }
-}
-
-@keyframes compactMiniShipGlow {
-  0% { 
-    filter: drop-shadow(0 0 6px $color-cyan); 
-    transform: scale(1); 
-  }
-  100% { 
-    filter: drop-shadow(0 0 10px $color-cyan); 
-    transform: scale(1.05); 
-  }
-} 
 
 // Animación de llama de las turbinas
 @keyframes engineFlame {
-  0%   { transform: scaleY(0.8); opacity: 0.7; }
-  50%  { transform: scaleY(1.1); opacity: 1; }
-  100% { transform: scaleY(0.9); opacity: 0.65; }
+  0% {
+    transform: scaleY(0.8);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: scaleY(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleY(0.9);
+    opacity: 0.65;
+  }
 }
 
 // Animación para la estela central (ligeramente distinta)
 @keyframes centralFlame {
-  0%   { transform: translateX(-50%) scaleY(0.9); opacity: 0.75; }
-  50%  { transform: translateX(-50%) scaleY(1.2); opacity: 1; }
-  100% { transform: translateX(-50%) scaleY(1);   opacity: 0.7; }
-} 
+  0% {
+    transform: translateX(-50%) scaleY(0.9);
+    opacity: 0.75;
+  }
+
+  50% {
+    transform: translateX(-50%) scaleY(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-50%) scaleY(1);
+    opacity: 0.7;
+  }
+}
 
 // Caída/explosión de la nave al perder vida
 @keyframes cannonFall {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  50% { transform: translate(-40%, 80%) rotate(180deg); }
-  100% { transform: translate(-30%, 350%) rotate(360deg); }
-} 
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  50% {
+    transform: translate(-40%, 80%) rotate(180deg);
+  }
+
+  100% {
+    transform: translate(-30%, 350%) rotate(360deg);
+  }
+}
 
 @keyframes cannonSpawn {
-  0% { transform: translate(-50%, 300%) scale(0.7); opacity:0; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity:1; }
-} 
+  0% {
+    transform: translate(-50%, 300%) scale(0.7);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}

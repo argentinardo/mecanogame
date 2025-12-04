@@ -270,14 +270,12 @@
 
 .start-btn {
   @include btn($color-cyan, $color-cyan-dark);
-  padding: $spacing-md $spacing-xl;
+  width: 100%;
 }
 
 .continue-btn {
   @include btn($color-green, #008000);
-  padding: $spacing-sm $spacing-lg;
-  font-size: $font-size-medium;
-  border-radius: $radius-small;
+  width: 100%;
 }
 
 // =============================================================================

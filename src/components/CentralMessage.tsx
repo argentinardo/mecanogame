@@ -13,10 +13,17 @@ export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdo
 
     const wrapperClass = countdown !== null ? 'central-message countdown-only' : 'central-message';
 
-    // Replace BACKSPACE, ENTER, ESC with TOCA AQUÍ on mobile
-    const displayMessage = isMobile && message
-        ? message.replace(/BACKSPACE|ENTER|ESC/g, 'TOCA AQUÍ')
-        : message;
+    // Replace full phrases and key references for mobile
+    let displayMessage = message;
+    if (isMobile && displayMessage) {
+        // Replace full phrases first (more specific replacements)
+        displayMessage = displayMessage
+            .replace(/Presiona BACKSPACE para saltear/gi, 'Toca para saltear')
+            .replace(/Presiona ENTER para continuar/gi, 'Toca para continuar')
+            .replace(/Presiona ESC para pausar/gi, 'Toca para pausar')
+            // Then replace any remaining key references
+            .replace(/BACKSPACE|ENTER|ESC/g, 'TOCA');
+    }
 
     return (
         <div
@@ -29,8 +36,8 @@ export const CentralMessage: React.FC<CentralMessageProps> = ({ message, countdo
                     <div className="status-message">
                         {displayMessage.split('\n').map((line, index) => (
                             <div key={index} className="message-line">
-                                {line.replace(/TOCA AQUÍ|ENTER|ESC/gi, match => `||${match}||`).split('||').map((segment, i) => (
-                                    segment.match(/TOCA AQUÍ|ENTER|ESC/i) ?
+                                {line.replace(/BACKSPACE|ENTER|ESC/gi, match => `||${match}||`).split('||').map((segment, i) => (
+                                    segment.match(/BACKSPACE|ENTER|ESC/i) ?
                                         <span key={i} className="key-label">{segment}</span> :
                                         <React.Fragment key={i}>{segment}</React.Fragment>
                                 ))}
