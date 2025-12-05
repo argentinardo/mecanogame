@@ -42,6 +42,7 @@ export interface GameSceneCallbacks {
     onBossMusicStart: () => void;
     onBossLaugh: () => void;
     onMassiveExplosion: () => void;
+    onEnemyDeath: () => void; // Called when enemy is hit by laser
 }
 
 export class GameScene extends Phaser.Scene {
@@ -953,18 +954,21 @@ export class GameScene extends Phaser.Scene {
         const enemyColor = target.getData('color') || 0xffff00;
         this.createExplosion(target.x, target.y, enemyColor);
 
+        // Play enemy death sound
+        this.callbacks.onEnemyDeath();
+
         // Create enemy disintegration effect (pixelated squares from circle area)
-        const enemyRadius = 50;
+        const enemyRadius = 30;
         const circle = new Phaser.Geom.Circle(0, 0, enemyRadius);
         const pixelParticles = this.add.particles(target.x, target.y, 'particle', {
             speed: { min: 0, max: 0 },
-            scale: { start: 0.5, end: 0.5 },
+            scale: { start: 1, end: 1 },
             lifespan: 1,
             blendMode: 'ADD',
-            quantity: 2,
+            quantity: 3,
             tint: enemyColor,
             angle: { min: 0, max: 360 },
-            gravityY: 0,
+            gravityY: -50,
             emitZone: {
                 type: 'random',
                 source: circle,
@@ -980,7 +984,7 @@ export class GameScene extends Phaser.Scene {
         // Make enemy explode and disappear
         this.tweens.add({
             targets: enemySprite,
-            scale: 2,
+            scale: 0,
             alpha: 0,
             duration: 200,
             ease: 'Power2',
@@ -1031,7 +1035,7 @@ export class GameScene extends Phaser.Scene {
                 targets: target,
                 x: this.ship.x,
                 y: this.ship.y,
-                duration: 300,
+                duration: 150,
                 ease: 'Power2',
                 onComplete: () => {
                     // Create points text when letter reaches ship
@@ -1108,9 +1112,9 @@ export class GameScene extends Phaser.Scene {
 
         // Layer 1: Fast outward particles (cyan) - 10% of original
         const fastParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 0, max: 300 },
+            speed: { min: 10, max: 200 },
             scale: { start: 1, end: 0 }, // Was 2.0
-            lifespan: 300,
+            lifespan: 600,
             blendMode: 'ADD',
             quantity: 2, // Was 15
             tint: cyanColor,
@@ -1120,9 +1124,9 @@ export class GameScene extends Phaser.Scene {
 
         // Layer 2: Medium speed particles (blue) - 10% of original
         const mediumParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 50, max: 300 },
+            speed: { min: 50, max: 200 },
             scale: { start: 1.2, end: 0 }, // Was 1.5
-            lifespan: 300,
+            lifespan: 600,
             blendMode: 'ADD',
             quantity: 2, // Was 10
             tint: blueColor,
@@ -1132,9 +1136,9 @@ export class GameScene extends Phaser.Scene {
 
         // Layer 3: Slow bright particles (white/cyan mix) - 10% of original
         const slowParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 200, max: 300 },
+            speed: { min: 70, max: 200 },
             scale: { start: 1.5, end: 0 }, // Was 1.8
-            lifespan: 300,
+            lifespan: 600,
             blendMode: 'ADD',
             quantity: 2, // Was 8
             tint: [cyanColor, whiteColor],
@@ -1161,7 +1165,7 @@ export class GameScene extends Phaser.Scene {
         });
 
         // Auto destroy emitters after use
-        this.time.delayedCall(1200, () => {
+        this.time.delayedCall(600, () => {
             fastParticles.destroy();
             mediumParticles.destroy();
             slowParticles.destroy();
@@ -1669,15 +1673,20 @@ export class GameScene extends Phaser.Scene {
     private createSpectacularExplosion(x: number, y: number, color: number | number[]) {
         // More particles, higher speed
         // Reduced scale (50% of previous)
-        // Multicolor: color can be array
+        // Multicolor: Pick random color from array for each emitter
+
+        // If color is an array, pick a random color; otherwise use the single color
+        const finalColor = Array.isArray(color)
+            ? Phaser.Math.RND.pick(color)
+            : color;
 
         const particles = this.add.particles(x, y, 'particle', {
-            speed: { min: 200, max: 600 },
-            scale: { start: 0.4, end: 0 }, // Reduced from 0.75 to 0.4 (User said "mas pequeño")
-            lifespan: 800,
+            speed: { min: 300, max: 600 },
+            scale: { start: 0.6, end: 0 }, // Reduced from 0.75 to 0.4 (User said "mas pequeño")
+            lifespan: 300,
             blendMode: 'ADD',
-            quantity: 30, // More particles
-            tint: color, // Can be array
+            quantity: 15, // More particles
+            tint: finalColor,
             angle: { min: 0, max: 360 },
             gravityY: 100
         });
@@ -1696,7 +1705,7 @@ export class GameScene extends Phaser.Scene {
         */
 
         // Auto destroy emitter
-        this.time.delayedCall(1000, () => {
+        this.time.delayedCall(500, () => {
             particles.destroy();
         });
     }
@@ -2249,10 +2258,19 @@ export class GameScene extends Phaser.Scene {
                         const isHead = segment.getData('isHead');
                         // Random color for explosion
                         // Red, Yellow, Orange, White
-                        const colors = [0xff0000, 0xffff00, 0xffa500, 0xffffff, 0x0000ff, 0x00ff00];
-
+                        const colors: number[] = [
+                            0xff0000, // red
+                            0xffff00, // yellow
+                            0xffffff, // white
+                            0x0000ff, // blue
+                            0x888888, // gray
+                            0x00ff00, // green
+                        ];
                         // Create SPECTACULAR explosion
-                        this.createSpectacularExplosion(segment.x, segment.y, colors);
+                        // Adjust Y position upward by 50% of segment size (~40px)
+                        // Segment sprites are offset at y=-30, so explosion origin should be at segment.y - 40
+                        const explosionY = segment.y - 40;
+                        this.createSpectacularExplosion(segment.x, explosionY, colors);
                         this.callbacks.onSegmentExplosion(); // Play segment boom sound
 
                         // If head, maybe a bit more flair but not blinding
@@ -2260,7 +2278,18 @@ export class GameScene extends Phaser.Scene {
                             this.cameras.main.shake(200, 0.01); // Subtle shake
                         }
 
-                        segment.destroy();
+                        // Fade out with scale up animation before destroying
+                        this.tweens.add({
+                            targets: segment,
+                            alpha: 0,
+                            scaleX: segment.scaleX * 1.5,
+                            scaleY: segment.scaleY * 1.5,
+                            duration: 200,
+                            ease: 'Power2',
+                            onComplete: () => {
+                                segment.destroy();
+                            }
+                        });
                     }
                 });
             }

@@ -12,7 +12,7 @@ import { useAudio } from '../hooks/useAudio';
 import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES } from '../types/game';
 
-const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ0123456789'.split('');
+const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
 const INITIAL_LETTER_SPEED = 0.9;
 const INITIAL_GAME_SPEED = 2100;
 const SPEED_INCREMENT = 0.05;
@@ -79,7 +79,8 @@ export const Game: React.FC = () => {
         stopGameOverMusic,
         playScoringSound,
         playBlastSound,
-        stopBossLaugh
+        stopBossLaugh,
+        playEnemyDeathSound
     } = useAudio();
 
     const [gameState, setGameState] = useState<GameState>({
@@ -256,7 +257,7 @@ export const Game: React.FC = () => {
         // Show order message when sequential hits reach certain thresholds
         if (newSequentialHits >= 5) {
             const orderBonus = Math.floor(newSequentialHits / 5) * 5;
-            setCurrentOrderMessage(`ORDEN ${newSequentialHits}!\n+${orderBonus} BONUS`);
+            setCurrentOrderMessage(`CHAIN ${newSequentialHits}!\n+${orderBonus} BONUS`);
             setIsOrderMessageVisible(true);
             setTimeout(() => setIsOrderMessageVisible(false), 2000);
         }
@@ -882,7 +883,7 @@ export const Game: React.FC = () => {
                             },
                             onSequentialBonus: (bonus: number) => {
                                 // Sequential bonus callback
-                                setCurrentOrderMessage(`ORDEN PERFECTO!\n+${bonus} BONUS`);
+                                setCurrentOrderMessage(`PERFECT CHAIN!\n+${bonus} BONUS`);
                                 setIsOrderMessageVisible(true);
                                 setTimeout(() => setIsOrderMessageVisible(false), 2000);
                             },
@@ -892,7 +893,8 @@ export const Game: React.FC = () => {
                             onBossSpawn: playBossSpawn,
                             onBossMusicStart: startBossMusic,
                             onBossLaugh: playBossLaugh,
-                            onMassiveExplosion: playBlastSound
+                            onMassiveExplosion: playBlastSound,
+                            onEnemyDeath: playEnemyDeathSound
                         }}
                     />
 

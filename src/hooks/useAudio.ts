@@ -14,6 +14,7 @@ import centipedeShotUrl from '../assets/sound/mecanogame_centipede-shot.mp3';
 import fieldForceUrl from '../assets/sound/mecanogame_field-force.mp3';
 import segmentBoomUrl from '../assets/sound/mecanogame_segment-boom.mp3';
 import bossLaughUrl from '../assets/sound/mecanogame_boss-laugh.mp3';
+import enemyDeathUrl from '../assets/sound/mecanogame_enemy-death.mp3';
 
 export const useAudio = () => {
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -79,6 +80,10 @@ export const useAudio = () => {
 
     const playBlastSound = useCallback(() => {
         playSound(blastUrl, 0.4); // Louder blast for massive explosion
+    }, [playSound]);
+
+    const playEnemyDeathSound = useCallback(() => {
+        playSound(enemyDeathUrl, 0.25);
     }, [playSound]);
 
     const playMeteoriteSound = useCallback(() => {
@@ -419,6 +424,7 @@ export const useAudio = () => {
 
     return {
         playShootSound,
+        playEnemyDeathSound,
         playExplosionSound,
         playMissSound,
         playLifeLostSound,

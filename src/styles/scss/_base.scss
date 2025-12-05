@@ -68,6 +68,8 @@ body {
         linear-gradient(rgba(0, 255, 255, 0.6) 2px, transparent 2px),
         linear-gradient(90deg, rgba(0, 255, 255, 0.6) 2px, transparent 2px);
     background-size: 80px 80px;
+    // Center the grid by offsetting half the tile width (40px) from 50%
+    background-position: calc(50% - 40px) 0;
     animation: gridMove 20s linear infinite;
     z-index: $z-index-background;
 
@@ -89,7 +91,7 @@ body {
     }
 
     100% {
-        transform: translateY(50px);
+        transform: translateY(80px);
     }
 }
 
