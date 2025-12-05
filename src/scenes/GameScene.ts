@@ -10,8 +10,12 @@ import enemy2BImg from '../assets/images/enemy_2b.svg';
 import enemy3Img from '../assets/images/enemy_3.svg';
 import enemy3BImg from '../assets/images/enemy_3b.svg';
 import asteroid1Img from '../assets/images/asteroid-01_40px.png';
-import asteroid2Img from '../assets/images/asteroid-02-40px.png';
+import asteroid2Img from '../assets/images/asteroid-02_40px.png';
 import asteroid3Img from '../assets/images/asteroid-03_40px.png';
+import asteroid4Img from '../assets/images/asteroid-04_40px.png';
+import asteroid5Img from '../assets/images/asteroid-05_40px.png';
+import asteroid6Img from '../assets/images/asteroid-06_40px.png';
+
 import bossHeadImg from '../assets/images/centipede_head.svg';
 import bossSegmentImg from '../assets/images/segmento.svg';
 import bossSegmentEmptyImg from '../assets/images/segmento_empty.svg';
@@ -63,7 +67,7 @@ export class GameScene extends Phaser.Scene {
     // Spawning logic
     private lastSpawnTime: number = 0;
     private lastMeteoriteSpawnTime: number = 0;
-    private meteoriteSpawnInterval: number = 8000; // Spawn meteorite every 8 seconds
+    private meteoriteSpawnInterval: number = 4000; // Spawn meteorite every 4 seconds
 
     // Boss Snake
     private bossActive: boolean = false;
@@ -106,6 +110,9 @@ export class GameScene extends Phaser.Scene {
         this.load.image('asteroid1', asteroid1Img);
         this.load.image('asteroid2', asteroid2Img);
         this.load.image('asteroid3', asteroid3Img);
+        this.load.image('asteroid1', asteroid4Img);
+        this.load.image('asteroid2', asteroid5Img);
+        this.load.image('asteroid3', asteroid6Img);
         this.load.image('boss_head', bossHeadImg);
         this.load.image('boss_segment', bossSegmentImg);
         this.load.image('boss_segment_empty', bossSegmentEmptyImg);
@@ -556,8 +563,8 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // Spawning meteorites (only from sector 3 onwards, and not during boss)
-        if (!this.bossActive && !this.bossDefeatedForCurrentStage && this.gameState.currentStage >= 3 && time - this.lastMeteoriteSpawnTime > this.meteoriteSpawnInterval) {
+        // Spawning meteorites (only from sector 2 onwards, and not during boss)
+        if (!this.bossActive && !this.bossDefeatedForCurrentStage && this.gameState.currentStage >= 2 && time - this.lastMeteoriteSpawnTime > this.meteoriteSpawnInterval) {
             this.spawnMeteorite(time);
             this.lastMeteoriteSpawnTime = time;
         }
@@ -708,7 +715,7 @@ export class GameScene extends Phaser.Scene {
         const y = -50 - Math.random() * (height / 2); // From -50 to -(height/2 + 50)
 
         // Random asteroid image
-        const asteroidKey = `asteroid${Math.floor(Math.random() * 3) + 1}`;
+        const asteroidKey = `asteroid${Math.floor(Math.random() * 6) + 1}`;
 
         // Random size
         const size = 30 + Math.random() * 20; // 30-50px
@@ -1080,8 +1087,8 @@ export class GameScene extends Phaser.Scene {
         // Colored particle explosion
         const particles = this.add.particles(x, y, 'particle', {
             speed: { min: 100, max: 300 },
-            scale: { start: 1.2, end: 0 },
-            lifespan: 10000,
+            scale: { start: 2, end: 0 },
+            lifespan: 300,
             blendMode: 'ADD',
             quantity: 1,
             tint: color
@@ -1094,59 +1101,59 @@ export class GameScene extends Phaser.Scene {
     }
 
     private createForceFieldExplosion(x: number, y: number) {
-        // More impressive explosion for force field - multiple layers
+        // Minimal explosion for force field - reduced to 10% size/quantity
         const cyanColor = 0x00ffff;
         const blueColor = 0x0088ff;
         const whiteColor = 0xffffff;
 
-        // Layer 1: Fast outward particles (cyan)
+        // Layer 1: Fast outward particles (cyan) - 10% of original
         const fastParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 200, max: 500 },
-            scale: { start: 2.0, end: 0 },
-            lifespan: 800,
+            speed: { min: 0, max: 300 },
+            scale: { start: 1, end: 0 }, // Was 2.0
+            lifespan: 300,
             blendMode: 'ADD',
-            quantity: 15,
+            quantity: 2, // Was 15
             tint: cyanColor,
             angle: { min: 0, max: 360 },
             alpha: { start: 1, end: 0 }
         });
 
-        // Layer 2: Medium speed particles (blue)
+        // Layer 2: Medium speed particles (blue) - 10% of original
         const mediumParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 150, max: 350 },
-            scale: { start: 1.5, end: 0 },
-            lifespan: 1000,
+            speed: { min: 50, max: 300 },
+            scale: { start: 1.2, end: 0 }, // Was 1.5
+            lifespan: 300,
             blendMode: 'ADD',
-            quantity: 10,
+            quantity: 2, // Was 10
             tint: blueColor,
             angle: { min: 0, max: 360 },
             alpha: { start: 0.8, end: 0 }
         });
 
-        // Layer 3: Slow bright particles (white/cyan mix)
+        // Layer 3: Slow bright particles (white/cyan mix) - 10% of original
         const slowParticles = this.add.particles(x, y, 'particle', {
-            speed: { min: 50, max: 200 },
-            scale: { start: 1.8, end: 0 },
-            lifespan: 1200,
+            speed: { min: 200, max: 300 },
+            scale: { start: 1.5, end: 0 }, // Was 1.8
+            lifespan: 300,
             blendMode: 'ADD',
-            quantity: 8,
+            quantity: 2, // Was 8
             tint: [cyanColor, whiteColor],
             angle: { min: 0, max: 360 },
             alpha: { start: 1, end: 0 }
         });
 
-        // Create expanding circle effect
+        // Create expanding circle effect - 10% size
         const circle = this.add.circle(x, y, 0, cyanColor, 0.5);
-        circle.setStrokeStyle(3, cyanColor, 1);
+        circle.setStrokeStyle(1, cyanColor, 1); // Was 3
         circle.setBlendMode(Phaser.BlendModes.ADD);
         circle.setDepth(10);
 
-        // Expand and fade circle
+        // Expand and fade circle - 10% of original radius
         this.tweens.add({
             targets: circle,
-            radius: 200,
+            radius: 100, // Was 200
             alpha: 0,
-            duration: 400,
+            duration: 200,
             ease: 'Power2',
             onComplete: () => {
                 circle.destroy();
