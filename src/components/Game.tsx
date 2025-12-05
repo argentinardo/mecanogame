@@ -933,16 +933,25 @@ export const Game: React.FC = () => {
                         isMobile={isMobile}
                         onMessageClick={() => {
                             if (isMobile) {
-                                if (gameState.isPaused) {
-                                    // Resume game (ESC)
-                                    handleVirtualKeyPress('Escape');
-                                } else if (gameState.showCentralMessage) {
-                                    // Handle other messages (BACKSPACE or ENTER)
-                                    // Try BACKSPACE first (respawn)
-                                    handleVirtualKeyPress('BACKSPACE');
-                                    // Also try ENTER (start game if needed, though usually handled by Instructions)
-                                    handleVirtualKeyPress('Enter');
+                                if (gameState.isPaused && !gameState.showSectorInfo) {
+                                    // Resume game (ESC) - only if not showing sector info
+                                    setGameState(prev => ({ ...prev, isPaused: false }));
+                                } else if (gameState.isPaused && gameState.showSectorInfo) {
+                                    // Continue after sector info (ENTER)
+                                    if (gameState.sectorInfoTimeout) {
+                                        clearTimeout(gameState.sectorInfoTimeout);
+                                    }
+                                    setGameState(prev => ({
+                                        ...prev,
+                                        showSectorInfo: false,
+                                        isPaused: false,
+                                        sectorInfoTimeout: null
+                                    }));
+                                } else if (gameState.isPenalized) {
+                                    // Skip penalty (BACKSPACE)
+                                    skipPenalty();
                                 }
+                                // Note: isLifeLostPaused countdown cannot be skipped - no action needed
                             }
                         }}
                     />
