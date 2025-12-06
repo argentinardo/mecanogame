@@ -33,9 +33,46 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.15) 0%, transparent 70%);
+    background: repeating-linear-gradient(0deg,
+            rgba(0, 0, 0, 0.15) 0px,
+            rgba(0, 0, 0, 0.15) 1px,
+            transparent 1px,
+            transparent 3px);
     pointer-events: none;
-    z-index: 1
+    z-index: 100;
+    animation: scanlineFlicker 0.1s infinite linear
+}
+
+.game-container::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at center,
+            transparent 50%,
+            rgba(0, 0, 0, 0.4) 80%,
+            rgba(0, 0, 0, 0.8) 100%);
+    box-shadow:
+        inset 0 0 100px rgba(0, 255, 255, 0.05),
+        inset 0 0 50px rgba(255, 0, 255, 0.03);
+    pointer-events: none;
+    z-index: 99
+}
+
+@keyframes scanlineFlicker {
+    0% {
+        opacity: 0.9
+    }
+
+    50% {
+        opacity: 1
+    }
+
+    100% {
+        opacity: 0.9
+    }
 }
 
 .bg-grid {

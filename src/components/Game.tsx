@@ -15,6 +15,20 @@ import { useAudio } from '../hooks/useAudio';
 import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES } from '../types/game';
 
+// CSS animations for CRT and combo effects
+const crtStyles = `
+@keyframes scanlineFlicker {
+    0% { opacity: 0.85; }
+    50% { opacity: 1; }
+    100% { opacity: 0.85; }
+}
+@keyframes comboPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+`;
+
 const LETTERS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
 const INITIAL_LETTER_SPEED = 0.9;
 const INITIAL_GAME_SPEED = 2100;
@@ -831,6 +845,9 @@ export const Game: React.FC = () => {
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
+            {/* CRT Animation Styles */}
+            <style>{crtStyles}</style>
+
             {/* Instructions (Splash Screen) - Full Screen */}
             {!gameState.isPlaying && gameState.lives > 0 && (
                 <Instructions
@@ -882,6 +899,32 @@ export const Game: React.FC = () => {
                     </video>
                     <Starfield />
                     <div className="bg-grid"></div>
+
+                    {/* CRT Scanlines Effect */}
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px)',
+                        pointerEvents: 'none',
+                        zIndex: 200,
+                        animation: 'scanlineFlicker 0.1s infinite linear'
+                    }} />
+
+                    {/* CRT Vignette Glow Effect */}
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0.8) 100%)',
+                        boxShadow: 'inset 0 0 100px rgba(0,255,255,0.05), inset 0 0 50px rgba(255,0,255,0.03)',
+                        pointerEvents: 'none',
+                        zIndex: 199
+                    }} />
 
                     {/* Phaser Game Layer */}
                     <PhaserGame
