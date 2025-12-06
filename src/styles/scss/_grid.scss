@@ -19,7 +19,6 @@
   position: relative;
   z-index: $z-base;
   overflow: hidden;
-  background: linear-gradient(135deg, #000000 0%, #001a33 50%, #000000 100%);
   box-shadow:
     0 0 50px rgba(0, 255, 255, 0.3),
     inset 0 0 100px rgba(0, 255, 255, 0.1);
@@ -43,7 +42,7 @@
     // Center the grid horizontally - subtract 1px (half the line width) so line center aligns with ship center
     background-position: calc(50% - 1px) 0, calc(50% - 1px) 0, calc(50% - 1px) 0, calc(50% - 1px) 0;
     transform: perspective(1200px) rotateX(80deg) scale(4) translateY(100px);
-    transform-origin: center 80%;
+    transform-origin: center 70%;
     animation: gridScroll 2s linear infinite;
     z-index: 1;
     opacity: 0.6;

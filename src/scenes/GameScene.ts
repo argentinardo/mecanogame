@@ -111,9 +111,9 @@ export class GameScene extends Phaser.Scene {
         this.load.image('asteroid1', asteroid1Img);
         this.load.image('asteroid2', asteroid2Img);
         this.load.image('asteroid3', asteroid3Img);
-        this.load.image('asteroid1', asteroid4Img);
-        this.load.image('asteroid2', asteroid5Img);
-        this.load.image('asteroid3', asteroid6Img);
+        this.load.image('asteroid4', asteroid4Img);
+        this.load.image('asteroid5', asteroid5Img);
+        this.load.image('asteroid6', asteroid6Img);
         this.load.image('boss_head', bossHeadImg);
         this.load.image('boss_segment', bossSegmentImg);
         this.load.image('boss_segment_empty', bossSegmentEmptyImg);
@@ -419,7 +419,7 @@ export class GameScene extends Phaser.Scene {
 
         // Update Letters with perspective movement (ALWAYS - except when life lost countdown)
         const height = this.scale.height;
-        const dangerZone = height * 0.6;
+        const alarmZone = height * 0.20; // Alarm sounds when letter is within 10% of top edge
         const turnaroundPoint = height * 0.55; // Point where enemies reach "front" and start rising (55%)
         let hasDanger = false;
 
@@ -458,11 +458,6 @@ export class GameScene extends Phaser.Scene {
                         letterContainer.setData('phase', 'rising');
                         letterContainer.setData('risingStartY', letterContainer.y);
                     }
-
-                    // Check danger zone during approach (only when playing)
-                    if (!this.gameState.isPaused && !this.gameState.isPenalized && letterContainer.y > dangerZone) {
-                        hasDanger = true;
-                    }
                 } else if (phase === 'rising') {
                     // Phase 2: Move up (rising toward player) and scale up to 1.0
                     letterContainer.y -= speed * (delta / 16.66);
@@ -479,8 +474,8 @@ export class GameScene extends Phaser.Scene {
                         this.handleLetterEscaped(letterContainer);
                     }
 
-                    // Danger zone is more critical when rising (only when playing)
-                    if (!this.gameState.isPaused && !this.gameState.isPenalized) {
+                    // Alarm sounds when letter is within 10% of top edge (about to escape)
+                    if (!this.gameState.isPaused && !this.gameState.isPenalized && letterContainer.y < alarmZone) {
                         hasDanger = true;
                     }
                 }
@@ -908,7 +903,7 @@ export class GameScene extends Phaser.Scene {
                 this.shipAngleTween = this.tweens.addCounter({
                     from: this.shipAngle,
                     to: 0, // Return to vertical (0 degrees)
-                    duration: 600, // Much slower return animation (600ms, was 300ms)
+                    duration: 200, // Much slower return animation (600ms, was 300ms)
                     ease: 'Power1',
                     onUpdate: (returnTween) => {
                         this.shipAngle = returnTween.getValue() as number;
@@ -2051,11 +2046,13 @@ export class GameScene extends Phaser.Scene {
 
         // Find the FIRST segment that matches the letter AND has a letter visible
         // Exclude the head (isHead=true)
+        // Only hit segments that are visible on screen (y > 0)
         const segment = this.bossSegments.find(s =>
             s.active &&
             !s.getData('isHead') &&
             s.getData('letter') === letter &&
-            !s.getData('letterAbsorbed')
+            !s.getData('letterAbsorbed') &&
+            s.y > 0 // Only allow hitting segments that are visible on screen
         );
 
         if (segment) {

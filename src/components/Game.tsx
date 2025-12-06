@@ -8,6 +8,9 @@ import { VirtualKeyboard } from './VirtualKeyboard';
 
 import { Starfield } from './Starfield';
 import { PhaserGame, type PhaserGameRef } from './PhaserGame';
+
+// Video background
+import agujeroNegroVideo from '../assets/images/agujero_negro.mp4';
 import { useAudio } from '../hooks/useAudio';
 import type { GameState, FallingLetter } from '../types/game';
 import { TYPING_STAGES } from '../types/game';
@@ -855,6 +858,28 @@ export const Game: React.FC = () => {
                     width: '100vw',
                     overflow: 'hidden'
                 } : {}}>
+                    {/* Black Hole Video Background */}
+                    <video
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="black-hole-video"
+                        style={{
+                            position: 'absolute',
+                            top: '35%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '35%',
+                            height: 'auto',
+                            objectFit: 'contain',
+                            zIndex: -1,
+                            opacity: 0.8,
+                            clipPath: 'ellipse(50% 50% at 50% 50%)'
+                        }}
+                    >
+                        <source src={agujeroNegroVideo} type="video/mp4" />
+                    </video>
                     <Starfield />
                     <div className="bg-grid"></div>
 
@@ -898,13 +923,34 @@ export const Game: React.FC = () => {
                         }}
                     />
 
-                    <div className="game-ui-container" style={isMobile ? { display: 'none' } : {}}>
-                        <div className="sector-info">
-                            <div className="sector-panel">
-                                <div className="sector-label">SECTOR</div>
-                                <div className="sector-name">{TYPING_STAGES[gameState.currentStage]?.name || 'N/A'}</div>
-                            </div>
+                    {/* Mobile Sector Display */}
+                    {isMobile && (
+                        <div className="mobile-sector-display" style={{
+                            position: 'absolute',
+                            top: '8px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 15,
+                            textAlign: 'center',
+                            fontFamily: '"Press Start 2P", monospace',
+                            fontSize: '8px',
+                            color: '#00ffff',
+                            textShadow: '0 0 10px #00ffff',
+                            padding: '4px 12px',
+                            background: 'rgba(0, 0, 0, 0.6)',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(0, 255, 255, 0.3)'
+                        }}>
+                            {TYPING_STAGES[gameState.currentStage]?.name || 'N/A'}
                         </div>
+                    )}
+
+                    <div className="game-ui-container" style={isMobile ? { display: 'none' } : {}}>                        <div className="sector-info">
+                        <div className="sector-panel">
+                            <div className="sector-label">SECTOR</div>
+                            <div className="sector-name">{TYPING_STAGES[gameState.currentStage]?.name || 'N/A'}</div>
+                        </div>
+                    </div>
 
                         {gameState.showSectorInfo && (
                             <div className="sector-info-large">
@@ -929,7 +975,13 @@ export const Game: React.FC = () => {
                     </div>
 
                     <CentralMessage
-                        message={gameState.isPaused ? 'PAUSA\nPresiona ESC para continuar' : (gameState.centralMessage || null)}
+                        message={
+                            gameState.isPaused && gameState.showSectorInfo
+                                ? `NUEVO SECTOR\n${TYPING_STAGES[gameState.currentStage]?.name || ''}\n\nToca para continuar`
+                                : gameState.isPaused
+                                    ? 'PAUSA\nPresiona ESC para continuar'
+                                    : (gameState.centralMessage || null)
+                        }
                         countdown={gameState.isPaused ? null : gameState.countdown}
                         show={gameState.showCentralMessage || gameState.isPaused}
                         isMobile={isMobile}
@@ -959,14 +1011,34 @@ export const Game: React.FC = () => {
                     />
 
                     {isComboMessageVisible && (
-                        <div className="floating-combo-message" style={{ zIndex: 20 }}>
-                            <div className="floating-combo-content">{currentComboMessage}</div>
+                        <div className={isMobile ? "mobile-combo-text" : "floating-combo-message"} style={isMobile ? {
+                            position: 'absolute',
+                            top: '25%',
+                            right: '10px',
+                            zIndex: 20,
+                            fontFamily: '"Press Start 2P", monospace',
+                            fontSize: '10px',
+                            color: '#ff00ff',
+                            textShadow: '0 0 10px #ff00ff, 0 0 20px #ff00ff',
+                            animation: 'comboPulse 0.8s ease-in-out infinite'
+                        } : { zIndex: 20 }}>
+                            {isMobile ? currentComboMessage : <div className="floating-combo-content">{currentComboMessage}</div>}
                         </div>
                     )}
 
                     {isOrderMessageVisible && (
-                        <div className="floating-order-message" style={{ zIndex: 20 }}>
-                            <div className="floating-order-content">{currentOrderMessage}</div>
+                        <div className={isMobile ? "mobile-order-text" : "floating-order-message"} style={isMobile ? {
+                            position: 'absolute',
+                            top: '25%',
+                            left: '10px',
+                            zIndex: 20,
+                            fontFamily: '"Press Start 2P", monospace',
+                            fontSize: '10px',
+                            color: '#00ffff',
+                            textShadow: '0 0 10px #00ffff, 0 0 20px #00ffff',
+                            animation: 'comboPulse 0.8s ease-in-out infinite'
+                        } : { zIndex: 20 }}>
+                            {isMobile ? currentOrderMessage : <div className="floating-order-content">{currentOrderMessage}</div>}
                         </div>
                     )}
                 </div>

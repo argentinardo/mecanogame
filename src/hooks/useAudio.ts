@@ -83,7 +83,7 @@ export const useAudio = () => {
     }, [playSound]);
 
     const playEnemyDeathSound = useCallback(() => {
-        playSound(enemyDeathUrl, 0.25);
+        playSound(enemyDeathUrl, 0.6);
     }, [playSound]);
 
     const playMeteoriteSound = useCallback(() => {
