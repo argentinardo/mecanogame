@@ -87,6 +87,11 @@ export class GameScene extends Phaser.Scene {
     private bossDefeatedForCurrentStage: boolean = false; // Track if boss was defeated for current stage
     private lastSpawnedLetters: string[] = []; // Track last spawned letters to avoid duplicates
 
+    // Choreographed chains (cadenas coreografiadas)
+    private lettersDestroyedSinceSector1: number = 0; // Contador desde inicio del sector 1
+    private activeChoreographedChains: Map<string, Phaser.GameObjects.Container[]> = new Map(); // Map de chainId -> array de containers
+    private nextChainId: number = 0;
+
     constructor() {
         super({ key: 'GameScene' });
     }
@@ -419,7 +424,8 @@ export class GameScene extends Phaser.Scene {
 
         // Update Letters with perspective movement (ALWAYS - except when life lost countdown)
         const height = this.scale.height;
-        const alarmZone = height * 0.20; // Alarm sounds when letter is within 10% of top edge
+        const alarmZone = height * 0.35; // Alarm sounds when letter is within 35% of top edge (aumentado para más advertencia)
+        const slowDownZone = height * 0.30; // Zona donde la velocidad se reduce (últimos 30% antes del top)
         const turnaroundPoint = height * 0.55; // Point where enemies reach "front" and start rising (55%)
         let hasDanger = false;
 
@@ -460,12 +466,25 @@ export class GameScene extends Phaser.Scene {
                     }
                 } else if (phase === 'rising') {
                     // Phase 2: Move up (rising toward player) and scale up to 1.0
-                    letterContainer.y -= speed * (delta / 16.66);
-
-                    // Scale from 0.7 to 1.0 as it rises
                     const risingStartY = letterContainer.getData('risingStartY') || turnaroundPoint;
                     const risingDistance = risingStartY - 0;
-                    const risingProgress = (risingStartY - letterContainer.y) / risingDistance;
+                    const currentY = letterContainer.y;
+                    
+                    // Calcular velocidad ajustada: reducir velocidad cuando está cerca del top
+                    let effectiveSpeed = speed;
+                    if (currentY < slowDownZone) {
+                        // Cuando está en la zona de lentitud, reducir velocidad progresivamente
+                        // Entre slowDownZone y 0, la velocidad se reduce del 100% al 20%
+                        const slowDownProgress = Math.max(0, Math.min(1, currentY / slowDownZone));
+                        const minSpeedMultiplier = 0.2; // Velocidad mínima al 20% cuando está muy cerca del top
+                        const speedMultiplier = minSpeedMultiplier + (slowDownProgress * (1 - minSpeedMultiplier));
+                        effectiveSpeed = speed * speedMultiplier;
+                    }
+                    
+                    letterContainer.y -= effectiveSpeed * (delta / 16.66);
+
+                    // Scale from 0.7 to 1.0 as it rises
+                    const risingProgress = (risingStartY - currentY) / risingDistance;
                     const currentScale = 0.7 + (risingProgress * 0.3); // 0.7 -> 1.0
                     letterContainer.setScale(Math.min(currentScale, 1.0));
 
@@ -474,7 +493,7 @@ export class GameScene extends Phaser.Scene {
                         this.handleLetterEscaped(letterContainer);
                     }
 
-                    // Alarm sounds when letter is within 10% of top edge (about to escape)
+                    // Alarm sounds when letter is within 35% of top edge (about to escape)
                     if (!this.gameState.isPaused && !this.gameState.isPenalized && letterContainer.y < alarmZone) {
                         hasDanger = true;
                     }
@@ -514,6 +533,15 @@ export class GameScene extends Phaser.Scene {
             // Reset boss flags for the new stage
             this.bossDefeatedForCurrentStage = false;
             this.bossHasExited = null;
+            
+            // Reset contador de letras desde sector 1 cuando empezamos el sector 1
+            if (this.gameState.currentStage === 1) {
+                this.lettersDestroyedSinceSector1 = 0;
+            } else if (this.gameState.currentStage === 0) {
+                // Sector 0, resetear contador
+                this.lettersDestroyedSinceSector1 = 0;
+            }
+            // Si estamos en un sector > 1, mantener el contador acumulado
         }
 
         // Update boss if active (only when not paused)
@@ -538,7 +566,9 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Spawning letters (not during boss fight and not after boss defeat)
-        if (!this.bossActive && !this.bossDefeatedForCurrentStage) {
+        // También bloquear si hay cadenas coreografiadas activas
+        const hasActiveChains = this.activeChoreographedChains.size > 0;
+        if (!this.bossActive && !this.bossDefeatedForCurrentStage && !hasActiveChains) {
             // Dynamic Spawn Rate Logic
             // Calculate progress within current level
             const currentThreshold = this.getThresholdForStage(this.gameState.currentStage);
@@ -746,6 +776,292 @@ export class GameScene extends Phaser.Scene {
         this.meteoritesGroup.add(meteorite);
     }
 
+    private spawnChoreographedChain(time: number) {
+        // Solo spawn si no hay boss activo
+        if (this.bossActive || this.bossDefeatedForCurrentStage) return;
+        if (this.gameState.currentStage < 1) return; // Solo a partir del sector 1
+
+        const stage = TYPING_STAGES[this.gameState.currentStage];
+        if (!stage || !stage.letters.length) return;
+
+        const { width, height } = this.scale;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const chainId = `chain_${this.nextChainId++}`;
+        const chain: Phaser.GameObjects.Container[] = [];
+
+        // Elegir 5 letras únicas del stage
+        const availableLetters = [...stage.letters];
+        const selectedLetters: string[] = [];
+        for (let i = 0; i < 5 && availableLetters.length > 0; i++) {
+            const randomIndex = Math.floor(Math.random() * availableLetters.length);
+            selectedLetters.push(availableLetters.splice(randomIndex, 1)[0]);
+        }
+
+        // Si no hay suficientes letras, usar las que haya
+        while (selectedLetters.length < 5 && stage.letters.length > 0) {
+            selectedLetters.push(stage.letters[Math.floor(Math.random() * stage.letters.length)]);
+        }
+
+        // Crear las 5 letras en cadena
+        selectedLetters.forEach((letterChar, index) => {
+            // Determinar sprite según fila del teclado
+            const position = KEYBOARD_POSITIONS[letterChar];
+            let enemyKey = 'enemy';
+            let enemyBKey = 'enemy_b';
+            if (position) {
+                if (position.row === 0) {
+                    enemyKey = 'enemy_2';
+                    enemyBKey = 'enemy_2b';
+                } else if (position.row === 2) {
+                    enemyKey = 'enemy_3';
+                    enemyBKey = 'enemy_3b';
+                }
+            }
+
+            // Posición inicial: aparecen desde fuera de la pantalla, una detrás de otra
+            const startY = height * 1.2; // Fuera de la pantalla abajo
+            const spacing = 120; // Espaciado entre letras
+            const startX = centerX - (2 * spacing) + (index * spacing); // Formación horizontal
+
+            const container = this.add.container(startX, startY);
+            container.setScale(0.3); // Empiezan pequeñas
+
+            // Enemy sprite
+            const enemyColors = [0xFF10F0, 0x39FF14, 0x00FFFF, 0xFFFF00, 0xFF6600, 0xBF00FF];
+            const enemyColor = enemyColors[Math.floor(Math.random() * enemyColors.length)];
+            const enemySize = 100;
+            const offsetY = -enemySize * 0.15;
+            const offsetX = -enemySize * 0.03;
+            const sprite = this.add.image(offsetX, offsetY, enemyKey);
+            sprite.setDisplaySize(enemySize, enemySize);
+            sprite.setTint(enemyColor);
+
+            // Animación sprite
+            sprite.setData('enemyKey', enemyKey);
+            sprite.setData('enemyBKey', enemyBKey);
+            let isNormalFrame = true;
+            const animateEnemy = () => {
+                if (!sprite.active) return;
+                const currentKey = isNormalFrame ? sprite.getData('enemyKey') : sprite.getData('enemyBKey');
+                sprite.setTexture(currentKey);
+                isNormalFrame = !isNormalFrame;
+                this.time.delayedCall(1000, animateEnemy);
+            };
+            this.time.delayedCall(1000, animateEnemy);
+
+            // Text
+            const letterOffset = enemySize * 0.3;
+            const text = this.add.text(0, letterOffset, letterChar, {
+                fontSize: '54px',
+                fontFamily: '"Press Start 2P", monospace',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }).setOrigin(0.5);
+
+            container.add([sprite, text]);
+
+            // Efecto de color rainbow en el texto
+            this.tweens.addCounter({
+                from: 0,
+                to: 360,
+                duration: 1000,
+                repeat: -1,
+                onUpdate: (tween) => {
+                    const value = tween.getValue() || 0;
+                    const color = Phaser.Display.Color.HSLToColor(value / 360, 1, 0.5);
+                    text.setTint(color.color);
+                }
+            });
+
+            // Solo la primera letra está activa (brillante)
+            const isActive = index === 0;
+            
+            if (!isActive) {
+                // Letras inactivas: oscuras y semi-transparentes
+                sprite.setAlpha(0.3);
+                sprite.setTint(0x555555); // Tint oscuro
+                text.setAlpha(0.3);
+                text.setTint(0x555555);
+            }
+
+            // Set data
+            container.setData('letter', letterChar);
+            container.setData('chainId', chainId);
+            container.setData('chainIndex', index);
+            container.setData('chainActive', isActive);
+            container.setData('color', enemyColor);
+            container.setData('id', time + index);
+            container.setData('spawnTime', time);
+            container.setData('speed', this.gameState.letterSpeed);
+
+            chain.push(container);
+            this.lettersGroup.add(container);
+        });
+
+        this.activeChoreographedChains.set(chainId, chain);
+
+        // Trayectoria coreografiada usando tweens
+        // Fase 1: Acercarse desde abajo (más lento y coordinado)
+        // Fase 2: Hacer ondas de lado a lado
+        // Fase 3: Formar un círculo (más lento y coordinado)
+        // Fase 4: Ir hacia arriba (más lento y coordinado)
+
+        const approachDuration = 1800; // Más lento: 1.8 segundos
+        const waveDuration = 2500; // Duración del movimiento ondulatorio: 2.5 segundos
+        const circleDuration = 3500; // Más lento: 3.5 segundos
+        const exitDuration = 2500; // Más lento: 2.5 segundos
+        const staggerDelay = 50; // Menor delay entre letras para mejor coordinación
+
+        chain.forEach((container, index) => {
+            // Fase 1: Acercarse - todas las letras llegan más o menos al mismo tiempo
+            const approachTargetY = centerY + 100; // Centro de pantalla un poco abajo
+            this.tweens.add({
+                targets: container,
+                y: approachTargetY,
+                scale: 0.7,
+                duration: approachDuration,
+                delay: index * staggerDelay, // Stagger más pequeño para mejor coordinación
+                ease: 'Power1', // Ease más suave para movimiento más coordinado
+                onComplete: () => {
+                    // Fase 2: Movimiento ondulatorio - hacer ondas de lado a lado
+                    // Cada letra hace ondas con un desplazamiento de fase para crear un efecto coordinado
+                    const waveAmplitude = 200; // Amplitud de las ondas (distancia lateral)
+                    const waveFrequency = 2; // Número de ondas completas
+                    const initialX = container.x; // Posición X inicial
+                    const waveOffset = (index / chain.length) * Math.PI * 2; // Desplazamiento de fase por letra
+                    
+                    this.tweens.addCounter({
+                        from: 0,
+                        to: Math.PI * 2 * waveFrequency, // Varias ondas completas
+                        duration: waveDuration,
+                        ease: 'Sine.easeInOut', // Ease suave para movimiento ondulatorio natural
+                        onUpdate: (tween) => {
+                            if (!container.active) {
+                                tween.stop();
+                                return;
+                            }
+                            const wavePhase = tween.getValue() as number;
+                            // Movimiento sinusoidal de lado a lado
+                            const waveX = initialX + Math.sin(wavePhase + waveOffset) * waveAmplitude;
+                            // También añadir un pequeño movimiento vertical para hacer la onda más natural
+                            const waveY = approachTargetY + Math.cos(wavePhase + waveOffset) * 30;
+                            container.x = waveX;
+                            container.y = waveY;
+                        },
+                        onComplete: () => {
+                            // Fase 3: Formar círculo usando tween continuo - todas sincronizadas
+                            // Primero mover todas las letras hacia el centro para preparar el círculo
+                            const circleRadius = 150;
+                            const angleOffset = (index / chain.length) * Math.PI * 2;
+                            const targetCircleX = centerX + Math.cos(angleOffset) * circleRadius;
+                            const targetCircleY = centerY + Math.sin(angleOffset) * circleRadius;
+                            
+                            // Transición suave hacia la posición inicial del círculo
+                            this.tweens.add({
+                                targets: container,
+                                x: targetCircleX,
+                                y: targetCircleY,
+                                duration: 800, // Transición suave de 0.8 segundos
+                                ease: 'Power2',
+                                onComplete: () => {
+                                    // Ahora formar el círculo completo
+                                    this.tweens.addCounter({
+                                        from: 0,
+                                        to: Math.PI * 2,
+                                        duration: circleDuration,
+                                        ease: 'Linear', // Movimiento uniforme para coordinación perfecta
+                                        onUpdate: (circleTween) => {
+                                            if (!container.active) {
+                                                circleTween.stop();
+                                                return;
+                                            }
+                                            const angle = angleOffset + (circleTween.getValue() as number);
+                                            container.x = centerX + Math.cos(angle) * circleRadius;
+                                            container.y = centerY + Math.sin(angle) * circleRadius;
+                                        },
+                                        onComplete: () => {
+                                            // Fase 4: Salir hacia arriba (todas sincronizadas y más lentas)
+                                            // Primero ir a un punto cercano al top lentamente
+                                            const slowExitY = this.scale.height * 0.15; // Parar a 15% del top
+                                            this.tweens.add({
+                                                targets: container,
+                                                y: slowExitY,
+                                                scale: 1.1,
+                                                duration: exitDuration * 1.8, // Más lento: 4.5 segundos
+                                                delay: index * (staggerDelay * 0.5), // Mínimo stagger para coordinación
+                                                ease: 'Power1',
+                                                onComplete: () => {
+                                                    // Esperar un poco antes de salir completamente (todas esperan lo mismo)
+                                                    this.time.delayedCall(1500, () => {
+                                                        if (!container.active) return;
+                                                        // Ahora salir completamente - 3 veces más rápido que antes
+                                                        this.tweens.add({
+                                                            targets: container,
+                                                            y: -100,
+                                                            scale: 1.2,
+                                                            duration: (exitDuration * 2.5) / 3, // 3 veces más rápido: ~2.08 segundos
+                                                            delay: index * (staggerDelay * 0.3), // Stagger mínimo
+                                                            ease: 'Power1',
+                                                            onComplete: () => {
+                                                                // Si la letra no fue destruida, eliminarla y restar vida
+                                                                if (container.active && !container.getData('hit')) {
+                                                                    // La letra escapó sin ser destruida - restar vida
+                                                                    this.handleLetterEscaped(container);
+                                                                    // Verificar si todas las letras de la cadena fueron destruidas o salieron
+                                                                    const chain = this.activeChoreographedChains.get(chainId);
+                                                                    if (chain) {
+                                                                        const allGone = chain.every(letter => !letter.active);
+                                                                        if (allGone) {
+                                                                            this.activeChoreographedChains.delete(chainId);
+                                                                        }
+                                                                    }
+                                                                } else if (!container.active) {
+                                                                    // Ya fue destruida, solo limpiar la cadena
+                                                                    const chain = this.activeChoreographedChains.get(chainId);
+                                                                    if (chain) {
+                                                                        const allGone = chain.every(letter => !letter.active);
+                                                                        if (allGone) {
+                                                                            this.activeChoreographedChains.delete(chainId);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        });
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        // Limpiar la cadena del mapa después de un tiempo (seguridad)
+        // Tiempo total: approach + wave + transition + circle + exit (con las dos fases de salida) + margen
+        // approach: 1.8s, wave: 2.5s, transition: 0.8s, circle: 3.5s, exit fase 1: 4.5s, espera: 1.5s, exit fase 2: ~2.08s (3x más rápido)
+        const totalExitDuration = (exitDuration * 1.8) + 1500 + ((exitDuration * 2.5) / 3); // ~8.33 segundos (más rápido)
+        const transitionDuration = 800; // Transición hacia el círculo
+        const totalDuration = approachDuration + waveDuration + transitionDuration + circleDuration + totalExitDuration + 2000; // ~23.85 segundos total
+        this.time.delayedCall(totalDuration, () => {
+            // Solo limpiar si la cadena aún existe (por si ya fue limpiada antes)
+            if (this.activeChoreographedChains.has(chainId)) {
+                const chain = this.activeChoreographedChains.get(chainId);
+                if (chain) {
+                    const allGone = chain.every(letter => !letter.active);
+                    if (allGone) {
+                        this.activeChoreographedChains.delete(chainId);
+                    }
+                }
+            }
+        });
+    }
+
     private updateMeteorites(delta: number) {
         const { width, height } = this.scale;
 
@@ -863,7 +1179,19 @@ export class GameScene extends Phaser.Scene {
         // Find target (exclude already hit letters)
         const targets = this.lettersGroup.getChildren().filter((child: any) => {
             const container = child as Phaser.GameObjects.Container;
-            return container.getData('letter') === targetLetter && !container.getData('hit');
+            if (container.getData('letter') !== targetLetter || container.getData('hit')) {
+                return false;
+            }
+            
+            // Si es parte de una cadena coreografiada, solo puede ser disparada si está activa
+            const chainId = container.getData('chainId');
+            if (chainId !== undefined) {
+                const isActive = container.getData('chainActive');
+                return isActive === true; // Solo letras activas de cadenas pueden ser disparadas
+            }
+            
+            // Letras normales siempre pueden ser disparadas
+            return true;
         }) as Phaser.GameObjects.Container[];
 
         if (targets.length === 0) {
@@ -948,6 +1276,69 @@ export class GameScene extends Phaser.Scene {
         // Create explosion with enemy color
         const enemyColor = target.getData('color') || 0xffff00;
         this.createExplosion(target.x, target.y, enemyColor);
+
+        // Handle choreographed chain logic
+        const chainId = target.getData('chainId');
+        const chainIndex = target.getData('chainIndex');
+        
+        if (chainId !== undefined && chainIndex !== undefined) {
+            // Esta letra es parte de una cadena coreografiada
+            // Activar la siguiente letra de la cadena
+            const chain = this.activeChoreographedChains.get(chainId);
+            if (chain) {
+                if (chainIndex < chain.length - 1) {
+                    const nextLetter = chain[chainIndex + 1];
+                    if (nextLetter && nextLetter.active) {
+                        // Activar la siguiente letra (hacerla brillante)
+                        nextLetter.setData('chainActive', true);
+                        const nextSprite = nextLetter.getAt(0) as Phaser.GameObjects.Image;
+                        const nextText = nextLetter.getAt(1) as Phaser.GameObjects.Text;
+                        const nextColor = nextLetter.getData('color') || 0xFFFFFF;
+                        if (nextSprite) {
+                            nextSprite.setAlpha(1.0);
+                            nextSprite.clearTint(); // Quitar tint oscuro
+                            nextSprite.setTint(nextColor); // Restaurar color original
+                        }
+                        if (nextText) {
+                            nextText.setAlpha(1.0);
+                            nextText.clearTint();
+                        }
+                        // Efecto de activación: pulso brillante
+                        this.tweens.add({
+                            targets: [nextSprite, nextText],
+                            alpha: { from: 0.3, to: 1.0 },
+                            duration: 300,
+                            ease: 'Power2'
+                        });
+                    }
+                }
+                
+                // Verificar si todas las letras de la cadena fueron destruidas
+                // Esto se hace después de un pequeño delay para asegurar que la letra actual se marca como destruida
+                this.time.delayedCall(100, () => {
+                    const updatedChain = this.activeChoreographedChains.get(chainId);
+                    if (updatedChain) {
+                        const allDestroyed = updatedChain.every(letter => !letter.active || letter.getData('hit'));
+                        if (allDestroyed) {
+                            this.activeChoreographedChains.delete(chainId);
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Incrementar contador para todas las letras (normales y de cadena) si estamos en sector 1 o superior
+        if (this.gameState.currentStage >= 1) {
+            this.lettersDestroyedSinceSector1++;
+            
+            // Verificar si debemos spawn una cadena (cada 20 letras)
+            if (this.lettersDestroyedSinceSector1 > 0 && this.lettersDestroyedSinceSector1 % 20 === 0) {
+                // Spawn cadena coreografiada en el próximo frame
+                this.time.delayedCall(100, () => {
+                    this.spawnChoreographedChain(this.time.now);
+                });
+            }
+        }
 
         // Play enemy death sound
         this.callbacks.onEnemyDeath();
@@ -1847,8 +2238,24 @@ export class GameScene extends Phaser.Scene {
                 }
             }
         } else if (this.bossAttackPattern === 'shooting') {
-            // Shoot in bursts
-            const burstInterval = 600;
+            // Shoot in bursts - frecuencia ajustada por sector
+            // Sector 0: 1/3 de la frecuencia (3x el intervalo)
+            // Incrementa gradualmente con cada sector
+            const baseInterval = 600;
+            const currentStage = this.gameState.currentStage;
+            let burstInterval: number;
+            
+            if (currentStage === 0) {
+                // Sector 0: 3 veces más lento (1/3 de la frecuencia)
+                burstInterval = baseInterval * 3; // 1800ms
+            } else {
+                // Incrementa gradualmente: cada sector reduce el intervalo
+                // Sector 1: 2.5x, Sector 2: 2x, Sector 3: 1.7x, etc.
+                // Fórmula: 3 - (stage * 0.5) hasta llegar a 1x
+                const multiplier = Math.max(1, 3 - (currentStage * 0.5));
+                burstInterval = baseInterval * multiplier;
+            }
+            
             const shotsPerBurst = 3;
             const burstPause = 1000;
 
